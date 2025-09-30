@@ -1,0 +1,95 @@
+﻿@model ProductDTO
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<div class="pagetitle">
+    <h1>Dashboard</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Home</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index">Producto</a></li>
+            <li class="breadcrumb-item active">Editar Producto</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="Product dashboard">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary ">Editar producto</h3>
+
+        </div>
+
+
+
+
+        <div class="card-body">
+
+            @* <h5 class="card-title text-primary">Editar Producto</h5> *@
+            <form asp-action="Edit" method="POST" class="row g-3">
+                <input type="hidden" asp-for="Id" />
+                
+                <div class="col-md-12">
+                    <div class="form-floating">
+                        <input asp-for="Name" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Name)">
+                        <label asp-for="Name"></label>
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-floating">
+                        <input asp-for="Description" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Description)">
+                        <label asp-for="Description"></label>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-floating">
+                        <input asp-for="Price" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Price)">
+                        <label asp-for="Price" "></label>
+                        <span asp-validation-for="Price" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-floating">
+                        <input asp-for="Stock" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Stock)">
+                        <label asp-for="Stock" "></label>
+                        <span asp-validation-for="Stock" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-floating">
+                        <input asp-for="Category" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Category)">
+                        <label asp-for="Category" "></label>
+                        <span asp-validation-for="Category" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                    <button class="btn btn-primary" type="submit">Guardar</button>
+                    <a asp-action="Index" class="btn btn-secondary">×</a>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+</section>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+
+            $('.btnDelete').click(function(event) {
+
+                event.preventDefault();
+
+                Swal.fire({
+                    icon: "error",
+                    title: "Oops...",
+                    text: "Something went wrong!",
+                    footer: '<a href="#">Why do I have this issue?</a>'
+                });
+            });
+        });
+    </script>
+}

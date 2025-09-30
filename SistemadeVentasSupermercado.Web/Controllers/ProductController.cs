@@ -53,5 +53,65 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             _notyfService.Success(response.Message);
             return RedirectToAction(nameof(Index));
         }
+        [HttpGet]
+        public async Task<IActionResult> Edit([FromRoute] Guid id)
+        {
+            Response<ProductDTO> response = await _productService.GetOneAsync(id);
+
+            if (!response.IsSuccess)
+            {
+                _notyfService.Error(response.Message);
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(response.Result);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Edit([FromForm] ProductDTO dto)
+        {
+            
+            if (!ModelState.IsValid)
+            {
+                _notyfService.Error("Debe ajustar los errores de validación");
+                return View(dto);
+            }
+
+            
+            Response<ProductDTO> response = await _productService.EditAsync(dto);
+
+           
+            if (!response.IsSuccess)
+            {
+              
+                _notyfService.Error(response.Message);
+                return View(dto);
+            }
+
+           
+            _notyfService.Success(response.Message);
+            return RedirectToAction(nameof(Index));
+        }
+        [HttpPost]
+        public async Task<IActionResult> Delete([FromRoute] Guid id)
+        {
+        
+            Response<object> response = await _productService.DeleteAsync(id);
+
+            
+            if (!response.IsSuccess)
+            {
+               
+                _notyfService.Error(response.Message);
+            }
+            else
+            {
+               
+                _notyfService.Success(response.Message);
+            }
+
+          
+            return RedirectToAction(nameof(Index));
+        }
     }
 }
