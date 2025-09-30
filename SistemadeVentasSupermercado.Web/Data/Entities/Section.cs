@@ -10,7 +10,7 @@ namespace SistemadeVentasSupermercado.Web.NewFolder.Entities
 
         [Display(Name = "Seccion")]
         [Required(ErrorMessage = "El campo {0} es requerido")]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         [Display(Name = "Descripcion")]
         public string? Description { get; set; }

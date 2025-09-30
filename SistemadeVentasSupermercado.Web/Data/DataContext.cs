@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SistemadeVentasSupermercado.Web.Data.Entities;
 using SistemadeVentasSupermercado.Web.NewFolder.Entities;
 namespace SistemadeVentasSupermercado.Web.Data
 {
@@ -8,5 +9,6 @@ namespace SistemadeVentasSupermercado.Web.Data
         
         }
         public DbSet<Section> Sections { get; set; }
+        public DbSet<Product> Products { get; set; }
     }
 }
