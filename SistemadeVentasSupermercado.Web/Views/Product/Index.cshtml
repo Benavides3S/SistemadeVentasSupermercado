@@ -60,7 +60,7 @@
                                 <a asp-action="Edit" asp-route-Id="@item.Id" class="btn btn-sm btn-warning"><i class="bi bi-pencil-fill"></i></a>
 
                                 <form asp-action="Delete" asp-route-Id="@item.Id" style="display: contents;">
-                                    <button class="btn btn-sm btn-danger"><i class="bi bi-trash-fill"></i></button>
+                                    <button class="btn btn-sm btn-danger btnDelete"><i class="bi bi-trash-fill"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -74,3 +74,31 @@
 
 </section>
 
+@section Scripts {
+    <script>
+
+        $(document).ready(function() {
+
+            $('.btnDelete').click(function(event) {
+
+                event.preventDefault();
+
+                Swal.fire({
+                  icon: "question",
+                  title: "¿Desea eliminar la sección?",
+                  text: "No podrá revertirlo",
+                  showCancelButton: true
+                }).then((result) => {
+
+                    if (result.isConfirmed) {
+
+                        const form = $(this).closest('form');
+
+                        form.submit();
+                    }
+                });
+            });
+        });
+
+    </script>
+}
