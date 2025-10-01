@@ -6,6 +6,7 @@ using AutoMapper;
 using AspNetCoreHero.ToastNotification;
 using Microsoft.Identity.Client;
 using AspNetCoreHero.ToastNotification.Extensions;
+using SistemadeVentasSupermercado.Web.Data.Seeders;
 namespace SistemadeVentasSupermercado.Web
 {
     public static class CustomConfiguration
@@ -40,14 +41,26 @@ namespace SistemadeVentasSupermercado.Web
         private static void AddService(WebApplicationBuilder builder)
         {
             builder.Services.AddScoped<IProductService, ProductsService>();
+            builder.Services.AddTransient<SeedDb>();
 
 
         }
         public static  WebApplication AddCustomWebApplicationConfiguration(this WebApplication app)
         {
             app.UseNotyf();
+            SeedData(app);
             return app;
         }
+
+        private static void SeedData(WebApplication app)
+        {
+            IServiceScopeFactory scopeFactory = app.Services.GetService<IServiceScopeFactory>();
+
+            using IServiceScope scope = scopeFactory.CreateScope();
+            SeedDb service = scope.ServiceProvider.GetService<SeedDb>();
+            service.SeedAsync().Wait();
+        }
+
 
     }
 }
