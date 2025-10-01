@@ -8,12 +8,12 @@ using SistemadeVentasSupermercado.Web.Services.Abstractions;
 
 namespace SistemadeVentasSupermercado.Web.Services.Implementations
 {
-    public class ProductsService : IProductService
+    public class ProductsService : CustomQueryableOperationsService, IProductService
     {
          private readonly DataContext _context;
         private readonly IMapper _mapper;
 
-        public ProductsService(DataContext context, IMapper mapper)
+        public ProductsService(DataContext context, IMapper mapper) :base(context, mapper)
         {
             _context = context;
             _mapper = mapper;
@@ -21,24 +21,26 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         public async Task<Response<ProductDTO>> CreateAsync(ProductDTO dto)
         {
-            try
-            {
-                Product product = _mapper.Map<Product>(dto);
+            //try
+            //{
+            //    Product product = _mapper.Map<Product>(dto);
 
-                Guid id = Guid.NewGuid();
-                product.Id = id;
-                
-                await _context.Products.AddAsync(product);
-                await _context.SaveChangesAsync();
-                dto.Id = id;
-                return Response<ProductDTO>.Success(dto, "Producto creado con exito");
+            //    Guid id = Guid.NewGuid();
+            //    product.Id = id;
 
-            }
-            catch (Exception ex) 
-            {
-                return Response<ProductDTO>.Failure(ex);
-               
-            }
+            //    await _context.Products.AddAsync(product);
+            //    await _context.SaveChangesAsync();
+            //    dto.Id = id;
+            //    return Response<ProductDTO>.Success(dto, "Producto creado con exito");
+
+            //}
+            //catch (Exception ex) 
+            //{
+            //    return Response<ProductDTO>.Failure(ex);
+
+            //}
+
+            return await CreateAsync<Product, ProductDTO>(dto);
 
                
         }
