@@ -1,6 +1,7 @@
 ﻿using AspNetCoreHero.ToastNotification.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.DTOs;
 using SistemadeVentasSupermercado.Web.Services.Abstractions;
 
@@ -18,14 +19,17 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             _notyfService = notyfService;
         }
         [HttpGet]
-        public async Task<IActionResult> Index()
+        
+        public async Task<IActionResult> Index([FromQuery] PaginationRequest request)
         {
-            Response<List<ProductDTO>> response = await _productService.GetListAsync();
+            Response<PaginationResponse<ProductDTO>> response = await _productService.GetPaginatedListAsync(request);
+
             if (!response.IsSuccess)
             {
                 _notyfService.Error(response.Message);
                 return RedirectToAction("Index", "Home");
             }
+
             return View(response.Result);
         }
 

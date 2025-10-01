@@ -1,4 +1,5 @@
 ﻿using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.DTOs;
 
 namespace SistemadeVentasSupermercado.Web.Services.Abstractions
@@ -20,5 +21,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
 
         // R - Read (Leer uno)
         public Task<Response<ProductDTO>> GetOneAsync(Guid id);
+        Task<Response<PaginationResponse<ProductDTO>>> GetPaginatedListAsync(PaginationRequest request);
+
     }
 }

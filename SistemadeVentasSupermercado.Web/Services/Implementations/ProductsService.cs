@@ -3,6 +3,7 @@ using Humanizer;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
 using SistemadeVentasSupermercado.Web.DTOs;
@@ -126,6 +127,19 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             return await GetCompleteListAsync<Product, ProductDTO>();
         }
 
+        public async Task<Response<PaginationResponse<ProductDTO>>> GetPaginatedListAsync(PaginationRequest request)
+        {
+            IQueryable<Product> query = _context.Products.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(request.Filter))
+            {
+                // SELECT * FROM Sections WHERE Name LIKE '%FILTER%'
+                query = query.Where(s => s.Name.ToLower().Contains(request.Filter.ToLower())
+                                         || s.Description.ToLower().Contains(request.Filter.ToLower()));
+            }
+
+            return await GetPaginationAsync<Product, ProductDTO>(request, query);
+        }
         public async Task<Response<ProductDTO>> GetOneAsync(Guid id)
         {
             //    try

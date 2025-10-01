@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Abstractions;
 using SistemadeVentasSupermercado.Web.Data.Entities;
@@ -123,25 +124,58 @@ namespace SistemadeVentasSupermercado.Web.Services
         {
             try
             {
-                // 1. Inicializar la consulta si no se proporcionó una
+              
                 if (query is null)
                 {
                     query = _context.Set<TEntity>();
                 }
 
-                // 2. Ejecutar la consulta y obtener la lista de entidades
+                
                 List<TEntity> list = await query.ToListAsync();
 
-                // 3. Mapear la lista de entidades a una lista de DTOs
+                
                 List<TDTO> dtoList = _mapper.Map<List<TDTO>>(list);
 
-                // 4. Devolver una respuesta de éxito con la lista de DTOs
+               
                 return Response<List<TDTO>>.Success(dtoList);
             }
             catch (Exception ex)
             {
-                // Manejar cualquier excepción y devolver un fallo
+               
                 return Response<List<TDTO>>.Failure(ex);
+            }
+        }
+
+
+
+        public async Task<Response<PaginationResponse<TDTO>>> GetPaginationAsync<TEntity, TDTO>(PaginationRequest request, IQueryable<TEntity> query = null)
+        where TEntity : class
+        where TDTO : class
+        {
+            try
+            {
+                if (query is null)
+                {
+                    query = _context.Set<TEntity>();
+                }
+
+                PagedList<TEntity> list = await PagedList<TEntity>.ToPagedListAsync(query, request);
+
+                PaginationResponse<TDTO> response = new PaginationResponse<TDTO>
+                {
+                    List = _mapper.Map<PagedList<TDTO>>(list),
+                    TotalCount = list.TotalCount,
+                    RecordsPerPage = list.RecordsPerPage,
+                    CurrentPage = list.CurrentPage,
+                    TotalPages = list.TotalPages,
+                    Filter = request.Filter
+                };
+
+                return Response<PaginationResponse<TDTO>>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                return Response<PaginationResponse<TDTO>>.Failure(ex);
             }
         }
     }
