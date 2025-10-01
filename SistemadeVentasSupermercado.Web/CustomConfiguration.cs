@@ -13,16 +13,16 @@ namespace SistemadeVentasSupermercado.Web
     {
         public static WebApplicationBuilder AddCustomConfiguration(this WebApplicationBuilder builder)
         {
-            // Data context 
+            
             builder.Services.AddDbContext<DataContext>(options => {
 
                 options.UseSqlServer(builder.Configuration.GetConnectionString("Myconnection"));
             
             });
-            // AutoMapper 
+           
              builder.Services.AddAutoMapper(typeof(Program));
 
-            // tost notification setup
+            
             builder.Services.AddNotyf(config =>
             {
 
@@ -32,7 +32,7 @@ namespace SistemadeVentasSupermercado.Web
 
             });
             
-            // Servicios 
+            
             AddService(builder);
              
             return builder;
