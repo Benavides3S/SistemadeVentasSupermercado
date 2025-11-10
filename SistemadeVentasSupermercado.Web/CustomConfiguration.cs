@@ -41,6 +41,7 @@ namespace SistemadeVentasSupermercado.Web
         private static void AddService(WebApplicationBuilder builder)
         {
             builder.Services.AddScoped<IProductService, ProductsService>();
+            builder.Services.AddScoped<IClientService, ClientsService>();
             builder.Services.AddTransient<SeedDb>();
 
 

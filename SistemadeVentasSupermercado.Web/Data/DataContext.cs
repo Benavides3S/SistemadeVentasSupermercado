@@ -10,5 +10,7 @@ namespace SistemadeVentasSupermercado.Web.Data
         }
         public DbSet<Section> Sections { get; set; }
         public DbSet<Product> Products { get; set; }
+        public DbSet<Client> Clients { get; set; }
+
     }
 }

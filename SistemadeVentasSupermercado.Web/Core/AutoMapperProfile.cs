@@ -9,6 +9,7 @@ namespace SistemadeVentasSupermercado.Web.Core
         public AutoMapperProfile()
         {
             CreateMap<Product, ProductDTO>().ReverseMap();
+            CreateMap<Client, ClientDTO>().ReverseMap();
         }
     }
 }
