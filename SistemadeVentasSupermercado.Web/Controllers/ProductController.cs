@@ -1,5 +1,7 @@
 ﻿using AspNetCoreHero.ToastNotification.Abstractions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SistemadeVentasSupermercado.Web.Core.Attributes;
 using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.DTOs;
@@ -7,8 +9,8 @@ using SistemadeVentasSupermercado.Web.Services.Abstractions;
 
 namespace SistemadeVentasSupermercado.Web.Controllers
 {
+    [Authorize]
     public class ProductController : Controller
-
     {
         private readonly IProductService _productService;
         private readonly INotyfService _notyfService;
@@ -18,8 +20,9 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             _productService = productService;
             _notyfService = notyfService;
         }
+
         [HttpGet]
-        
+        [CustomAuthorize(permission: "showProducts", module: "Productos")]
         public async Task<IActionResult> Index([FromQuery] PaginationRequest request)
         {
             Response<PaginationResponse<ProductDTO>> response = await _productService.GetPaginatedListAsync(request);
@@ -34,30 +37,36 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         }
 
         [HttpGet]
+        [CustomAuthorize("Productos", "createProducts")]
         public IActionResult Create()
         {
             return View();
         }
+
         [HttpPost]
-        
+        [CustomAuthorize("createProducts", "Productos")]
         public async Task<IActionResult> Create([FromForm] ProductDTO dto)
         {
-            
             if (!ModelState.IsValid)
             {
-                _notyfService.Error("debe ajustar los errores de validacion");
+                _notyfService.Error("Debe ajustar los errores de validación");
                 return View(dto);
             }
+
             Response<ProductDTO> response = await _productService.CreateAsync(dto);
+
             if (!response.IsSuccess)
             {
                 _notyfService.Error(response.Message);
                 return View(dto);
             }
+
             _notyfService.Success(response.Message);
             return RedirectToAction(nameof(Index));
         }
+
         [HttpGet]
+        [CustomAuthorize("updateProducts", "Productos")]
         public async Task<IActionResult> Edit([FromRoute] Guid id)
         {
             Response<ProductDTO> response = await _productService.GetOneAsync(id);
@@ -72,50 +81,44 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         }
 
         [HttpPost]
+        [CustomAuthorize("updateProducts", "Productos")]
         public async Task<IActionResult> Edit([FromForm] ProductDTO dto)
         {
-            
             if (!ModelState.IsValid)
             {
                 _notyfService.Error("Debe ajustar los errores de validación");
                 return View(dto);
             }
 
-            
             Response<ProductDTO> response = await _productService.EditAsync(dto);
 
-           
             if (!response.IsSuccess)
             {
-              
                 _notyfService.Error(response.Message);
                 return View(dto);
             }
 
-           
             _notyfService.Success(response.Message);
             return RedirectToAction(nameof(Index));
         }
+
         [HttpPost]
+        [CustomAuthorize("deleteProducts", "Productos")]
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
-        
             Response<object> response = await _productService.DeleteAsync(id);
 
-            
             if (!response.IsSuccess)
             {
-               
                 _notyfService.Error(response.Message);
             }
             else
             {
-               
                 _notyfService.Success(response.Message);
             }
 
-          
             return RedirectToAction(nameof(Index));
         }
     }
 }
+

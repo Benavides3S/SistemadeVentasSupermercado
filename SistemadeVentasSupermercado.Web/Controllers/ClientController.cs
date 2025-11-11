@@ -1,5 +1,7 @@
 ﻿using AspNetCoreHero.ToastNotification.Abstractions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SistemadeVentasSupermercado.Web.Core.Attributes;
 using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.DTOs;
@@ -18,10 +20,12 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             _notyfService = notyfService;
         }
 
+        // 📋 LISTAR CLIENTES
         [HttpGet]
+        [CustomAuthorize(permission: "showClient", module: "Clientes")]
         public async Task<IActionResult> Index([FromQuery] PaginationRequest request)
         {
-            var response = await _clientService.GetPaginatedListAsync(request);
+            Response<PaginationResponse<ClientDTO>> response = await _clientService.GetPaginatedListAsync(request);
 
             if (!response.IsSuccess)
             {
@@ -32,19 +36,25 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             return View(response.Result);
         }
 
+        // ➕ CREAR CLIENTE
         [HttpGet]
-        public IActionResult Create() => View();
+        [CustomAuthorize("Clientes", "createClient")]
+        public IActionResult Create()
+        {
+            return View();
+        }
 
         [HttpPost]
+        [CustomAuthorize("createClient", "Clientes")]
         public async Task<IActionResult> Create([FromForm] ClientDTO dto)
         {
             if (!ModelState.IsValid)
             {
-                _notyfService.Error("Debe corregir los errores de validación");
+                _notyfService.Error("Debe ajustar los errores de validación");
                 return View(dto);
             }
 
-            var response = await _clientService.CreateAsync(dto);
+            Response<ClientDTO> response = await _clientService.CreateAsync(dto);
 
             if (!response.IsSuccess)
             {
@@ -56,10 +66,12 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // ✏️ EDITAR CLIENTE
         [HttpGet]
-        public async Task<IActionResult> Edit(Guid id)
+        [CustomAuthorize("updateClient", "Clientes")]
+        public async Task<IActionResult> Edit([FromRoute] Guid id)
         {
-            var response = await _clientService.GetOneAsync(id);
+            Response<ClientDTO> response = await _clientService.GetOneAsync(id);
 
             if (!response.IsSuccess)
             {
@@ -71,15 +83,16 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         }
 
         [HttpPost]
+        [CustomAuthorize("updateClient", "Clientes")]
         public async Task<IActionResult> Edit([FromForm] ClientDTO dto)
         {
             if (!ModelState.IsValid)
             {
-                _notyfService.Error("Debe corregir los errores de validación");
+                _notyfService.Error("Debe ajustar los errores de validación");
                 return View(dto);
             }
 
-            var response = await _clientService.EditAsync(dto);
+            Response<ClientDTO> response = await _clientService.EditAsync(dto);
 
             if (!response.IsSuccess)
             {
@@ -91,17 +104,25 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // 🗑️ ELIMINAR CLIENTE
         [HttpPost]
-        public async Task<IActionResult> Delete(Guid id)
+        [CustomAuthorize("deleteClient", "Clientes")]
+        public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
-            var response = await _clientService.DeleteAsync(id);
+            Response<object> response = await _clientService.DeleteAsync(id);
 
             if (!response.IsSuccess)
+            {
                 _notyfService.Error(response.Message);
+            }
             else
+            {
                 _notyfService.Success(response.Message);
+            }
 
             return RedirectToAction(nameof(Index));
         }
+
+       
     }
 }

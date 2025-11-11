@@ -1,45 +1,47 @@
-﻿@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
-@using SistemadeVentasSupermercado.Web.Core.Pagination
-@model PaginationResponse<ClientDTO>
+﻿@model PaginationResponse<UserDTO>
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
 
 @{
-    ViewData["Title"] = "Clientes";
+    ViewData["Title"] = "Usuarios";
 }
+
+
 
 <div class="pagetitle">
     <h1>Dashboard</h1>
     <nav>
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
-            <li class="breadcrumb-item active">Clientes</li>
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+            <li class="breadcrumb-item active">Usuarios</li>
         </ol>
     </nav>
 </div>
 
 <section class="section dashboard">
+
     <div class="card">
-
         <div class="card-header">
-            <div class="row">
-                <h3 class="m-0 font-weight-bold text-primary col-md-11">Clientes</h3>
 
-                @if (await _usersService.CurrentUserIsAuthorizedAsync("createClients", "Clientes"))
-                {
+            @if (await _usersService.CurrentUserIsAuthorizedAsync("createUsers", "Usuarios"))
+            {
+                <div class="row">
+                    <h3 class="m-0 font-weight-bold text-primary col-md-11">Usuarios</h3>
                     <div class="col-md-1">
                         <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i></a>
                     </div>
-                }
-            </div>
+                </div>
+            }
         </div>
 
-        <div class="card-body mt-3">
+        <div class="card-body">
 
-            @* Formulario de búsqueda y paginación *@
             <form asp-action="Index" class="navbar-search" method="GET">
+
                 <input type="hidden" name="Page" value="@Model.CurrentPage" />
 
                 <div class="row mt-3">
                     <div class="col-md-auto">
+
                         <select name="RecordsPerPage" class="form-select bg-light border-0 small" asp-for="RecordsPerPage">
                             <option value="2" selected="@(Model.RecordsPerPage == 2)">2</option>
                             <option value="10" selected="@(Model.RecordsPerPage == 10)">10</option>
@@ -47,94 +49,107 @@
                             <option value="30" selected="@(Model.RecordsPerPage == 30)">30</option>
                             <option value="50" selected="@(Model.RecordsPerPage == 50)">50</option>
                         </select>
+
                     </div>
 
                     <div class="col-md-10">
-                        <div class="input-group mb-3">
+                        <div class="input-group-mb-3">
                             <input type="text"
                                    class="form-control bg-light border-0 small"
-                                   placeholder="Buscar cliente..."
+                                   placeholder="Buscar..."
                                    aria-label="search"
-                                   asp-for="Filter" />
+                                   asp-for="Filter">
+                        </div>
+                    </div>
+
+                    <div class="col-md-auto">
+                        <div class="input-group-mb-3">
                             <button class="btn btn-primary"><i class="bi bi-search"></i></button>
                         </div>
                     </div>
+
                 </div>
+
             </form>
 
-            @* Tabla de clientes *@
             <table class="table table-bordered">
+
                 <thead>
                     <tr>
-                        <th>Id</th>
-                        <th>Nombre</th>
-                        <th>Dirección</th>
+                        <th>Documento</th>
+                        <th>Nombres</th>
+                        <th>Apellidos</th>
                         <th>Teléfono</th>
-                        <th>Correo</th>
+                        <th>Email</th>
                         <th></th>
                     </tr>
                 </thead>
-
                 <tbody>
-                    @if (Model.List != null && Model.List.Any())
+                    @foreach (UserDTO item in Model.List)
                     {
-                        foreach (ClientDTO item in Model.List)
-                        {
-                            <tr>
-                                <td>@item.Id</td>
-                                <td>@item.Name</td>
-                                <td>@item.Address</td>
-                                <td>@item.Phone</td>
-                                <td>@item.Email</td>
-                                <td>
-                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("updateClients", "Clientes"))
-                                    {
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning"><i class="bi bi-pencil-fill"></i></a>
-                                    }
+                        <tr>
+                            <td>@item.Document</td>
+                            <td>@item.FirstName</td>
+                            <td>@item.LastName</td>
+                            <td>@item.PhoneNumber</td>
+                            <td>@item.Email</td>
+                            <td>
 
-                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("deleteClients", "Clientes"))
+                                @if (await _usersService.CurrentUserIsAuthorizedAsync("updateUsers", "Usuarios"))
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning"><i class="bi bi-pencil-fill"></i></a>
+                                }
+
+                                @* @if (await _usersService.CurrentUserIsAuthorizedAsync("deleteUsers", "Usuarios"))
                                     {
                                         <form asp-action="Delete" asp-route-id="@item.Id" style="display: contents;">
                                             <button class="btn btn-sm btn-danger btnDelete"><i class="bi bi-trash-fill"></i></button>
                                         </form>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="6" class="text-center">No hay clientes registrados.</td>
+                                    } *@
+                            </td>
                         </tr>
                     }
                 </tbody>
             </table>
 
-            @* Componente de paginación reutilizable *@
             @await Html.PartialAsync("_PaginationComponent", Model)
 
         </div>
     </div>
+
 </section>
 
 @section Scripts {
-    <script>
+
+    @* <script>
+
         $(document).ready(function() {
+
             $('.btnDelete').click(function(event) {
+
                 event.preventDefault();
+
                 Swal.fire({
-                    icon: "question",
-                    title: "¿Desea eliminar este cliente?",
+
+                    title: "¿Desea eliminar al usuario?",
                     text: "No podrá revertirlo",
+                    icon: "question",
                     showCancelButton: true
+
                 }).then((result) => {
+
                     if (result.isConfirmed) {
+
                         const form = $(this).closest('form');
+
                         form.submit();
                     }
+
                 });
             });
+
         });
-    </script>
+
+    </script> *@
+
 }

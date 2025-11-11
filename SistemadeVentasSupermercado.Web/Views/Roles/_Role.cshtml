@@ -1,0 +1,11 @@
+﻿@model SistemaVentaRoleDTO
+
+<input type="hidden" id="permissionIds" name="PermissionIds" />
+
+<div class="col-md-12">
+    <div class="form-floating">
+        <input asp-for="Name" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Name)">
+        <label asp-for="Name"></label>
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SistemadeVentasSupermercado.Web.Data;
 
@@ -11,9 +12,11 @@ using SistemadeVentasSupermercado.Web.Data;
 namespace SistemadeVentasSupermercado.Web.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20251111223528_roles")]
+    partial class roles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -184,7 +187,7 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .IsUnique()
                         .HasFilter("[Email] IS NOT NULL");
 
-                    b.ToTable("Clients", (string)null);
+                    b.ToTable("Clients");
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Permission", b =>
@@ -213,7 +216,7 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Permissions", (string)null);
+                    b.ToTable("Permissions");
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Product", b =>
@@ -246,7 +249,7 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.RolePermission", b =>
@@ -261,7 +264,7 @@ namespace SistemadeVentasSupermercado.Web.Migrations
 
                     b.HasIndex("SistemaVentasRoleId");
 
-                    b.ToTable("RolePermissions", (string)null);
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.SistemaVentasRole", b =>
@@ -280,7 +283,7 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("SistemaVentasRoles", (string)null);
+                    b.ToTable("SistemaVentasRoles");
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.User", b =>
