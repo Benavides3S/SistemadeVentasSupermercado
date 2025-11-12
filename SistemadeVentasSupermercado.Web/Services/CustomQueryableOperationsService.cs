@@ -91,15 +91,19 @@ namespace SistemadeVentasSupermercado.Web.Services
             }
         }
 
-        public async Task<Response<TDTO>> GetOneAsync<TEntity, TDTO>(Guid id) where TEntity : class, IId
+        public async Task<Response<TDTO>> GetOneAsync<TEntity, TDTO>(Guid id, IQueryable<TEntity>? query = null) where TEntity : class, IId
         {
             try
             {
-               
-                TEntity? entity = await _context.Set<TEntity>()
-                    .FirstOrDefaultAsync(s => s.Id == id);
 
-                
+                if (query is null)
+                {
+                    query = _context.Set<TEntity>();
+                }
+
+                TEntity? entity = await query.FirstOrDefaultAsync(s => s.Id == id);
+
+
                 if (entity is null)
                 {
                     
