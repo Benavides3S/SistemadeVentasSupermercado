@@ -13,7 +13,7 @@
             </a>
         </li>
 
-        @if (await _usersService.CurrentUserIsAuthorizedAsync("showPoducts" , "Productos"))
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showProducts" , "Productos"))
         {
             <li class="nav">
                 <a class="nav-link collapsed" asp-controller="Product" asp-action="Index">
@@ -23,7 +23,7 @@
             </li>
         }
 
-        @if (await _usersService.CurrentUserIsAuthorizedAsync("showClient", "Clientes"))
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showClients", "Clientes"))
         {
             <li class="nav">
                 <a class="nav-link collapsed" asp-controller="Client" asp-action="Index">

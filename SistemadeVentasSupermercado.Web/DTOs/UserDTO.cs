@@ -36,9 +36,9 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         [Required(ErrorMessage = "El campo '{0}' es requerido.")]
         public string SistemaVentasRoleId { get; set; }
 
-        public SistemaVentasRole? PrivateBlogRole { get; set; }
+        public SistemaVentasRole? SistemaVentasRole { get; set; }
 
-        public IEnumerable<SelectListItem>? PrivateBlogRoles { get; set; }
+        public IEnumerable<SelectListItem>? SistemaVentasRoles { get; set; }
 
         public string FullName => $"{FirstName} {LastName}";
     }

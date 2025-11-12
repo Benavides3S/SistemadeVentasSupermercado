@@ -20,29 +20,53 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         private readonly UserManager<User> _userManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMapper _mapper;
+        private readonly ILogger<UsersService> _logger; // ✅ Agregar esto
+
 
         public UsersService(DataContext context,
-                            SignInManager<User> signInManager,
-                            UserManager<User> userManager,
-                            IHttpContextAccessor httpContextAccessor,
-                            IMapper mapper) : base(context, mapper)
+                        SignInManager<User> signInManager,
+                        UserManager<User> userManager,
+                        IHttpContextAccessor httpContextAccessor,
+                        IMapper mapper,
+                        ILogger<UsersService> logger) : base(context, mapper) // ✅ Agregar logger
+
         {
             _context = context;
             _signInManager = signInManager;
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<Response<IdentityResult>> AddUserAsync(User user, string password)
         {
-            IdentityResult result = await _userManager.CreateAsync(user, password);
-
-            return new Response<IdentityResult>
+            try
             {
-                Result = result,
-                IsSuccess = result.Succeeded,
-            };
+                _logger.LogInformation("Creando usuario en Identity: {Email}", user.Email);
+
+                IdentityResult result = await _userManager.CreateAsync(user, password);
+
+                _logger.LogInformation("Resultado Identity: {Succeeded}, Errores: {ErrorCount}",
+                    result.Succeeded, result.Errors.Count());
+
+                return new Response<IdentityResult>
+                {
+                    Result = result,
+                    IsSuccess = result.Succeeded,
+                    Message = result.Succeeded ? "Usuario creado exitosamente" : string.Join(", ", result.Errors.Select(e => e.Description))
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Excepción en AddUserAsync");
+                return new Response<IdentityResult>
+                {
+                    Result = null,
+                    IsSuccess = false,
+                    Message = $"Excepción en AddUserAsync: {ex.Message}"
+                };
+            }
         }
 
         public async Task<Response<IdentityResult>> ConfirmUserAsync(User user, string token)
@@ -60,41 +84,56 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         {
             try
             {
+                _logger.LogInformation("=== INICIANDO CREACIÓN ===");
+                _logger.LogInformation($"Email: {dto.Email}, Rol: {dto.SistemaVentasRoleId}");
+
+                // Verificar si el email ya existe
+                var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+                if (existingUser != null)
+                {
+                    _logger.LogWarning("Email ya registrado: {Email}", dto.Email);
+                    return Response<UserDTO>.Failure("El email ya está registrado.");
+                }
+
                 User user = _mapper.Map<User>(dto);
-                // Id is a Guid (IdentityUser<Guid>)
                 user.Id = Guid.NewGuid().ToString();
-                // Use document as initial password as previous behavior (consider changing)
+                user.UserName = dto.Email;
+                user.EmailConfirmed = true;
+
+                if (!string.IsNullOrWhiteSpace(dto.SistemaVentasRoleId) && Guid.TryParse(dto.SistemaVentasRoleId, out Guid roleId))
+                {
+                    user.SistemaVentasRoleId = roleId;
+                    _logger.LogInformation("Rol asignado: {RoleId}", roleId);
+                }
+
                 Response<IdentityResult> createResponse = await AddUserAsync(user, dto.Document);
 
-                if (createResponse is null || !createResponse.IsSuccess || createResponse.Result == null)
+                _logger.LogInformation("Create Response - Success: {Success}", createResponse.IsSuccess);
+
+                if (!createResponse.IsSuccess || createResponse.Result == null)
                 {
-                    var errors = createResponse?.Result?.Errors.Select(e => e.Description).ToList() ?? new List<string> { "No se pudo crear el usuario." };
-                    return Response<UserDTO>.Failure("No se pudo crear el usuario.", errors);
+                    var errors = createResponse.Result?.Errors.Select(e => e.Description).ToList();
+                    _logger.LogError("ERRORES IDENTITY al crear usuario:");
+                    foreach (var error in errors ?? new List<string>())
+                    {
+                        _logger.LogError(" - {Error}", error);
+                    }
+
+                    return Response<UserDTO>.Failure("No se pudo crear el usuario en el sistema de autenticación.", errors);
                 }
 
-                // TODO: Envío de email para confirmación
-                Response<string> tokenResponse = await GenerateConfirmationTokenAsync(user);
-
-                if (tokenResponse == null || !tokenResponse.IsSuccess || string.IsNullOrWhiteSpace(tokenResponse.Result))
-                {
-                    return Response<UserDTO>.Failure("No se pudo generar el token de confirmación.");
-                }
-
-                Response<IdentityResult> confirmResponse = await ConfirmUserAsync(user, tokenResponse.Result);
-
-                if (confirmResponse == null || !confirmResponse.IsSuccess)
-                {
-                    var errors = confirmResponse?.Result?.Errors.Select(e => e.Description).ToList() ?? new List<string> { "No se pudo confirmar el email del usuario." };
-                    return Response<UserDTO>.Failure("No se pudo confirmar el email del usuario.", errors);
-                }
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("✅ USUARIO CREADO EXITOSAMENTE: {Email}", dto.Email);
 
                 return Response<UserDTO>.Success(_mapper.Map<UserDTO>(user), "Usuario creado con éxito");
             }
             catch (Exception ex)
             {
-                return Response<UserDTO>.Failure(ex);
+                _logger.LogError(ex, "💥 EXCEPCIÓN en CreateAsync: {Message}", ex.Message);
+                return Response<UserDTO>.Failure($"Error al crear usuario: {ex.Message}");
             }
         }
+
 
         public bool CurrentUserIsAuthenticaded()
         {
@@ -104,34 +143,59 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         public async Task<bool> CurrentUserIsAuthorizedAsync(string permission, string module)
         {
-            ClaimsPrincipal? claimsUser = _httpContextAccessor.HttpContext?.User;
-
-            // Valida si hay sesión
-            if (claimsUser is null)
+            try
             {
+                _logger.LogInformation($"Verificando permiso: {module}.{permission}");
+
+                ClaimsPrincipal? claimsUser = _httpContextAccessor.HttpContext?.User;
+
+                if (claimsUser?.Identity?.IsAuthenticated != true)
+                {
+                    _logger.LogWarning("Usuario no autenticado");
+                    return false;
+                }
+
+                string userName = claimsUser.Identity.Name;
+                User? user = await GetUserByEmailAsync(userName);
+
+                if (user is null)
+                {
+                    _logger.LogWarning($"Usuario no encontrado: {userName}");
+                    return false;
+                }
+
+                _logger.LogInformation($"Usuario: {userName}, Rol: {user.SistemaVentasRole?.Name ?? "Sin rol"}");
+
+                // Super admin tiene acceso total
+                if (user.SistemaVentasRole?.Name == Env.SUPER_ADMIN_ROLE_NAME)
+                {
+                    _logger.LogInformation("Acceso concedido - Super Admin");
+                    return true;
+                }
+
+                // Verificar si el rol tiene permisos
+                if (user.SistemaVentasRoleId == Guid.Empty)
+                {
+                    _logger.LogWarning("Usuario sin rol asignado");
+                    return false;
+                }
+
+                // Verificar permisos directamente desde RolePermissions
+                bool hasPermission = await _context.RolePermissions
+                    .Include(rp => rp.Permission)
+                    .Include(rp => rp.SistemaVentasRole)
+                    .Where(rp => rp.SistemaVentasRoleId == user.SistemaVentasRoleId)
+                    .AnyAsync(rp => rp.Permission.Module == module && rp.Permission.Name == permission);
+
+                _logger.LogInformation($"Permiso {module}.{permission}: {(hasPermission ? "CONCEDIDO" : "DENEGADO")}");
+
+                return hasPermission;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verificando autorización");
                 return false;
             }
-
-            string userName = claimsUser.Identity!.Name!;
-
-            User? user = await GetUserByEmailAsync(userName);
-
-            if (user is null)
-            {
-                return false;
-            }
-
-            // Avoid dereference of possibly null navigation property
-            if (user.SistemaVentasRole?.Name == Env.SUPER_ADMIN_ROLE_NAME)
-            {
-                return true;
-            }
-
-            // Ensure RolePermissions is not null before using Any
-            return await _context.Permissions.Include(p => p.RolePermissions)
-                                             .AnyAsync(p => (p.Module == module && p.Name == permission)
-                                                            && p.RolePermissions != null
-                                                            && p.RolePermissions.Any(rp => rp.SistemaVentasRoleId == user.SistemaVentasRoleId));
         }
 
         //public Task<Response<object>> DeleteAsync(Guid id)
@@ -175,7 +239,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         public async Task<Response<string>> GenerateConfirmationTokenAsync(User user)
         {
-            string result = await _userManager.GeneratePasswordResetTokenAsync(user);
+            string result = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
             return Response<string>.Success(result);
         }
@@ -237,13 +301,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         {
             try
             {
-                User? user = await GetUserAsync(dto.Id);
-
-                if (user == null)
-                {
-                    return Response<AccountUserDTO>.Failure("No existe usuario.");
-                }
-
+                User user = await GetUserAsync(dto.Id);
                 user.PhoneNumber = dto.PhoneNumber;
                 user.Document = dto.Document;
                 user.FirstName = dto.FirstName;
@@ -260,22 +318,57 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 return Response<AccountUserDTO>.Failure(ex);
             }
         }
-
-        private async Task<User?> GetUserAsync(string? id)
+        public async Task LogCurrentUserPermissions()
         {
-            if (string.IsNullOrWhiteSpace(id))
+            try
             {
-                return null;
-            }
+                ClaimsPrincipal? claimsUser = _httpContextAccessor.HttpContext?.User;
 
-            if (!Guid.TryParse(id, out var guid))
+                if (claimsUser?.Identity?.IsAuthenticated == true)
+                {
+                    string userName = claimsUser.Identity.Name;
+                    User? user = await GetUserByEmailAsync(userName);
+
+                    if (user != null)
+                    {
+                        _logger.LogInformation($"=== PERMISOS DEL USUARIO ACTUAL ===");
+                        _logger.LogInformation($"Usuario: {userName}");
+                        _logger.LogInformation($"Rol: {user.SistemaVentasRole?.Name} (ID: {user.SistemaVentasRoleId})");
+
+                        var permissions = await _context.RolePermissions
+                            .Include(rp => rp.Permission)
+                            .Where(rp => rp.SistemaVentasRoleId == user.SistemaVentasRoleId)
+                            .Select(rp => new { rp.Permission.Module, rp.Permission.Name, rp.Permission.Description })
+                            .ToListAsync();
+
+                        _logger.LogInformation($"Permisos asignados ({permissions.Count}):");
+                        foreach (var perm in permissions)
+                        {
+                            _logger.LogInformation($" - {perm.Module}.{perm.Name}: {perm.Description}");
+                        }
+
+                        // También mostrar todos los permisos disponibles para comparar
+                        var allPermissions = await _context.Permissions
+                            .Select(p => new { p.Module, p.Name, p.Description })
+                            .ToListAsync();
+
+                        _logger.LogInformation($"=== TODOS LOS PERMISOS DISPONIBLES ({allPermissions.Count}) ===");
+                        foreach (var perm in allPermissions)
+                        {
+                            _logger.LogInformation($" - {perm.Module}.{perm.Name}: {perm.Description}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
             {
-                return null;
+                _logger.LogError(ex, "Error loggeando permisos del usuario");
             }
+        }
 
-            // FindAsync with a Guid key
-            var user = await _context.Users.FindAsync(guid);
-            return user;
+        private async Task<User> GetUserAsync(string? id)
+        {
+            return await _context.Users.FindAsync(id);
         }
     }
 }

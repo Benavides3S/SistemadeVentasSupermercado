@@ -17,6 +17,10 @@ namespace SistemadeVentasSupermercado.Web
         public static WebApplicationBuilder AddCustomConfiguration(this WebApplicationBuilder builder)
         {
             string? cnn = builder.Configuration.GetConnectionString("MyConnection");
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+            builder.Logging.AddDebug();
+            builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
             // Data Context
             builder.Services.AddDbContext<DataContext>(options =>

@@ -22,7 +22,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
         // 📋 LISTAR CLIENTES
         [HttpGet]
-        [CustomAuthorize(permission: "showClient", module: "Clientes")]
+        [CustomAuthorize(permission: "showClients", module: "Clientes")]
         public async Task<IActionResult> Index([FromQuery] PaginationRequest request)
         {
             Response<PaginationResponse<ClientDTO>> response = await _clientService.GetPaginatedListAsync(request);

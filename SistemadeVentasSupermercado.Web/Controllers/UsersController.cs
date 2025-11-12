@@ -45,39 +45,50 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
                 UserDTO dto = new UserDTO
                 {
-                    PrivateBlogRoles = items,
+                   SistemaVentasRoles = items,
                 };
 
                 return View(dto);
             }
 
-            [HttpPost]
-            [CustomAuthorize(permission: "createUsers", module: "Usuarios")]
-            public async Task<IActionResult> Create(UserDTO dto)
+        [HttpPost]
+        [CustomAuthorize(permission: "createUsers", module: "Usuarios")]
+        public async Task<IActionResult> Create(UserDTO dto)
+        {
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid)
-                {
-                    _notifyService.Error("Debe ajustar los errores de validación");
-                    dto.PrivateBlogRoles = await _combosHelper.GetComboRoles();
-                    return View(dto);
-                }
-
-                Response<UserDTO> response = await _usersService.CreateAsync(dto);
-
-                if (!response.IsSuccess)
-                {
-                    _notifyService.Error(response.Message);
-                    dto.PrivateBlogRoles = await _combosHelper.GetComboRoles();
-                    return View(dto);
-                }
-
-                _notifyService.Success(response.Message);
-                return RedirectToAction(nameof(Index));
+                _notifyService.Error("Debe ajustar los errores de validación");
+                dto.SistemaVentasRoles = await _combosHelper.GetComboRoles();
+                return View(dto);
             }
 
+            Response<UserDTO> response = await _usersService.CreateAsync(dto);
+
+            if (!response.IsSuccess)
+            {
+                // ✅ Mostrar errores específicos
+                _notifyService.Error($"Error: {response.Message}");
+
+                // Log adicional en consola
+                Console.WriteLine($"ERROR CREANDO USUARIO: {response.Message}");
+                if (response.Errors != null)
+                {
+                    foreach (var error in response.Errors)
+                    {
+                        Console.WriteLine($" - {error}");
+                    }
+                }
+
+                dto.SistemaVentasRoles = await _combosHelper.GetComboRoles();
+                return View(dto);
+            }
+
+            _notifyService.Success(response.Message);
+            return RedirectToAction(nameof(Index));
+        }
 
 
-            [HttpGet]
+        [HttpGet]
             [CustomAuthorize(permission: "updateUsers", module: "Usuarios")]
             public async Task<IActionResult> Edit(Guid id)
             {
@@ -94,7 +105,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 }
 
                 UserDTO dto = _mapper.Map<UserDTO>(user);
-                dto.PrivateBlogRoles = await _combosHelper.GetComboRoles();
+                dto.SistemaVentasRoles = await _combosHelper.GetComboRoles();
 
                 return View(dto);
             }
@@ -106,7 +117,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 if (!ModelState.IsValid)
                 {
                     _notifyService.Error("Debe ajustar los errores de validación");
-                    dto.PrivateBlogRoles = await _combosHelper.GetComboRoles();
+                    dto.SistemaVentasRoles = await _combosHelper.GetComboRoles();
                     return View(dto);
                 }
 
@@ -115,7 +126,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 if (!response.IsSuccess)
                 {
                     _notifyService.Error(response.Message);
-                    dto.PrivateBlogRoles = await _combosHelper.GetComboRoles();
+                    dto.SistemaVentasRoles = await _combosHelper.GetComboRoles();
                     return View(dto);
                 }
 

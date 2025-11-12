@@ -6,8 +6,7 @@ using SistemadeVentasSupermercado.Web.Core.Attributes;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.DTOs;
 using SistemadeVentasSupermercado.Web.Services.Abstractions;
-using SistemadeVentasSupermercado.Web.Core.Attributes;
-using SistemadeVentasSupermercado.Web.Core.Pagination;
+
 using System.Runtime.CompilerServices;
 
 namespace SistemadeVentasSupermercado.Web.Controllers
