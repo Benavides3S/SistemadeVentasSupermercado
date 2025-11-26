@@ -365,6 +365,33 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 _logger.LogError(ex, "Error loggeando permisos del usuario");
             }
         }
+        public async Task<Response<User>> GetCurrentUserAsync()
+        {
+            try
+            {
+                ClaimsPrincipal? claimsUser = _httpContextAccessor.HttpContext?.User;
+
+                if (claimsUser?.Identity?.IsAuthenticated != true)
+                {
+                    return Response<User>.Failure("Usuario no autenticado");
+                }
+
+                string userName = claimsUser.Identity.Name;
+                User? user = await GetUserByEmailAsync(userName);
+
+                if (user is null)
+                {
+                    return Response<User>.Failure($"Usuario no encontrado: {userName}");
+                }
+
+                return Response<User>.Success(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo usuario actual");
+                return Response<User>.Failure($"Error obteniendo usuario actual: {ex.Message}");
+            }
+        }
 
         private async Task<User> GetUserAsync(string? id)
         {

@@ -1,0 +1,143 @@
+﻿@model SistemadeVentasSupermercado.Web.DTOs.SaleDTO
+
+@{
+    ViewData["Title"] = "Detalles de Venta";
+}
+
+<div class="pagetitle">
+    <h1>Detalles de Venta</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index">Ventas</a></li>
+            <li class="breadcrumb-item active">Detalles</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary">Detalles de la Venta #@Model.SaleNumber</h3>
+        </div>
+
+        <div class="card-body mt-3">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>Información de la Venta</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Número de Venta:</th>
+                            <td>@Model.SaleNumber</td>
+                        </tr>
+                        <tr>
+                            <th>Fecha y Hora:</th>
+                            <td>@Model.SaleDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                        <tr>
+                            <th>Cliente:</th>
+                            <td>@(Model.ClientName ?? "Cliente General")</td>
+                        </tr>
+                        <tr>
+                            <th>Usuario:</th>
+                            <td>@Model.UserName</td>
+                        </tr>
+                        <tr>
+                            <th>Método de Pago:</th>
+                            <td>@Model.PaymentMethod</td>
+                        </tr>
+                        <tr>
+                            <th>Estado:</th>
+                            <td>
+                                @if (Model.Status == SistemadeVentasSupermercado.Web.Data.Entities.SaleStatus.Completed)
+                                {
+                                    <span class="badge bg-success">Completada</span>
+                                }
+                                else if (Model.Status == SistemadeVentasSupermercado.Web.Data.Entities.SaleStatus.Cancelled)
+                                {
+                                    <span class="badge bg-danger">Anulada</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">Pendiente</span>
+                                }
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="col-md-6">
+                    <h5>Resumen Financiero</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Subtotal:</th>
+                            <td class="text-end">@Model.Subtotal.ToString("C2")</td>
+                        </tr>
+                        <tr>
+                            <th>Descuento:</th>
+                            <td class="text-end">@Model.DiscountAmount.ToString("C2")</td>
+                        </tr>
+                        <tr class="table-active">
+                            <th><strong>Total:</strong></th>
+                            <td class="text-end"><strong>@Model.TotalAmount.ToString("C2")</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Detalles de Productos -->
+            <div class="row">
+                <div class="col-12">
+                    <h5>Productos Vendidos</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio Unitario</th>
+                                    <th>Descuento</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var detail in Model.SaleDetails)
+                                {
+                                    <tr>
+                                        <td>@detail.ProductName</td>
+                                        <td>@detail.Quantity</td>
+                                        <td>@detail.UnitPrice.ToString("C2")</td>
+                                        <td>@detail.Discount.ToString("C2")</td>
+                                        <td>@detail.Total.ToString("C2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Observations))
+            {
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h5>Observaciones</h5>
+                        <div class="card">
+                            <div class="card-body">
+                                @Model.Observations
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Volver a Ventas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

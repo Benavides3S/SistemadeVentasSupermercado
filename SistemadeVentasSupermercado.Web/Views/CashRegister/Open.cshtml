@@ -1,0 +1,71 @@
+﻿@model SistemadeVentasSupermercado.Web.DTOs.OpenCashRegisterDTO
+
+@{
+    ViewData["Title"] = "Abrir Caja";
+}
+
+<div class="pagetitle">
+    <h1>Abrir Caja</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index">Cajas</a></li>
+            <li class="breadcrumb-item active">Abrir</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary">Apertura de Caja</h3>
+        </div>
+
+        <div class="card-body mt-3">
+            <form asp-action="Open" method="post" class="row g-3">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="col-md-6">
+                    <label asp-for="InitialAmount" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="InitialAmount" class="form-control" type="number" step="0.01" min="0" />
+                    </div>
+                    <span asp-validation-for="InitialAmount" class="text-danger"></span>
+                    <small class="form-text text-muted">Monto inicial en efectivo para comenzar operaciones.</small>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Observations" class="form-label"></label>
+                    <textarea asp-for="Observations" class="form-control" rows="3" placeholder="Observaciones opcionales..."></textarea>
+                    <span asp-validation-for="Observations" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Información:</strong> Al abrir la caja, podrás comenzar a registrar ventas.
+                        Asegúrate de contar con el monto inicial correcto antes de continuar.
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="btn-group" role="group">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-lock-open"></i> Abrir Caja
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancelar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

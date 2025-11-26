@@ -1,0 +1,354 @@
+﻿@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IClientService _clientService
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IProductService _productService
+@model SistemadeVentasSupermercado.Web.DTOs.CreateSaleDTO
+
+@{
+    ViewData["Title"] = "Nueva Venta";
+    var clientsResponse = await _clientService.GetListAsync();
+    var clients = clientsResponse.IsSuccess ? clientsResponse.Result : new List<SistemadeVentasSupermercado.Web.DTOs.ClientDTO>();
+}
+
+<div class="pagetitle">
+    <h1>Nueva Venta</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index">Ventas</a></li>
+            <li class="breadcrumb-item active">Nueva</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary">Registrar Nueva Venta</h3>
+        </div>
+
+        <div class="card-body mt-3">
+            <form id="saleForm" asp-action="Create" method="post" class="row g-3">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <!-- Panel de Búsqueda de Productos -->
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="bi bi-search me-2"></i>Buscar Productos</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <select id="productSearch" class="form-select">
+                                        <option value="">Seleccione un producto...</option>
+                                        @{
+                                            var productsResponse = await _productService.GetListAsync();
+                                            if (productsResponse.IsSuccess)
+                                            {
+                                                foreach (var product in productsResponse.Result)
+                                                {
+                                                    <option value="@product.Id" data-price="@product.Price" data-stock="@product.Stock">
+                                                        @product.Name - @product.Price.ToString("C2") (Stock: @product.Stock)
+                                                    </option>
+                                                }
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" id="productQuantity" class="form-control" value="1" min="1" placeholder="Cantidad">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" id="addProduct" class="btn btn-primary w-100">
+                                        <i class="bi bi-plus-lg"></i> Agregar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detalles de la Venta -->
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Detalles de la Venta</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="saleDetailsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th width="100">Cantidad</th>
+                                            <th width="120">Precio Unit.</th>
+                                            <th width="120">Descuento</th>
+                                            <th width="120">Total</th>
+                                            <th width="80">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="saleDetailsBody">
+                                        <!-- Los detalles se agregarán aquí dinámicamente -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
+                                            <td id="subtotalAmount">$0.00</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="4" class="text-end">
+                                                <strong>Descuento General:</strong>
+                                                <input type="number" id="generalDiscount" name="GeneralDiscountPercent"
+                                                       class="form-control form-control-sm d-inline-block w-50 ms-2"
+                                                       value="0" min="0" max="100" step="0.01">
+                                                <span class="ms-1">%</span>
+                                            </td>
+                                            <td id="discountAmount">$0.00</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr class="table-active">
+                                            <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
+                                            <td id="totalAmount" class="fw-bold">$0.00</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información de la Venta -->
+                <div class="col-md-6">
+                    <label asp-for="ClientId" class="form-label">Cliente (Opcional)</label>
+                    <select asp-for="ClientId" class="form-select">
+                        <option value="">Cliente General</option>
+                        @foreach (var client in clients)
+                        {
+                            <option value="@client.Id">@client.Name - @client.Phone</option>
+                        }
+                    </select>
+                    <span asp-validation-for="ClientId" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="PaymentMethod" class="form-label">Método de Pago</label>
+                    <select asp-for="PaymentMethod" class="form-select" required>
+                        <option value="">Seleccione método de pago...</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Tarjeta">Tarjeta</option>
+                        <option value="Transferencia">Transferencia</option>
+                    </select>
+                    <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Observations" class="form-label">Observaciones (Opcional)</label>
+                    <textarea asp-for="Observations" class="form-control" rows="2" placeholder="Observaciones adicionales..."></textarea>
+                    <span asp-validation-for="Observations" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Información:</strong> Asegúrese de que todos los productos y cantidades sean correctos antes de procesar la venta.
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="btn-group" role="group">
+                        <button type="submit" class="btn btn-success" id="processSale">
+                            <i class="bi bi-credit-card"></i> Procesar Venta
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancelar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function() {
+            let saleDetails = [];
+            let nextDetailId = 0;
+
+            // Agregar producto al carrito
+            $('#addProduct').click(function() {
+                const productSelect = $('#productSearch');
+                const selectedOption = productSelect.find('option:selected');
+                const productId = selectedOption.val();
+
+                if (!productId) {
+                    alert('Por favor seleccione un producto.');
+                    return;
+                }
+
+                const productName = selectedOption.text().split(' - ')[0];
+                const unitPrice = parseFloat(selectedOption.data('price'));
+                const stock = parseInt(selectedOption.data('stock'));
+                const quantity = parseInt($('#productQuantity').val()) || 1;
+
+                if (quantity > stock) {
+                    alert(`Stock insuficiente. Stock disponible: ${stock}`);
+                    return;
+                }
+
+                if (quantity <= 0) {
+                    alert('La cantidad debe ser mayor a 0.');
+                    return;
+                }
+
+                // Verificar si el producto ya está en el carrito
+                const existingDetail = saleDetails.find(detail => detail.ProductId === productId);
+                if (existingDetail) {
+                    existingDetail.Quantity += quantity;
+                    existingDetail.Total = (existingDetail.UnitPrice * existingDetail.Quantity) - existingDetail.Discount;
+                    updateSaleDetailRow(existingDetail.Id);
+                } else {
+                    const detail = {
+                        Id: nextDetailId++,
+                        ProductId: productId,
+                        ProductName: productName,
+                        Quantity: quantity,
+                        UnitPrice: unitPrice,
+                        Discount: 0,
+                        Total: unitPrice * quantity
+                    };
+                    saleDetails.push(detail);
+                    addSaleDetailRow(detail);
+                }
+
+                updateTotals();
+                $('#productQuantity').val(1);
+                productSelect.val('');
+            });
+
+            // Agregar fila a la tabla
+            function addSaleDetailRow(detail) {
+                const row = `
+                    <tr id="detail-${detail.Id}">
+                        <td>${detail.ProductName}</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm quantity-input"
+                                   value="${detail.Quantity}" min="1" data-detail-id="${detail.Id}">
+                        </td>
+                        <td>$${detail.UnitPrice.toFixed(2)}</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm discount-input"
+                                   value="${detail.Discount.toFixed(2)}" min="0" step="0.01" data-detail-id="${detail.Id}">
+                        </td>
+                        <td class="detail-total">$${detail.Total.toFixed(2)}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger remove-detail" data-detail-id="${detail.Id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                        <input type="hidden" name="SaleDetails[${saleDetails.indexOf(detail)}].ProductId" value="${detail.ProductId}">
+                        <input type="hidden" name="SaleDetails[${saleDetails.indexOf(detail)}].Quantity" value="${detail.Quantity}">
+                        <input type="hidden" name="SaleDetails[${saleDetails.indexOf(detail)}].UnitPrice" value="${detail.UnitPrice}">
+                        <input type="hidden" name="SaleDetails[${saleDetails.indexOf(detail)}].Discount" value="${detail.Discount}">
+                        <input type="hidden" name="SaleDetails[${saleDetails.indexOf(detail)}].Total" value="${detail.Total}">
+                    </tr>
+                `;
+                $('#saleDetailsBody').append(row);
+            }
+
+            // Actualizar fila existente
+            function updateSaleDetailRow(detailId) {
+                const detail = saleDetails.find(d => d.Id === detailId);
+                if (detail) {
+                    $(`#detail-${detailId} .quantity-input`).val(detail.Quantity);
+                    $(`#detail-${detailId} .discount-input`).val(detail.Discount.toFixed(2));
+                    $(`#detail-${detailId} .detail-total`).text('$' + detail.Total.toFixed(2));
+
+                    // Actualizar hidden fields
+                    const index = saleDetails.indexOf(detail);
+                    $(`#detail-${detailId} input[name="SaleDetails[${index}].Quantity"]`).val(detail.Quantity);
+                    $(`#detail-${detailId} input[name="SaleDetails[${index}].Discount"]`).val(detail.Discount);
+                    $(`#detail-${detailId} input[name="SaleDetails[${index}].Total"]`).val(detail.Total);
+                }
+            }
+
+            // Actualizar totales
+            function updateTotals() {
+                let subtotal = 0;
+                saleDetails.forEach(detail => {
+                    subtotal += detail.Total;
+                });
+
+                const discountPercent = parseFloat($('#generalDiscount').val()) || 0;
+                const discountAmount = subtotal * (discountPercent / 100);
+                const total = subtotal - discountAmount;
+
+                $('#subtotalAmount').text('$' + subtotal.toFixed(2));
+                $('#discountAmount').text('$' + discountAmount.toFixed(2));
+                $('#totalAmount').text('$' + total.toFixed(2));
+            }
+
+            // Event listeners
+            $(document).on('change', '.quantity-input', function() {
+                const detailId = $(this).data('detail-id');
+                const detail = saleDetails.find(d => d.Id === detailId);
+                if (detail) {
+                    detail.Quantity = parseInt($(this).val()) || 1;
+                    detail.Total = (detail.UnitPrice * detail.Quantity) - detail.Discount;
+                    updateSaleDetailRow(detailId);
+                    updateTotals();
+                }
+            });
+
+            $(document).on('change', '.discount-input', function() {
+                const detailId = $(this).data('detail-id');
+                const detail = saleDetails.find(d => d.Id === detailId);
+                if (detail) {
+                    detail.Discount = parseFloat($(this).val()) || 0;
+                    detail.Total = (detail.UnitPrice * detail.Quantity) - detail.Discount;
+                    updateSaleDetailRow(detailId);
+                    updateTotals();
+                }
+            });
+
+            $(document).on('change', '#generalDiscount', updateTotals);
+
+            $(document).on('click', '.remove-detail', function() {
+                const detailId = $(this).data('detail-id');
+                saleDetails = saleDetails.filter(d => d.Id !== detailId);
+                $(`#detail-${detailId}`).remove();
+                updateTotals();
+
+                // Reindexar hidden fields
+                $('#saleDetailsBody tr').each(function(index) {
+                    $(this).find('input[name^="SaleDetails"]').each(function() {
+                        const name = $(this).attr('name');
+                        const newName = name.replace(/SaleDetails\[\d+\]/, `SaleDetails[${index}]`);
+                        $(this).attr('name', newName);
+                    });
+                });
+            });
+
+            // Validar formulario antes de enviar
+            $('#saleForm').submit(function(e) {
+                if (saleDetails.length === 0) {
+                    e.preventDefault();
+                    alert('Debe agregar al menos un producto a la venta.');
+                    return;
+                }
+
+                const paymentMethod = $('#PaymentMethod').val();
+                if (!paymentMethod) {
+                    e.preventDefault();
+                    alert('Debe seleccionar un método de pago.');
+                    $('#PaymentMethod').focus();
+                    return;
+                }
+            });
+        });
+    </script>
+}

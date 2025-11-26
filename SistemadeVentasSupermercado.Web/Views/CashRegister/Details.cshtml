@@ -1,0 +1,117 @@
+﻿@model SistemadeVentasSupermercado.Web.DTOs.CashRegisterDTO
+
+@{
+    ViewData["Title"] = "Detalles de Caja";
+}
+
+<div class="pagetitle">
+    <h1>Detalles de Caja</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index">Cajas</a></li>
+            <li class="breadcrumb-item active">Detalles</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary">Detalles del Turno de Caja</h3>
+        </div>
+
+        <div class="card-body mt-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Información General</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Usuario:</th>
+                            <td>@Model.UserName</td>
+                        </tr>
+                        <tr>
+                            <th>Fecha Apertura:</th>
+                            <td>@Model.OpenDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                        <tr>
+                            <th>Fecha Cierre:</th>
+                            <td>@(Model.CloseDate?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")</td>
+                        </tr>
+                        <tr>
+                            <th>Estado:</th>
+                            <td>
+                                @if (Model.Status == SistemadeVentasSupermercado.Web.Data.Entities.CashRegisterStatus.Open)
+                                {
+                                    <span class="badge bg-warning">Abierta</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Cerrada</span>
+                                }
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="col-md-6">
+                    <h5>Resumen Financiero</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Monto Inicial:</th>
+                            <td class="text-end">@Model.InitialAmount.ToString("C2")</td>
+                        </tr>
+                        <tr>
+                            <th>Total Ventas:</th>
+                            <td class="text-end">@(Model.TotalSales?.ToString("C2") ?? "N/A")</td>
+                        </tr>
+                        <tr>
+                            <th>Total Efectivo:</th>
+                            <td class="text-end">@(Model.TotalCash?.ToString("C2") ?? "N/A")</td>
+                        </tr>
+                        <tr>
+                            <th>Total Tarjeta:</th>
+                            <td class="text-end">@(Model.TotalCard?.ToString("C2") ?? "N/A")</td>
+                        </tr>
+                        <tr>
+                            <th>Total Transferencias:</th>
+                            <td class="text-end">@(Model.TotalTransfer?.ToString("C2") ?? "N/A")</td>
+                        </tr>
+                        <tr>
+                            <th>Monto Final:</th>
+                            <td class="text-end">@(Model.FinalAmount?.ToString("C2") ?? "N/A")</td>
+                        </tr>
+                        <tr>
+                            <th>Diferencia:</th>
+                            <td class="text-end @(Model.Difference >= 0 ? "text-success" : "text-danger")">
+                                @(Model.Difference?.ToString("C2") ?? "N/A")
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Observations))
+            {
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h5>Observaciones</h5>
+                        <div class="card">
+                            <div class="card-body">
+                                @Model.Observations
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

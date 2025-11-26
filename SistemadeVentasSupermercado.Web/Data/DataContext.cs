@@ -19,6 +19,12 @@ namespace SistemadeVentasSupermercado.Web.Data
         public DbSet<Discount> Discounts { get; set; }
         public DbSet<PaymentMethod> PaymentMethods { get; set; }
 
+        public DbSet<CashRegister> CashRegisters { get; set; }
+        // Add this property to your DataContext class:
+        public DbSet<Sale> Sales { get; set; }
+        public DbSet<SaleDetail> SaleDetails { get; set; }
+
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

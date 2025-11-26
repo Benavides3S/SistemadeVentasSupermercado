@@ -1,0 +1,146 @@
+﻿@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
+@using SistemadeVentasSupermercado.Web.Core.Pagination
+@model PaginationResponse<SistemadeVentasSupermercado.Web.DTOs.CashRegisterDTO>
+
+@{
+    ViewData["Title"] = "Cajas";
+}
+
+<div class="pagetitle">
+    <h1>Cajas</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item active">Cajas</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-header">
+            <div class="row">
+                <h3 class="m-0 font-weight-bold text-primary col-md-11">Registro de Cajas</h3>
+
+                @if (await _usersService.CurrentUserIsAuthorizedAsync("openCashRegisters", "Caja") && !ViewBag.HasOpenCashRegister)
+                {
+                    <div class="col-md-1">
+                        <a asp-action="Open" class="btn btn-primary" title="Abrir Caja">
+                            <i class="bi bi-plus-circle"></i>
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card-body mt-3">
+            <!-- Alertas -->
+            @if (ViewBag.HasOpenCashRegister)
+            {
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Tienes una caja abierta.</strong>
+                    <a asp-action="Close" class="alert-link">Cerrar caja</a> antes de abrir una nueva.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @* Formulario de búsqueda y paginación *@
+            <form asp-action="Index" class="navbar-search" method="GET">
+                <input type="hidden" name="Page" value="@Model.CurrentPage" />
+
+                <div class="row mt-3">
+                    <div class="col-md-auto">
+                        <select name="RecordsPerPage" class="form-select bg-light border-0 small" asp-for="RecordsPerPage">
+                            <option value="10" selected="@(Model.RecordsPerPage == 10)">10</option>
+                            <option value="15" selected="@(Model.RecordsPerPage == 15)">15</option>
+                            <option value="30" selected="@(Model.RecordsPerPage == 30)">30</option>
+                            <option value="50" selected="@(Model.RecordsPerPage == 50)">50</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-10">
+                        <div class="input-group mb-3">
+                            <input type="text"
+                                   class="form-control bg-light border-0 small"
+                                   placeholder="Buscar por usuario u observaciones..."
+                                   aria-label="search"
+                                   asp-for="Filter" />
+                            <button class="btn btn-primary"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            @* Tabla de Cajas *@
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Fecha Apertura</th>
+                        <th>Fecha Cierre</th>
+                        <th>Monto Inicial</th>
+                        <th>Total Ventas</th>
+                        <th>Monto Final</th>
+                        <th>Diferencia</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.List != null && Model.List.Any())
+                    {
+                        foreach (var item in Model.List)
+                        {
+                            <tr>
+                                <td>@item.UserName</td>
+                                <td>@item.OpenDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@(item.CloseDate?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")</td>
+                                <td>@item.InitialAmount.ToString("C2")</td>
+                                <td>@(item.TotalSales?.ToString("C2") ?? "N/A")</td>
+                                <td>@(item.FinalAmount?.ToString("C2") ?? "N/A")</td>
+                                <td>
+                                    @if (item.Difference.HasValue)
+                                    {
+                                        <span class="@(item.Difference.Value >= 0 ? "text-success" : "text-danger")">
+                                            @item.Difference.Value.ToString("C2")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>N/A</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.Status == SistemadeVentasSupermercado.Web.Data.Entities.CashRegisterStatus.Open)
+                                    {
+                                        <span class="badge bg-warning">Abierta</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">Cerrada</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center">No hay registros de cajas.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @* Componente de paginación *@
+            @await Html.PartialAsync("_PaginationComponent", Model)
+        </div>
+    </div>
+</section>

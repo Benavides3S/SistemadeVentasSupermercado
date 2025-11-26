@@ -1,0 +1,194 @@
+﻿@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
+@using SistemadeVentasSupermercado.Web.Core.Pagination
+@model PaginationResponse<SistemadeVentasSupermercado.Web.DTOs.SaleDTO>
+
+@{
+    ViewData["Title"] = "Ventas";
+}
+
+<div class="pagetitle">
+    <h1>Ventas</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item active">Ventas</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-header">
+            <div class="row">
+                <h3 class="m-0 font-weight-bold text-primary col-md-11">Registro de Ventas</h3>
+
+                @if (await _usersService.CurrentUserIsAuthorizedAsync("createSales", "Ventas"))
+                {
+                    <div class="col-md-1">
+                        <a asp-action="Create" class="btn btn-primary" title="Nueva Venta">
+                            <i class="bi bi-plus-circle"></i>
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card-body mt-3">
+            @* Formulario de búsqueda y paginación *@
+            <form asp-action="Index" class="navbar-search" method="GET">
+                <input type="hidden" name="Page" value="@Model.CurrentPage" />
+
+                <div class="row mt-3">
+                    <div class="col-md-auto">
+                        <select name="RecordsPerPage" class="form-select bg-light border-0 small" asp-for="RecordsPerPage">
+                            <option value="10" selected="@(Model.RecordsPerPage == 10)">10</option>
+                            <option value="15" selected="@(Model.RecordsPerPage == 15)">15</option>
+                            <option value="30" selected="@(Model.RecordsPerPage == 30)">30</option>
+                            <option value="50" selected="@(Model.RecordsPerPage == 50)">50</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-10">
+                        <div class="input-group mb-3">
+                            <input type="text"
+                                   class="form-control bg-light border-0 small"
+                                   placeholder="Buscar por número de venta, cliente o método de pago..."
+                                   aria-label="search"
+                                   asp-for="Filter" />
+                            <button class="btn btn-primary"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            @* Tabla de Ventas *@
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>N° Venta</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Usuario</th>
+                        <th>Subtotal</th>
+                        <th>Descuento</th>
+                        <th>Total</th>
+                        <th>Método Pago</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.List != null && Model.List.Any())
+                    {
+                        foreach (var item in Model.List)
+                        {
+                            <tr>
+                                <td>@item.SaleNumber</td>
+                                <td>@item.SaleDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@(item.ClientName ?? "Cliente General")</td>
+                                <td>@item.UserName</td>
+                                <td>@item.Subtotal.ToString("C2")</td>
+                                <td>@item.DiscountAmount.ToString("C2")</td>
+                                <td><strong>@item.TotalAmount.ToString("C2")</strong></td>
+                                <td>@item.PaymentMethod</td>
+                                <td>
+                                    @if (item.Status == SistemadeVentasSupermercado.Web.Data.Entities.SaleStatus.Completed)
+                                    {
+                                        <span class="badge bg-success">Completada</span>
+                                    }
+                                    else if (item.Status == SistemadeVentasSupermercado.Web.Data.Entities.SaleStatus.Cancelled)
+                                    {
+                                        <span class="badge bg-danger">Anulada</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">Pendiente</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">
+                                            <i class="bi bi-eye-fill"></i>
+                                        </a>
+                                        @if (item.Status == SistemadeVentasSupermercado.Web.Data.Entities.SaleStatus.Completed &&
+                                                                        await _usersService.CurrentUserIsAuthorizedAsync("cancelSales", "Ventas"))
+                                        {
+                                            <button class="btn btn-sm btn-warning btn-cancel" data-sale-id="@item.Id" data-sale-number="@item.SaleNumber">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center">No hay ventas registradas.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @* Componente de paginación *@
+            @await Html.PartialAsync("_PaginationComponent", Model)
+        </div>
+    </div>
+</section>
+
+<!-- Modal para anulación de venta -->
+<div class="modal fade" id="cancelSaleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Anular Venta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="cancelSaleForm" method="post" asp-action="Cancel">
+                <div class="modal-body">
+                    <input type="hidden" id="cancelSaleId" name="SaleId" />
+                    <div class="mb-3">
+                        <label for="cancellationReason" class="form-label">Motivo de Anulación</label>
+                        <textarea class="form-control" id="cancellationReason" name="CancellationReason" rows="3" required></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Advertencia:</strong> Esta acción no se puede deshacer y afectará el inventario.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Anular Venta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Manejar anulación de venta
+            $('.btn-cancel').click(function() {
+                var saleId = $(this).data('sale-id');
+                var saleNumber = $(this).data('sale-number');
+
+                $('#cancelSaleId').val(saleId);
+                $('#cancelSaleModal .modal-title').text('Anular Venta: ' + saleNumber);
+                $('#cancelSaleModal').modal('show');
+            });
+
+            // Validar formulario de anulación
+            $('#cancelSaleForm').submit(function(e) {
+                var reason = $('#cancellationReason').val().trim();
+                if (!reason) {
+                    e.preventDefault();
+                    alert('Debe ingresar el motivo de anulación.');
+                    $('#cancellationReason').focus();
+                }
+            });
+        });
+    </script>
+}

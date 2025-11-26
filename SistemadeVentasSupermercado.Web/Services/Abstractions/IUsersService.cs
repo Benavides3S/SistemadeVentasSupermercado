@@ -15,6 +15,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         public Task<Response<string>> GenerateConfirmationTokenAsync(User user);
       
         public Task<User> GetUserByEmailAsync(string email);
+        public Task<Response<User>> GetCurrentUserAsync();
         public Task<User> GetUserByIdAsync(Guid id);
         public Task<Response<SignInResult>> LoginAsync(LoginDTO dto);
         public Task LogoutAsync();

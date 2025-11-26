@@ -1,0 +1,57 @@
+﻿@model SistemadeVentasSupermercado.Web.DTOs.CancelSaleDTO
+
+@{
+    ViewData["Title"] = "Anular Venta";
+}
+
+<div class="pagetitle">
+    <h1>Anular Venta</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index">Ventas</a></li>
+            <li class="breadcrumb-item active">Anular</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary">Anular Venta</h3>
+        </div>
+
+        <div class="card-body mt-3">
+            <form asp-action="Cancel" method="post">
+                <input type="hidden" asp-for="SaleId" />
+
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Advertencia:</strong> Esta acción no se puede deshacer. Al anular la venta,
+                    el stock de los productos será restaurado automáticamente.
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="CancellationReason" class="form-label">Motivo de Anulación</label>
+                    <textarea asp-for="CancellationReason" class="form-control" rows="4" placeholder="Describa el motivo de la anulación..." required></textarea>
+                    <span asp-validation-for="CancellationReason" class="text-danger"></span>
+                </div>
+
+                <div class="btn-group" role="group">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-x-circle"></i> Confirmar Anulación
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

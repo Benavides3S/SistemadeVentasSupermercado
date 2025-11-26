@@ -22,7 +22,9 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 ..Secciones(),
                 ..Roles(),
                 ..Users(),
-                ..Configuration()
+                ..Configuration(),
+                ..Caja(),
+                ..Ventas()
             ];
 
             foreach (Permission permission in permissions)
@@ -36,6 +38,25 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             }
 
             await _context.SaveChangesAsync();
+        }
+        private List<Permission> Ventas()
+        {
+            return new List<Permission>
+    {
+        new Permission { Id = Guid.NewGuid(), Name = "showSales", Description = "Ver ventas", Module = "Ventas" },
+        new Permission { Id = Guid.NewGuid(), Name = "createSales", Description = "Registrar ventas", Module = "Ventas" },
+        new Permission { Id = Guid.NewGuid(), Name = "cancelSales", Description = "Anular ventas", Module = "Ventas" },
+        new Permission { Id = Guid.NewGuid(), Name = "applyDiscounts", Description = "Aplicar descuentos", Module = "Ventas" }
+    };
+        }
+        private List<Permission> Caja()
+        {
+            return new List<Permission>
+    {
+        new Permission { Id = Guid.NewGuid(), Name = "showCashRegisters", Description = "Ver cajas", Module = "Caja" },
+        new Permission { Id = Guid.NewGuid(), Name = "openCashRegisters", Description = "Abrir caja", Module = "Caja" },
+        new Permission { Id = Guid.NewGuid(), Name = "closeCashRegisters", Description = "Cerrar caja", Module = "Caja" }
+    };
         }
 
         private List<Permission> Productos()

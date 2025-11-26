@@ -30,7 +30,27 @@
             </li>
         }
 
-        <!-- Nuevo: Módulo de Configuración -->
+        <!-- Módulo de Ventas -->
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas"))
+        {
+            <li class="nav">
+                <a class="nav-link collapsed" asp-controller="Sale" asp-action="Index">
+                    <i class="bi bi-cart-check"></i><span>Ventas</span>
+                </a>
+            </li>
+        }
+
+        <!-- Módulo de Caja -->
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showCashRegisters", "Caja"))
+        {
+            <li class="nav">
+                <a class="nav-link collapsed" asp-controller="CashRegister" asp-action="Index">
+                    <i class="bi bi-cash-coin"></i><span>Caja</span>
+                </a>
+            </li>
+        }
+
+        <!-- Módulo de Configuración -->
         @if (await _usersService.CurrentUserIsAuthorizedAsync("showPaymentMethods", "Configuración") ||
                 await _usersService.CurrentUserIsAuthorizedAsync("showDiscounts", "Configuración"))
         {
