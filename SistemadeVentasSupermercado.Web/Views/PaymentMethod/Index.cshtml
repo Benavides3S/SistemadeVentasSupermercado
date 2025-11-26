@@ -1,17 +1,17 @@
 ﻿@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
 @using SistemadeVentasSupermercado.Web.Core.Pagination
-@model PaginationResponse<ProductDTO>
+@model PaginationResponse<SistemadeVentasSupermercado.Web.DTOs.PaymentMethodDTO>
 
 @{
-    ViewData["Title"] = "Productos";
+    ViewData["Title"] = "Métodos de Pago";
 }
 
 <div class="pagetitle">
-    <h1>Dashboard</h1>
+    <h1>Métodos de Pago</h1>
     <nav>
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
-            <li class="breadcrumb-item active">Productos</li>
+            <li class="breadcrumb-item active">Métodos de Pago</li>
         </ol>
     </nav>
 </div>
@@ -21,9 +21,9 @@
 
         <div class="card-header">
             <div class="row">
-                <h3 class="m-0 font-weight-bold text-primary col-md-11">Productos</h3>
+                <h3 class="m-0 font-weight-bold text-primary col-md-11">Métodos de Pago</h3>
 
-                @if (await _usersService.CurrentUserIsAuthorizedAsync("createProducts", "Productos"))
+                @if (await _usersService.CurrentUserIsAuthorizedAsync("createPaymentMethods", "Configuración"))
                 {
                     <div class="col-md-1">
                         <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i></a>
@@ -53,7 +53,7 @@
                         <div class="input-group mb-3">
                             <input type="text"
                                    class="form-control bg-light border-0 small"
-                                   placeholder="Buscar producto..."
+                                   placeholder="Buscar método de pago..."
                                    aria-label="search"
                                    asp-for="Filter" />
                             <button class="btn btn-primary"><i class="bi bi-search"></i></button>
@@ -62,16 +62,15 @@
                 </div>
             </form>
 
-            @* Tabla de Productos *@
+            @* Tabla de Métodos de Pago *@
             <table class="table table-bordered">
                 <thead>
                     <tr>
-                        <th>Id</th>
                         <th>Nombre</th>
                         <th>Descripción</th>
-                        <th>Precio</th>
-                        <th>Stock</th>
-                        <th>Categoría</th>
+                        <th>Comisión</th>
+                        <th>Requiere Terminal</th>
+                        <th>Estado</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -79,24 +78,41 @@
                 <tbody>
                     @if (Model.List != null && Model.List.Any())
                     {
-                        foreach (ProductDTO item in Model.List)
+                        foreach (var item in Model.List)
                         {
                             <tr>
-                                <td>@item.Id</td>
                                 <td>@item.Name</td>
-                                <td>@item.Description</td>
-                                <td>@item.Price</td>
-                                <td>@item.Stock</td>
-                                <td>@item.Category</td>
+                                <td>@(item.Description ?? "N/A")</td>
+                                <td>@item.CommissionPercentage.ToString("P2")</td>
                                 <td>
-                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("updateProducts", "Productos"))
+                                    @if (item.RequiresTerminal)
+                                    {
+                                        <span class="badge bg-info">Sí</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">No</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="badge bg-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactivo</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("updatePaymentMethods", "Configuración"))
                                     {
                                         <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">
                                             <i class="bi bi-pencil-fill"></i>
                                         </a>
                                     }
 
-                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("deleteProducts", "Productos"))
+                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("deletePaymentMethods", "Configuración"))
                                     {
                                         <form asp-action="Delete" asp-route-id="@item.Id" style="display: contents;">
                                             <button class="btn btn-sm btn-danger btnDelete">
@@ -111,7 +127,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center">No hay productos registrados.</td>
+                            <td colspan="6" class="text-center">No hay métodos de pago registrados.</td>
                         </tr>
                     }
                 </tbody>
@@ -131,7 +147,7 @@
                 event.preventDefault();
                 Swal.fire({
                     icon: "question",
-                    title: "¿Desea eliminar el producto?",
+                    title: "¿Desea eliminar el método de pago?",
                     text: "No podrá revertirlo",
                     showCancelButton: true
                 }).then((result) => {
@@ -142,5 +158,5 @@
                 });
             });
         });
-    </script>   
+    </script>
 }

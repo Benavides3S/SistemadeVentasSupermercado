@@ -21,7 +21,8 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 ..Clientes(),
                 ..Secciones(),
                 ..Roles(),
-                ..Users()
+                ..Users(),
+                ..Configuration()
             ];
 
             foreach (Permission permission in permissions)
@@ -88,6 +89,20 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 new Permission { Name = "createUsers", Description = "Crear Usuarios", Module = "Usuarios"},
                 new Permission { Name = "updateUsers", Description = "Editar Usuarios", Module = "Usuarios"},
                 new Permission { Name = "deleteUsers", Description = "Eliminar Usuarios", Module = "Usuarios"},
+            };
+        }
+        private List<Permission> Configuration()
+        {
+            return new List<Permission>
+            {
+                new Permission { Id = Guid.NewGuid(), Name = "showPaymentMethods", Description = "Ver métodos de pago", Module = "Configuración" },
+                new Permission { Id = Guid.NewGuid(), Name = "createPaymentMethods", Description = "Crear métodos de pago", Module = "Configuración" },
+                new Permission { Id = Guid.NewGuid(), Name = "updatePaymentMethods", Description = "Editar métodos de pago", Module = "Configuración" },
+                new Permission { Id = Guid.NewGuid(), Name = "deletePaymentMethods", Description = "Eliminar métodos de pago", Module = "Configuración" },
+                new Permission { Id = Guid.NewGuid(), Name = "showDiscounts", Description = "Ver descuentos", Module = "Configuración" },
+                new Permission { Id = Guid.NewGuid(), Name = "createDiscounts", Description = "Crear descuentos", Module = "Configuración" },
+                new Permission { Id = Guid.NewGuid(), Name = "updateDiscounts", Description = "Editar descuentos", Module = "Configuración" },
+                new Permission { Id = Guid.NewGuid(), Name = "deleteDiscounts", Description = "Eliminar descuentos", Module = "Configuración" }
             };
         }
     }

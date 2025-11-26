@@ -1,0 +1,82 @@
+﻿@model SistemadeVentasSupermercado.Web.DTOs.PaymentMethodDTO
+
+@{
+    ViewData["Title"] = "Crear Método de Pago";
+}
+
+<div class="pagetitle">
+    <h1>Crear Método de Pago</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index">Métodos de Pago</a></li>
+            <li class="breadcrumb-item active">Crear</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary">Nuevo Método de Pago</h3>
+        </div>
+
+        <div class="card-body mt-3">
+            <form asp-action="Create" method="post" class="row g-3">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="col-md-6">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="CommissionPercentage" class="form-label"></label>
+                    <div class="input-group">
+                        <input asp-for="CommissionPercentage" class="form-control" type="number" step="0.01" min="0" max="100" />
+                        <span class="input-group-text">%</span>
+                    </div>
+                    <span asp-validation-for="CommissionPercentage" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" asp-for="RequiresTerminal">
+                        <label class="form-check-label" asp-for="RequiresTerminal"></label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" asp-for="IsActive" checked>
+                        <label class="form-check-label" asp-for="IsActive"></label>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="btn-group" role="group">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Crear
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Volver
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

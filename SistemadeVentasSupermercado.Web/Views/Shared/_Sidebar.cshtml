@@ -1,5 +1,4 @@
 ﻿<!-- ======= Sidebar ======= -->
-
 @inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
 
 <aside id="sidebar" class="sidebar">
@@ -13,13 +12,12 @@
             </a>
         </li>
 
-        @if (await _usersService.CurrentUserIsAuthorizedAsync("showProducts" , "Productos"))
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showProducts", "Productos"))
         {
             <li class="nav">
                 <a class="nav-link collapsed" asp-controller="Product" asp-action="Index">
                     <i class="bi bi-book"></i><span>Productos</span>
                 </a>
-
             </li>
         }
 
@@ -29,7 +27,38 @@
                 <a class="nav-link collapsed" asp-controller="Client" asp-action="Index">
                     <i class="bi bi-person-add"></i><span>Clientes</span>
                 </a>
+            </li>
+        }
 
+        <!-- Nuevo: Módulo de Configuración -->
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showPaymentMethods", "Configuración") ||
+                await _usersService.CurrentUserIsAuthorizedAsync("showDiscounts", "Configuración"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" data-bs-target="#components-nav" data-bs-toggle="collapse" href="#">
+                    <i class="bi bi-gear"></i><span>Configuración</span><i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul id="components-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+
+                    @if (await _usersService.CurrentUserIsAuthorizedAsync("showPaymentMethods", "Configuración"))
+                    {
+                        <li>
+                            <a asp-controller="PaymentMethod" asp-action="Index" class="nav-link">
+                                <i class="bi bi-credit-card"></i><span>Métodos de Pago</span>
+                            </a>
+                        </li>
+                    }
+
+                    @if (await _usersService.CurrentUserIsAuthorizedAsync("showDiscounts", "Configuración"))
+                    {
+                        <li>
+                            <a asp-controller="Discount" asp-action="Index" class="nav-link">
+                                <i class="bi bi-tag"></i><span>Descuentos</span>
+                            </a>
+                        </li>
+                    }
+
+                </ul>
             </li>
         }
 
@@ -50,7 +79,6 @@
                 </a>
             </li>
         }
-
 
     </ul>
 

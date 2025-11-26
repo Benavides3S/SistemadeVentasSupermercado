@@ -16,7 +16,9 @@ namespace SistemadeVentasSupermercado.Web.Data
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<SistemaVentasRole> SistemaVentasRoles { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
-       
+        public DbSet<Discount> Discounts { get; set; }
+        public DbSet<PaymentMethod> PaymentMethods { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

@@ -79,7 +79,8 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddScoped<IClientService, ClientsService>();
             builder.Services.AddScoped<IRolesService, RolesService>();
             builder.Services.AddScoped<IUsersService, UsersService>();
-            
+            builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
+            builder.Services.AddScoped<IDiscountService, DiscountService>();
 
             builder.Services.AddTransient<SeedDb>();
 

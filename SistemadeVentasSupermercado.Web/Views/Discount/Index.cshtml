@@ -1,17 +1,17 @@
 ﻿@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
 @using SistemadeVentasSupermercado.Web.Core.Pagination
-@model PaginationResponse<ProductDTO>
+@model PaginationResponse<SistemadeVentasSupermercado.Web.DTOs.DiscountDTO>
 
 @{
-    ViewData["Title"] = "Productos";
+    ViewData["Title"] = "Descuentos";
 }
 
 <div class="pagetitle">
-    <h1>Dashboard</h1>
+    <h1>Descuentos</h1>
     <nav>
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
-            <li class="breadcrumb-item active">Productos</li>
+            <li class="breadcrumb-item active">Descuentos</li>
         </ol>
     </nav>
 </div>
@@ -21,9 +21,9 @@
 
         <div class="card-header">
             <div class="row">
-                <h3 class="m-0 font-weight-bold text-primary col-md-11">Productos</h3>
+                <h3 class="m-0 font-weight-bold text-primary col-md-11">Descuentos</h3>
 
-                @if (await _usersService.CurrentUserIsAuthorizedAsync("createProducts", "Productos"))
+                @if (await _usersService.CurrentUserIsAuthorizedAsync("createDiscounts", "Configuración"))
                 {
                     <div class="col-md-1">
                         <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-circle"></i></a>
@@ -53,7 +53,7 @@
                         <div class="input-group mb-3">
                             <input type="text"
                                    class="form-control bg-light border-0 small"
-                                   placeholder="Buscar producto..."
+                                   placeholder="Buscar descuento..."
                                    aria-label="search"
                                    asp-for="Filter" />
                             <button class="btn btn-primary"><i class="bi bi-search"></i></button>
@@ -62,16 +62,17 @@
                 </div>
             </form>
 
-            @* Tabla de Productos *@
+            @* Tabla de Descuentos *@
             <table class="table table-bordered">
                 <thead>
                     <tr>
-                        <th>Id</th>
                         <th>Nombre</th>
-                        <th>Descripción</th>
-                        <th>Precio</th>
-                        <th>Stock</th>
-                        <th>Categoría</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Mínimo de Compra</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Fin</th>
+                        <th>Estado</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -79,24 +80,61 @@
                 <tbody>
                     @if (Model.List != null && Model.List.Any())
                     {
-                        foreach (ProductDTO item in Model.List)
+                        foreach (var item in Model.List)
                         {
                             <tr>
-                                <td>@item.Id</td>
                                 <td>@item.Name</td>
-                                <td>@item.Description</td>
-                                <td>@item.Price</td>
-                                <td>@item.Stock</td>
-                                <td>@item.Category</td>
                                 <td>
-                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("updateProducts", "Productos"))
+                                    @if (item.Type == SistemadeVentasSupermercado.Web.Data.Entities.DiscountType.Percentage)
+                                    {
+                                        <span class="badge bg-info">Porcentaje</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">Monto Fijo</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.Type == SistemadeVentasSupermercado.Web.Data.Entities.DiscountType.Percentage)
+                                    {
+                                        @item.Value.ToString("P2")
+                                    }
+                                    else
+                                    {
+                                        @item.Value.ToString("C2")
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.MinimumPurchaseAmount.HasValue)
+                                    {
+                                        @item.MinimumPurchaseAmount.Value.ToString("C2")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                                <td>@(item.StartDate?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                                <td>@(item.EndDate?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="badge bg-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactivo</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("updateDiscounts", "Configuración"))
                                     {
                                         <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">
                                             <i class="bi bi-pencil-fill"></i>
                                         </a>
                                     }
 
-                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("deleteProducts", "Productos"))
+                                    @if (await _usersService.CurrentUserIsAuthorizedAsync("deleteDiscounts", "Configuración"))
                                     {
                                         <form asp-action="Delete" asp-route-id="@item.Id" style="display: contents;">
                                             <button class="btn btn-sm btn-danger btnDelete">
@@ -111,7 +149,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center">No hay productos registrados.</td>
+                            <td colspan="8" class="text-center">No hay descuentos registrados.</td>
                         </tr>
                     }
                 </tbody>
@@ -131,7 +169,7 @@
                 event.preventDefault();
                 Swal.fire({
                     icon: "question",
-                    title: "¿Desea eliminar el producto?",
+                    title: "¿Desea eliminar el descuento?",
                     text: "No podrá revertirlo",
                     showCancelButton: true
                 }).then((result) => {
@@ -142,5 +180,5 @@
                 });
             });
         });
-    </script>   
+    </script>
 }

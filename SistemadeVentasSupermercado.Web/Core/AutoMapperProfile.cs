@@ -22,5 +22,7 @@ public class AutoMapperProfile : Profile
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.SistemaVentasRoleId, opt => opt.Ignore()) // Lo manejamos en el servicio
             .ForMember(dest => dest.SistemaVentasRole, opt => opt.Ignore());
+        CreateMap<PaymentMethod, PaymentMethodDTO>().ReverseMap();
+        CreateMap<Discount, DiscountDTO>().ReverseMap();
     }
 }
