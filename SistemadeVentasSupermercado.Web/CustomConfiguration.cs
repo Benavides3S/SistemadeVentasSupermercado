@@ -1,5 +1,6 @@
 ﻿using AspNetCoreHero.ToastNotification;
 using AspNetCoreHero.ToastNotification.Extensions;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Web.Core;
@@ -47,6 +48,16 @@ namespace SistemadeVentasSupermercado.Web
             AddServices(builder);
 
             builder.Services.AddHttpContextAccessor();
+
+            // Llaves que firman la cookie de sesión y los tokens antiforgery. En Docker se guardan
+            // en un volumen (DataProtection:KeysPath); si no, al recrear el contenedor se perderían
+            // y todos los usuarios quedarían deslogueados. Sin la opción se usa la ubicación por defecto.
+            string? keysPath = builder.Configuration["DataProtection:KeysPath"];
+            if (!string.IsNullOrWhiteSpace(keysPath))
+            {
+                builder.Services.AddDataProtection()
+                    .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+            }
 
             return builder;
         }
@@ -107,6 +118,17 @@ namespace SistemadeVentasSupermercado.Web
             IServiceScopeFactory scopeFactory = app.Services.GetService<IServiceScopeFactory>();
 
             using IServiceScope scope = scopeFactory.CreateScope();
+
+            // Las migraciones no se aplican solas: si faltan, se avisa claramente en vez de fallar más adelante.
+            DataContext context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            List<string> pendientes = context.Database.GetPendingMigrations().ToList();
+            if (pendientes.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "La base de datos no está actualizada. Faltan estas migraciones: " + string.Join(", ", pendientes) +
+                    ". En desarrollo: Update-Database. En Docker: docker/aplicar-migraciones.ps1 (ver docker/LEEME.md).");
+            }
+
             SeedDb service = scope.ServiceProvider.GetService<SeedDb>();
             string? passwordInicial = app.Configuration["Seed:PasswordInicial"];
             service.SeedAsync(passwordInicial, app.Environment.IsDevelopment()).Wait();

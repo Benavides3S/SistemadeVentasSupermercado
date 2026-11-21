@@ -1,0 +1,13 @@
+# Lo que NO se envía a Docker al construir la imagen.
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+**/appsettings.Development.json
+.git/
+.env
+.env.*
+docker/
+backups/
+SistemadeVentasSupermercado.Tests/
+*.md

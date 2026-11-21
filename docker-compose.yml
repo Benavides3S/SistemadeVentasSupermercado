@@ -1,0 +1,58 @@
+# Sistema de Ventas en Docker: base de datos SQL Server + aplicación web.
+# Los valores secretos se leen del archivo .env (copia .env.example). Guía: docker/LEEME.md
+
+name: sistemaventas
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      # Express: gratis en producción (máx. 10 GB por base). Developer: solo desarrollo y pruebas.
+      MSSQL_PID: ${MSSQL_PID:-Express}
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Falta MSSQL_SA_PASSWORD en el archivo .env}
+    volumes:
+      - db-data:/var/opt/mssql
+    # Solo accesible desde este mismo computador (para SQL Server Management Studio), no desde la red.
+    ports:
+      - "127.0.0.1:${DB_PORT:-14330}:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q \"SELECT 1\" -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  web:
+    build:
+      context: .
+      dockerfile: SistemadeVentasSupermercado.Web/Dockerfile
+    image: sistemaventas-web:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__MyConnection: "Server=db;Database=${DB_NAME:-SistemaVentasSuperMercado};User Id=sa;Password=${MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;"
+      # Solo se usa la primera vez, para crear los usuarios iniciales.
+      Seed__PasswordInicial: ${SEED_PASSWORD_INICIAL:-}
+      Negocio__Nombre: ${NEGOCIO_NOMBRE:-Supermercado}
+      Negocio__Nit: ${NEGOCIO_NIT:-}
+      Negocio__Direccion: ${NEGOCIO_DIRECCION:-}
+      Negocio__Telefono: ${NEGOCIO_TELEFONO:-}
+    volumes:
+      - dp-keys:/keys
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  db-data:   # datos de SQL Server
+  dp-keys:   # llaves de la cookie de sesión

@@ -60,6 +60,10 @@ Tecnología: ASP.NET Core 8 MVC (Razor), Entity Framework Core 8, SQL Server, AS
 
    Al arrancar se crean (si no existen) los permisos, el rol **Admin**, categorías y productos de ejemplo y los usuarios iniciales. En ambiente *Development* también se crean dos usuarios de prueba sin el rol Admin (`anad@yopmail.com` y `jhond@yopmail.com`), útiles para probar permisos.
 
+## Instalación con Docker (para un negocio)
+
+Ver la guía [docker/LEEME.md](docker/LEEME.md): primera instalación, actualizaciones, HTTPS y seguridad.
+
 ## Pruebas automáticas
 
 ```bash
