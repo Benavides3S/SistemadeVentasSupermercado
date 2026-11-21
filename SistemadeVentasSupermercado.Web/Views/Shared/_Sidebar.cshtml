@@ -31,6 +31,24 @@
             </li>
         }
 
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("manageCashSessions", "Caja"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="CashSessions" asp-action="Current">
+                    <i class="bi bi-safe"></i><span>Mi caja</span>
+                </a>
+            </li>
+        }
+
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showCashSessions", "Caja"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="CashSessions" asp-action="Index">
+                    <i class="bi bi-journal-check"></i><span>Turnos de caja</span>
+                </a>
+            </li>
+        }
+
         @if (await _usersService.CurrentUserIsAuthorizedAsync("showProducts" , "Productos"))
         {
             <li class="nav">

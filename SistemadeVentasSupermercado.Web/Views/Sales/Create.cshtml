@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Punto de venta";
     bool canShowSales = await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas");
+    CashSessionDTO? cashSession = ViewBag.CashSession as CashSessionDTO;
 }
 
 <div class="pagetitle">
@@ -13,6 +14,12 @@
             <li class="breadcrumb-item active">Punto de venta</li>
         </ol>
     </nav>
+    @if (cashSession != null)
+    {
+        <span class="badge bg-success">
+            <i class="bi bi-unlock"></i> Caja N.º @cashSession.Number abierta desde @DisplayFormat.DateTimeColombia(cashSession.OpenedAtUtc)
+        </span>
+    }
 </div>
 
 @* Token antiforgery: el JavaScript lo lee de aquí y lo envía en el encabezado del cobro. *@

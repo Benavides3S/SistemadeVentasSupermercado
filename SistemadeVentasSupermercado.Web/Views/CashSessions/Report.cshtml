@@ -1,0 +1,172 @@
+@model CashSessionSummaryDTO
+
+@{
+    CashSessionDTO session = Model.Session;
+    ViewData["Title"] = $"Caja #{session.Number}";
+    BusinessOptions business = (BusinessOptions)ViewBag.Business;
+    bool isSupervisor = (bool)ViewBag.IsSupervisor;
+    bool isOpen = session.Status == CashSessionStatus.Open;
+}
+
+<div class="pagetitle no-print">
+    <h1>Reporte de caja</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            @if (isSupervisor)
+            {
+                <li class="breadcrumb-item"><a asp-action="Index">Turnos de caja</a></li>
+            }
+            <li class="breadcrumb-item active">Caja #@session.Number</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="no-print mb-3 d-flex gap-2 justify-content-center">
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+        <i class="bi bi-printer"></i> Imprimir
+    </button>
+    @if (isSupervisor)
+    {
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver a turnos</a>
+    }
+</div>
+
+<div class="receipt">
+    <div class="text-center">
+        <div class="receipt-title">@business.Nombre</div>
+        @if (!string.IsNullOrWhiteSpace(business.Nit))
+        {
+            <div>NIT @business.Nit</div>
+        }
+        <div class="receipt-banner">@(isOpen ? "TURNO ABIERTO (parcial)" : "CIERRE DE CAJA")</div>
+    </div>
+
+    <hr />
+
+    <div>Caja N.º <strong>@session.Number</strong></div>
+    <div>Cajero: @session.CashierName</div>
+    <div>Apertura: @DisplayFormat.DateTimeColombia(session.OpenedAtUtc)</div>
+    @if (session.ClosedAtUtc.HasValue)
+    {
+        <div>Cierre: @DisplayFormat.DateTimeColombia(session.ClosedAtUtc.Value)</div>
+        <div>Cerrada por: @session.ClosedByName</div>
+    }
+
+    <hr />
+
+    <div class="fw-bold">Ventas (@Model.SalesCount)</div>
+    @foreach (PaymentTotalDTO payment in Model.Payments)
+    {
+        <div class="d-flex justify-content-between">
+            <span>@payment.PaymentMethod.Label() (@payment.Count)</span>
+            <span>@DisplayFormat.Money(payment.Total)</span>
+        </div>
+    }
+    <div class="d-flex justify-content-between fw-bold">
+        <span>Total ventas</span>
+        <span>@DisplayFormat.Money(Model.SalesTotal)</span>
+    </div>
+    @if (Model.CancelledCount > 0)
+    {
+        <div class="d-flex justify-content-between">
+            <span>Anuladas (@Model.CancelledCount)</span>
+            <span>@DisplayFormat.Money(Model.CancelledTotal)</span>
+        </div>
+    }
+
+    <hr />
+
+    <div class="fw-bold">Efectivo en cajón</div>
+    <div class="d-flex justify-content-between">
+        <span>Monto inicial</span>
+        <span>@DisplayFormat.Money(session.OpeningAmount)</span>
+    </div>
+    <div class="d-flex justify-content-between">
+        <span>+ Ventas en efectivo</span>
+        <span>@DisplayFormat.Money(Model.Payments.Single(p => p.PaymentMethod == PaymentMethod.Cash).Total)</span>
+    </div>
+    <div class="d-flex justify-content-between fw-bold">
+        <span>= Esperado</span>
+        <span>@DisplayFormat.Money(Model.ExpectedCash)</span>
+    </div>
+
+    @if (!isOpen && session.CountedAmount.HasValue && session.Difference.HasValue)
+    {
+        decimal diff = session.Difference.Value;
+        <div class="d-flex justify-content-between">
+            <span>Contado</span>
+            <span>@DisplayFormat.Money(session.CountedAmount.Value)</span>
+        </div>
+        <div class="d-flex justify-content-between receipt-total">
+            <span>@(diff < 0 ? "FALTANTE" : diff > 0 ? "SOBRANTE" : "CUADRADA")</span>
+            <span>@DisplayFormat.Money(Math.Abs(diff))</span>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(session.Notes))
+    {
+        <hr />
+        <div>Observaciones: @session.Notes</div>
+    }
+
+    @if (!isOpen)
+    {
+        <hr />
+        <div class="mt-4">Firma cajero: ____________________</div>
+        <div class="mt-4">Firma supervisor: ________________</div>
+    }
+</div>
+
+@if (isOpen && isSupervisor)
+{
+    @* Un supervisor puede cerrar la caja que otro cajero olvidó cerrar. *@
+    <div class="row justify-content-center no-print">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body pt-3">
+                    <h5 class="card-title">Cerrar esta caja como supervisor</h5>
+                    <form asp-action="CloseOther" asp-route-id="@session.Id" method="post" id="closeOtherForm">
+                        <label for="CountedAmount" class="form-label fw-bold">Efectivo contado</label>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="any" min="0" id="CountedAmount" name="CountedAmount" class="form-control" required />
+                        </div>
+                        <label for="Notes" class="form-label">Observaciones</label>
+                        <textarea id="Notes" name="Notes" class="form-control mb-3" maxlength="500" rows="2"
+                                  placeholder="Ej.: el cajero olvidó cerrar el turno"></textarea>
+                        <button type="submit" class="btn btn-danger w-100"><i class="bi bi-lock"></i> Cerrar caja</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<link rel="stylesheet" href="~/css/receipt.css" asp-append-version="true" />
+
+@section Scripts {
+    <script>
+        const closeOtherForm = document.getElementById('closeOtherForm');
+        if (closeOtherForm) {
+            closeOtherForm.addEventListener('submit', function (event) {
+                if (closeOtherForm.dataset.confirmed === 'true') return;
+                event.preventDefault();
+                if (!closeOtherForm.reportValidity()) return;
+                Swal.fire({
+                    icon: 'warning',
+                    title: '¿Cerrar la caja de otro cajero?',
+                    text: 'El cierre no se puede deshacer.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, cerrar',
+                    cancelButtonText: 'Cancelar'
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        closeOtherForm.dataset.confirmed = 'true';
+                        closeOtherForm.submit();
+                    }
+                });
+            });
+        }
+    </script>
+}

@@ -52,7 +52,7 @@
     }
     @if (Model.Status == SaleStatus.Cancelled)
     {
-        <div class="receipt-cancelled">*** VENTA ANULADA ***</div>
+        <div class="receipt-banner">*** VENTA ANULADA ***</div>
     }
 
     <hr />
@@ -87,52 +87,4 @@
     </div>
 </div>
 
-<style>
-    .receipt {
-        width: 72mm;
-        margin: 0 auto 2rem;
-        padding: 4mm;
-        background: #fff;
-        color: #000;
-        font-family: "Courier New", Courier, monospace;
-        font-size: 12px;
-        line-height: 1.35;
-        border: 1px dashed #ccc;
-    }
-
-    .receipt hr {
-        border: 0;
-        border-top: 1px dashed #000;
-        opacity: 1;
-        margin: 6px 0;
-    }
-
-    .receipt-title { font-size: 15px; font-weight: bold; }
-    .receipt-total { font-size: 15px; font-weight: bold; }
-    .receipt-line { margin-bottom: 4px; }
-    .receipt-cancelled { text-align: center; font-weight: bold; margin-top: 4px; }
-
-    @@media print {
-        @@page {
-            size: 80mm auto;
-            margin: 0;
-        }
-
-        /* Solo se imprime el comprobante: se ocultan menú, encabezado y pie. */
-        #header, #sidebar, #footer, .back-to-top, .no-print, .notyf {
-            display: none !important;
-        }
-
-        body { background: #fff !important; }
-
-        #main {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
-        .receipt {
-            margin: 0;
-            border: 0;
-        }
-    }
-</style>
+<link rel="stylesheet" href="~/css/receipt.css" asp-append-version="true" />

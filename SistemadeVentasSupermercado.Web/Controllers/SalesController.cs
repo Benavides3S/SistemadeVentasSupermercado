@@ -15,12 +15,15 @@ namespace SistemadeVentasSupermercado.Web.Controllers
     public class SalesController : Controller
     {
         private readonly ISalesService _salesService;
+        private readonly ICashSessionService _cashService;
         private readonly INotyfService _notyfService;
         private readonly BusinessOptions _business;
 
-        public SalesController(ISalesService salesService, INotyfService notyfService, IOptions<BusinessOptions> business)
+        public SalesController(ISalesService salesService, ICashSessionService cashService,
+            INotyfService notyfService, IOptions<BusinessOptions> business)
         {
             _salesService = salesService;
+            _cashService = cashService;
             _notyfService = notyfService;
             _business = business.Value;
         }
@@ -62,8 +65,20 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
         [HttpGet]
         [CustomAuthorize("createSales", "Ventas")]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
+            // Sin caja abierta no se puede cobrar: se envía al cajero a abrirla primero.
+            // (CreateAsync también lo verifica en el servidor.)
+            string userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            Response<CashSessionDTO?> current = await _cashService.GetCurrentAsync(userId);
+
+            if (current.IsSuccess && current.Result is null)
+            {
+                _notyfService.Warning("Abre la caja para empezar a vender");
+                return RedirectToAction("Current", "CashSessions");
+            }
+
+            ViewBag.CashSession = current.Result;
             return View();
         }
 
