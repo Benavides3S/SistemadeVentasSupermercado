@@ -142,6 +142,92 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             }
         }
 
+        // ---------- Anulación ----------
+
+        public async Task<Response<SaleDetailDTO>> CancelAsync(Guid saleId, CancelSaleDTO dto, string userId)
+        {
+            string reason = dto.Reason?.Trim() ?? string.Empty;
+
+            if (reason.Length == 0)
+                return Response<SaleDetailDTO>.Failure("El motivo de la anulación es obligatorio");
+
+            if (reason.Length > 200)
+                return Response<SaleDetailDTO>.Failure("El motivo puede tener máximo 200 caracteres");
+
+            const string alreadyCancelled = "Esta venta ya está anulada";
+            const string sessionClosed = "El turno de caja de esta venta ya cerró: haz una devolución en lugar de anularla";
+
+            try
+            {
+                // Si salimos sin llegar a CommitAsync, la transacción se deshace sola.
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
+                var sale = await _context.Sales
+                    .AsNoTracking()
+                    .Where(s => s.Id == saleId)
+                    .Select(s => new { s.Status, s.CashSessionId })
+                    .FirstOrDefaultAsync();
+
+                if (sale is null)
+                    return Response<SaleDetailDTO>.Failure("La venta no existe");
+
+                if (sale.Status != SaleStatus.Completed)
+                    return Response<SaleDetailDTO>.Failure(alreadyCancelled);
+
+                // Ventas anteriores a la caja no tienen turno: solo admiten devolución.
+                if (sale.CashSessionId is null)
+                    return Response<SaleDetailDTO>.Failure(sessionClosed);
+
+                // 1. Bloquea el turno (mismo orden que una venta: turno → productos).
+                //    Si se cerró, no se actualiza nada y se rechaza: un arqueo cerrado no se altera.
+                int sessionLocked = await _context.CashSessions
+                    .Where(c => c.Id == sale.CashSessionId && c.Status == CashSessionStatus.Open)
+                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.Status, c => c.Status));
+
+                if (sessionLocked == 0)
+                    return Response<SaleDetailDTO>.Failure(sessionClosed);
+
+                // 2. Cambio de estado atómico: solo si sigue "Completada".
+                //    Si dos supervisores anulan a la vez, solo uno actualiza la fila.
+                DateTime now = DateTime.UtcNow;
+                int cancelled = await _context.Sales
+                    .Where(s => s.Id == saleId && s.Status == SaleStatus.Completed)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.Status, SaleStatus.Cancelled)
+                        .SetProperty(x => x.CancelledAtUtc, now)
+                        .SetProperty(x => x.CancelReason, reason)
+                        .SetProperty(x => x.CancelledByUserId, userId));
+
+                if (cancelled == 0)
+                    return Response<SaleDetailDTO>.Failure(alreadyCancelled);
+
+                // 3. Devuelve el stock de forma atómica, ordenado por ProductId (evita bloqueos mutuos).
+                var lines = await _context.SaleItems
+                    .Where(i => i.SaleId == saleId)
+                    .GroupBy(i => i.ProductId)
+                    .Select(g => new { ProductId = g.Key, Quantity = g.Sum(i => i.Quantity) })
+                    .ToListAsync();
+
+                foreach (var line in lines.OrderBy(l => l.ProductId))
+                {
+                    await _context.Products
+                        .Where(p => p.Id == line.ProductId)
+                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + line.Quantity));
+                }
+
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                return Response<SaleDetailDTO>.Failure(ex);
+            }
+
+            Response<SaleDetailDTO> result = await GetOneAsync(saleId);
+            if (result.IsSuccess)
+                result.Message = "Venta anulada con éxito";
+            return result;
+        }
+
         // ---------- Consultas para la pantalla de venta ----------
 
         private const int MaxProductResults = 20;
@@ -282,6 +368,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         PaymentMethod = s.PaymentMethod,
                         Status = s.Status,
                         Total = s.Total,
+                        CancelledAtUtc = s.CancelledAtUtc,
+                        CancelReason = s.CancelReason,
+                        CancelledByName = s.CancelledByUser != null ? s.CancelledByUser.FirstName + " " + s.CancelledByUser.LastName : null,
+                        CanBeCancelled = s.Status == SaleStatus.Completed
+                                      && s.CashSession != null
+                                      && s.CashSession.Status == CashSessionStatus.Open,
                         Items = s.Items
                             .OrderBy(i => i.ProductName)
                             .Select(i => new SaleDetailLineDTO

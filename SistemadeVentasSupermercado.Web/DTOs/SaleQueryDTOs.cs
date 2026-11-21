@@ -49,6 +49,22 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public SaleStatus Status { get; set; }
         public decimal Total { get; set; }
         public List<SaleDetailLineDTO> Items { get; set; } = new();
+
+        // ---------- Anulación ----------
+        public DateTime? CancelledAtUtc { get; set; }
+        public string? CancelReason { get; set; }
+        public string? CancelledByName { get; set; }
+
+        /// <summary>Se puede anular si sigue completada y su turno de caja sigue abierto.</summary>
+        public bool CanBeCancelled { get; set; }
+    }
+
+    /// <summary>Formulario de anulación.</summary>
+    public class CancelSaleDTO
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El motivo es obligatorio")]
+        [System.ComponentModel.DataAnnotations.StringLength(200, ErrorMessage = "El motivo puede tener máximo {1} caracteres")]
+        public string Reason { get; set; } = string.Empty;
     }
 
     public class SaleDetailLineDTO
