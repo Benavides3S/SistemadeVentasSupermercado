@@ -1,10 +1,11 @@
 ﻿using AspNetCoreHero.ToastNotification.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SistemadeVentasSupermercado.Web.Core.Attributes;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Attributes;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.DTOs;
+using SistemadeVentasSupermercado.Web.Helpers.Abstractions;
 using SistemadeVentasSupermercado.Web.Services.Abstractions;
 
 namespace SistemadeVentasSupermercado.Web.Controllers
@@ -14,11 +15,18 @@ namespace SistemadeVentasSupermercado.Web.Controllers
     {
         private readonly IProductService _productService;
         private readonly INotyfService _notyfService;
+        private readonly ICombosHelper _combosHelper;
 
-        public ProductController(IProductService productService, INotyfService notyfService)
+        public ProductController(IProductService productService, INotyfService notyfService, ICombosHelper combosHelper)
         {
             _productService = productService;
             _notyfService = notyfService;
+            _combosHelper = combosHelper;
+        }
+
+        private async Task LoadCategoriesAsync(Guid? selectedId = null)
+        {
+            ViewBag.Categories = await _combosHelper.GetComboCategories(selectedId);
         }
 
         [HttpGet]
@@ -37,9 +45,10 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         }
 
         [HttpGet]
-        [CustomAuthorize("Productos", "createProducts")]
-        public IActionResult Create()
+        [CustomAuthorize("createProducts", "Productos")]
+        public async Task<IActionResult> Create()
         {
+            await LoadCategoriesAsync();
             return View();
         }
 
@@ -50,6 +59,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             if (!ModelState.IsValid)
             {
                 _notyfService.Error("Debe ajustar los errores de validación");
+                await LoadCategoriesAsync(dto.CategoryId);
                 return View(dto);
             }
 
@@ -57,7 +67,9 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
             if (!response.IsSuccess)
             {
-                _notyfService.Error(response.Message);
+                string detalle = response.Errors is null ? "" : string.Join(" | ", response.Errors);
+                _notyfService.Error($"{response.Message} {detalle}");
+                await LoadCategoriesAsync(dto.CategoryId);
                 return View(dto);
             }
 
@@ -77,6 +89,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            await LoadCategoriesAsync(response.Result!.CategoryId);
             return View(response.Result);
         }
 
@@ -87,6 +100,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             if (!ModelState.IsValid)
             {
                 _notyfService.Error("Debe ajustar los errores de validación");
+                await LoadCategoriesAsync(dto.CategoryId);
                 return View(dto);
             }
 
@@ -94,7 +108,9 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
             if (!response.IsSuccess)
             {
-                _notyfService.Error(response.Message);
+                string detalle = response.Errors is null ? "" : string.Join(" | ", response.Errors);
+                _notyfService.Error($"{response.Message} {detalle}");
+                await LoadCategoriesAsync(dto.CategoryId);
                 return View(dto);
             }
 
@@ -109,16 +125,11 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             Response<object> response = await _productService.DeleteAsync(id);
 
             if (!response.IsSuccess)
-            {
                 _notyfService.Error(response.Message);
-            }
             else
-            {
                 _notyfService.Success(response.Message);
-            }
 
             return RedirectToAction(nameof(Index));
         }
     }
 }
-

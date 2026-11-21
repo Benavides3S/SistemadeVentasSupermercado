@@ -23,7 +23,20 @@ namespace SistemadeVentasSupermercado.Web.Helpers.Implementations
                 Value = r.Id.ToString()
             }).ToListAsync();
         }
+        public async Task<IEnumerable<SelectListItem>> GetComboCategories(Guid? includeCategoryId = null)
+        {
+            // Solo categorías activas, más la que ya tiene el producto (aunque esté inactiva)
+            return await _context.Categories
+                .Where(c => c.IsActive || c.Id == includeCategoryId)
+                .OrderBy(c => c.Name)
+                .Select(c => new SelectListItem
+                {
+                    Text = c.IsActive ? c.Name : c.Name + " (inactiva)",
+                    Value = c.Id.ToString()
+                })
+                .ToListAsync();
+        }
 
-        
+
     }
 }

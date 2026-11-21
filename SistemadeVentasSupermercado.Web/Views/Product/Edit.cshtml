@@ -59,9 +59,11 @@
                 </div>
                 <div class="col-md-12">
                     <div class="form-floating">
-                        <input asp-for="Category" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Category)">
-                        <label asp-for="Category" "></label>
-                        <span asp-validation-for="Category" class="text-danger"></span>
+                        <select asp-for="CategoryId" asp-items="@((IEnumerable<SelectListItem>)ViewBag.Categories)" class="form-select">
+                            <option value="">Seleccione una categoría</option>
+                        </select>
+                        <label asp-for="CategoryId"></label>
+                        <span asp-validation-for="CategoryId" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="text-center mt-3">

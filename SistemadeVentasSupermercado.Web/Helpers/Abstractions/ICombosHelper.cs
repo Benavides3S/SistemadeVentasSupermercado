@@ -5,6 +5,7 @@ namespace SistemadeVentasSupermercado.Web.Helpers.Abstractions
     public interface ICombosHelper
     {
         Task<IEnumerable<SelectListItem>> GetComboRoles();
-        
+        Task<IEnumerable<SelectListItem>> GetComboCategories(Guid? includeCategoryId = null);
+
     }
 }

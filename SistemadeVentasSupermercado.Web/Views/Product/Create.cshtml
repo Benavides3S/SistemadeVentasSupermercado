@@ -43,23 +43,31 @@
                 </div>
                 <div class="col-md-12">
                     <div class="form-floating">
-                        <input asp-for="Price" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Price)">
-                        <label asp-for="Price" "></label>
+                        <input asp-for="Price" type="number" step="any" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Price)">
+                        <label asp-for="Price"></label>
                         <span asp-validation-for="Price" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-12">
                     <div class="form-floating">
-                        <input asp-for="Stock" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Stock)">
-                        <label asp-for="Stock" "></label>
+                        <input asp-for="Stock" type="number" step="any" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Stock)">
+                        <label asp-for="Stock"></label>
                         <span asp-validation-for="Stock" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-12">
                     <div class="form-floating">
-                        <input asp-for="Category" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Category)">
-                        <label asp-for="Category" "></label>
-                        <span asp-validation-for="Category" class="text-danger"></span>
+                        <select asp-for="Unit" asp-items="Html.GetEnumSelectList<UnitOfMeasure>()" class="form-select"></select>
+                        <label asp-for="Unit"></label>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-floating">
+                        <select asp-for="CategoryId" asp-items="@((IEnumerable<SelectListItem>)ViewBag.Categories)" class="form-select">
+                            <option value="">Seleccione una categoría</option>
+                        </select>
+                        <label asp-for="CategoryId"></label>
+                        <span asp-validation-for="CategoryId" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="text-center mt-3">

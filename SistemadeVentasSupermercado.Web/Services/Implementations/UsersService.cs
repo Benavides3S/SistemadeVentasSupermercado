@@ -49,7 +49,11 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
                 _logger.LogInformation("Resultado Identity: {Succeeded}, Errores: {ErrorCount}",
                     result.Succeeded, result.Errors.Count());
-
+                if (!result.Succeeded)
+                {
+                    _logger.LogWarning("Errores de Identity: {Errores}",
+                        string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
                 return new Response<IdentityResult>
                 {
                     Result = result,

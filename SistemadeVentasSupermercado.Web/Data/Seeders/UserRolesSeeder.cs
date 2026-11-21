@@ -18,10 +18,17 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             _usersService = usersService;
         }
 
-        public async Task SeedAsync()
+        public async Task SeedAsync(string? passwordInicial, bool crearUsuariosDePrueba)
         {
             await CheckRolesAsync();
-            await CheckUsersAsync();
+
+            if (string.IsNullOrWhiteSpace(passwordInicial))
+            {
+                Console.WriteLine("Seed:PasswordInicial no está configurada: no se crean usuarios iniciales.");
+                return;
+            }
+
+            await CheckUsersAsync(passwordInicial, crearUsuariosDePrueba);
         }
 
         private async Task CheckRolesAsync()
@@ -31,7 +38,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             await ContentManagerRoleAsync();
         }
 
-        private async Task CheckUsersAsync()
+        private async Task CheckUsersAsync(string passwordInicial, bool crearUsuariosDePrueba)
         {
             // Admin
             User? user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == "manuel@yopmail.com");
@@ -51,12 +58,12 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                     SistemaVentasRoleId = adminRole!.Id
                 };
 
-                await _usersService.AddUserAsync(user, "1234");
+                await _usersService.AddUserAsync(user, passwordInicial);
 
                 string token = (await _usersService.GenerateConfirmationTokenAsync(user)).Result;
                 await _usersService.ConfirmUserAsync(user, token);
             }
-
+            if (!crearUsuariosDePrueba) return;
             // Content manager
             user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == "anad@yopmail.com");
 
@@ -75,7 +82,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                     SistemaVentasRoleId = contentManagerRole!.Id
                 };
 
-                await _usersService.AddUserAsync(user, "1234");
+                await _usersService.AddUserAsync(user, passwordInicial);
 
                 string token = (await _usersService.GenerateConfirmationTokenAsync(user)).Result;
                 await _usersService.ConfirmUserAsync(user, token);
@@ -99,7 +106,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                     SistemaVentasRoleId = basicRole!.Id
                 };
 
-                await _usersService.AddUserAsync(user, "1234");
+                await _usersService.AddUserAsync(user, passwordInicial );
 
                 string token = (await _usersService.GenerateConfirmationTokenAsync(user)).Result;
                 await _usersService.ConfirmUserAsync(user, token);

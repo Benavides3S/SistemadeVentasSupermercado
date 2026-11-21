@@ -24,28 +24,15 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         public async Task<Response<ProductDTO>> CreateAsync(ProductDTO dto)
         {
-            //try
-            //{
-            //    Product product = _mapper.Map<Product>(dto);
+            dto.Name = dto.Name.Trim();
 
-            //    Guid id = Guid.NewGuid();
-            //    product.Id = id;
+            if (await _context.Products.AnyAsync(p => p.Name == dto.Name))
+                return Response<ProductDTO>.Failure($"Ya existe un producto con el nombre \"{dto.Name}\"");
 
-            //    await _context.Products.AddAsync(product);
-            //    await _context.SaveChangesAsync();
-            //    dto.Id = id;
-            //    return Response<ProductDTO>.Success(dto, "Producto creado con exito");
-
-            //}
-            //catch (Exception ex) 
-            //{
-            //    return Response<ProductDTO>.Failure(ex);
-
-            //}
+            if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId && c.IsActive))
+                return Response<ProductDTO>.Failure("Seleccione una categoría válida y activa");
 
             return await CreateAsync<Product, ProductDTO>(dto);
-
-
         }
 
         public async Task<Response<object>> DeleteAsync(Guid id)
@@ -75,94 +62,39 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         public async Task<Response<ProductDTO>> EditAsync(ProductDTO dto)
         {
-            //try
-            //{
+            dto.Name = dto.Name.Trim();
 
-            //    Product? product = await _context.Products
-            //        .AsNoTracking()
-            //        .FirstOrDefaultAsync(p => p.Id == dto.Id);
+            if (await _context.Products.AnyAsync(p => p.Name == dto.Name && p.Id != dto.Id))
+                return Response<ProductDTO>.Failure($"Ya existe otro producto con el nombre \"{dto.Name}\"");
 
+            if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId))
+                return Response<ProductDTO>.Failure("La categoría seleccionada no existe");
 
-            //    if (product is null)
-            //    {
-
-            //        return Response<ProductDTO>.Failure($"No existe producto con id: {dto.Id}");
-            //    }
-
-
-            //    product = _mapper.Map<Product>(dto);
-
-
-            //    _context.Products.Update(product);
-            //    await _context.SaveChangesAsync();
-
-
-            //    return Response<ProductDTO>.Success(dto, "Producto actualizado con éxito");
-            //}
-            //catch (Exception ex)
-            //{
-
-            //    return Response<ProductDTO>.Failure(ex);
-            //}
             return await EditAsync<Product, ProductDTO>(dto, dto.Id);
         }
 
 
         public async Task<Response<List<ProductDTO>>> GetListAsync()
-        {
-            //try
-            //{
-            //    List<Product> Products = await _context.Products.ToListAsync();
-            //    List<ProductDTO> List = _mapper.Map<List<ProductDTO>>(Products);
+    => await GetCompleteListAsync<Product, ProductDTO>(_context.Products.Include(p => p.Category));
 
-            //    return  Response<List<ProductDTO>>.Success(List);
-
-
-            //}
-            //catch (Exception ex)
-            //{
-            //    return Response<List<ProductDTO>>.Failure(ex);
-
-            //}
-            return await GetCompleteListAsync<Product, ProductDTO>();
-        }
 
         public async Task<Response<PaginationResponse<ProductDTO>>> GetPaginatedListAsync(PaginationRequest request)
         {
-            IQueryable<Product> query = _context.Products.AsQueryable();
+            IQueryable<Product> query = _context.Products.Include(p => p.Category).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(request.Filter))
             {
-                // SELECT * FROM Sections WHERE Name LIKE '%FILTER%'
-                query = query.Where(s => s.Name.ToLower().Contains(request.Filter.ToLower())
-                                         || s.Description.ToLower().Contains(request.Filter.ToLower()));
+                string filter = request.Filter.ToLower();
+                query = query.Where(p => p.Name.ToLower().Contains(filter)
+                                      || (p.Description != null && p.Description.ToLower().Contains(filter))
+                                      || p.Category!.Name.ToLower().Contains(filter));
             }
+
+            query = query.OrderBy(p => p.Name);
 
             return await GetPaginationAsync<Product, ProductDTO>(request, query);
         }
         public async Task<Response<ProductDTO>> GetOneAsync(Guid id)
-        {
-            //    try
-            //    {
-            //        // Buscar el producto en la base de datos
-            //        Product? product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
-
-            //        if (product == null)
-            //        {
-            //            return Response<ProductDTO>.Failure($"No se encontró el producto con Id {id}");
-            //        }
-
-            //        // Mapear la entidad a DTO
-            //        ProductDTO dto = _mapper.Map<ProductDTO>(product);
-
-            //        return Response<ProductDTO>.Success(dto, "Producto encontrado con éxito");
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        return Response<ProductDTO>.Failure(ex);
-            //    }
-            //}
-            return await GetOneAsync<Product, ProductDTO>(id);
-        }
+      => await GetOneAsync<Product, ProductDTO>(id, _context.Products.Include(p => p.Category));
     }
 }

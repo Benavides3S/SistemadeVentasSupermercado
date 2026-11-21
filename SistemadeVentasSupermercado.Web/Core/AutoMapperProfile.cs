@@ -6,7 +6,12 @@ public class AutoMapperProfile : Profile
 {
     public AutoMapperProfile()
     {
-        CreateMap<Product, ProductDTO>().ReverseMap();
+        CreateMap<Product, ProductDTO>()
+     .ForMember(d => d.CategoryName, o => o.MapFrom(s => s.Category != null ? s.Category.Name : null))
+     .ReverseMap()
+     .ForMember(d => d.Category, o => o.Ignore());
+
+        CreateMap<Category, CategoryDTO>().ReverseMap();
         CreateMap<Client, ClientDTO>().ReverseMap();
         CreateMap<User, AccountUserDTO>().ReverseMap();
         CreateMap<Permission, PermissionDTO>();
