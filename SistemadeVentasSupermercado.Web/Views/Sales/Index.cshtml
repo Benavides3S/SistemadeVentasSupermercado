@@ -78,7 +78,16 @@
                                     <td>@item.PaymentMethod.Label()</td>
                                     <td class="text-end">@DisplayFormat.Money(item.Total)</td>
                                     <td>
-                                        @if (item.Status == SaleStatus.Completed)
+                                        @if (item.Status == SaleStatus.Completed && item.ReturnedTotal >= item.Total && item.Total > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark">Devuelta</span>
+                                        }
+                                        else if (item.Status == SaleStatus.Completed && item.ReturnedTotal > 0)
+                                        {
+                                            <span class="badge bg-success">@item.Status.Label()</span>
+                                            <span class="badge bg-warning text-dark" title="Devuelto @DisplayFormat.Money(item.ReturnedTotal)">Con devolución</span>
+                                        }
+                                        else if (item.Status == SaleStatus.Completed)
                                         {
                                             <span class="badge bg-success">@item.Status.Label()</span>
                                         }

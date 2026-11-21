@@ -5,6 +5,7 @@
     ViewData["Title"] = $"Venta #{Model.Number}";
     BusinessOptions business = (BusinessOptions)ViewBag.Business;
     bool canCancel = Model.CanBeCancelled && await _usersService.CurrentUserIsAuthorizedAsync("cancelSales", "Ventas");
+    bool canReturn = Model.CanBeReturned && await _usersService.CurrentUserIsAuthorizedAsync("createReturns", "Ventas");
 }
 
 <div class="pagetitle no-print">
@@ -23,6 +24,12 @@
         <i class="bi bi-printer"></i> Imprimir
     </button>
     <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver al historial</a>
+    @if (canReturn)
+    {
+        <a asp-controller="SaleReturns" asp-action="Create" asp-route-saleId="@Model.Id" class="btn btn-outline-warning">
+            <i class="bi bi-arrow-return-left"></i> Devolver productos
+        </a>
+    }
     @if (canCancel)
     {
         <form asp-action="Cancel" asp-route-id="@Model.Id" method="post" id="cancelForm" class="d-inline">
@@ -99,6 +106,26 @@
         <span>Pago</span>
         <span>@Model.PaymentMethod.Label()</span>
     </div>
+
+    @if (Model.Returns.Any())
+    {
+        <hr />
+        <div class="fw-bold">Devoluciones</div>
+        @foreach (SaleReturnSummaryDTO ret in Model.Returns)
+        {
+            <div class="d-flex justify-content-between">
+                <span>
+                    <a asp-controller="SaleReturns" asp-action="Details" asp-route-id="@ret.Id">N.º @ret.Number</a>
+                    @DisplayFormat.ToColombiaTime(ret.CreatedAtUtc).ToString("dd/MM/yyyy")
+                </span>
+                <span>− @DisplayFormat.Money(ret.Total)</span>
+            </div>
+        }
+        <div class="d-flex justify-content-between fw-bold">
+            <span>Neto</span>
+            <span>@DisplayFormat.Money(Model.Total - Model.ReturnedTotal)</span>
+        </div>
+    }
 
     <hr />
 

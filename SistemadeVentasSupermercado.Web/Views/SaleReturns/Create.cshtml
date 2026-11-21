@@ -1,0 +1,163 @@
+@model ReturnableSaleDTO
+
+@{
+    ViewData["Title"] = $"Devolución de la venta #{Model.SaleNumber}";
+    int index = 0; // índices seguidos para que el formulario se lea bien como lista
+}
+
+<div class="pagetitle">
+    <h1>Devolución de productos</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Sales" asp-action="Index">Ventas</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Sales" asp-action="Details" asp-route-id="@Model.SaleId">Venta #@Model.SaleNumber</a></li>
+            <li class="breadcrumb-item active">Devolución</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="card">
+        <div class="card-body pt-3">
+            <p class="mb-1">
+                Venta <strong>#@Model.SaleNumber</strong> del @DisplayFormat.DateTimeColombia(Model.CreatedAtUtc)
+                · Total @DisplayFormat.Money(Model.Total)
+                @if (Model.ReturnedTotal > 0)
+                {
+                    <span>· Ya devuelto @DisplayFormat.Money(Model.ReturnedTotal)</span>
+                }
+            </p>
+            <p>
+                El reembolso se hace en <strong>@Model.PaymentMethod.Label()</strong>, al precio de la venta.
+                @if (Model.PaymentMethod == PaymentMethod.Cash)
+                {
+                    <span class="text-muted">(sale de tu caja: debes tenerla abierta)</span>
+                }
+            </p>
+
+            <form asp-action="Create" asp-route-saleId="@Model.SaleId" method="post" id="returnForm">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-end">Precio</th>
+                                <th class="text-end">Vendido</th>
+                                <th class="text-end">Disponible</th>
+                                <th style="width: 160px;">A devolver</th>
+                                <th class="text-center">¿Vuelve al inventario?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (ReturnableLineDTO line in Model.Lines)
+                            {
+                                string unit = line.Unit.Abbreviation();
+                                <tr class="@(line.RemainingQuantity <= 0 ? "text-muted" : "")">
+                                    <td>@line.ProductName</td>
+                                    <td class="text-end">@DisplayFormat.Money(line.UnitPrice) / @unit</td>
+                                    <td class="text-end">@DisplayFormat.Quantity(line.SoldQuantity) @unit</td>
+                                    <td class="text-end">@DisplayFormat.Quantity(line.RemainingQuantity) @unit</td>
+                                    @if (line.RemainingQuantity > 0)
+                                    {
+                                        <td>
+                                            <input type="hidden" name="Lines[@index].SaleItemId" value="@line.SaleItemId" />
+                                            <div class="input-group input-group-sm">
+                                                @* Valores con punto decimal (InvariantCulture), como todos los formularios. *@
+                                                <input type="number" name="Lines[@index].Quantity" value="0" min="0"
+                                                       max="@line.RemainingQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                       step="@(line.AllowsDecimals ? "any" : "1")"
+                                                       class="form-control qty"
+                                                       data-price="@line.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                                <span class="input-group-text">@unit</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="checkbox" name="Lines[@index].Restock" value="true" checked class="form-check-input" />
+                                            @* Si la casilla se desmarca, el navegador no la envía: este campo manda "false". *@
+                                            <input type="hidden" name="Lines[@index].Restock" value="false" />
+                                        </td>
+                                        index++;
+                                    }
+                                    else
+                                    {
+                                        <td colspan="2" class="text-center"><span class="badge bg-secondary">Ya devuelto</span></td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <label for="Reason" class="form-label fw-bold">Motivo</label>
+                        <input type="text" id="Reason" name="Reason" maxlength="200" required class="form-control"
+                               placeholder="Ej.: producto vencido, cliente cambió de opinión..." />
+                        <div class="form-text">Desmarca "¿Vuelve al inventario?" si el producto está dañado o vencido.</div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="fs-5">Reembolso estimado</div>
+                        <div id="refundTotal" class="fs-3 fw-bold">$ 0</div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end mt-3">
+                    <a asp-controller="Sales" asp-action="Details" asp-route-id="@Model.SaleId" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-arrow-return-left"></i> Registrar devolución</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            const form = document.getElementById('returnForm');
+            const totalEl = document.getElementById('refundTotal');
+            const money = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+            // Estimado en pantalla; el valor real lo calcula el servidor con los precios de la venta.
+            function estimate() {
+                let total = 0;
+                form.querySelectorAll('input.qty').forEach(input => {
+                    const qty = parseFloat(input.value);
+                    if (Number.isFinite(qty) && qty > 0) {
+                        total += Math.round(parseFloat(input.dataset.price) * qty * 100) / 100;
+                    }
+                });
+                totalEl.textContent = money.format(total);
+                return total;
+            }
+
+            form.addEventListener('input', estimate);
+
+            form.addEventListener('submit', function (event) {
+                if (form.dataset.confirmed === 'true') return;
+                event.preventDefault();
+                if (!form.reportValidity()) return;
+
+                const total = estimate();
+                if (total <= 0) {
+                    Swal.fire({ icon: 'warning', title: 'Indica cuánto devolver', text: 'Escribe la cantidad de al menos un producto.' });
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'question',
+                    title: '¿Registrar la devolución?',
+                    text: 'Reembolso estimado: ' + money.format(total) + '. No se puede deshacer.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, registrar',
+                    cancelButtonText: 'No'
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        form.dataset.confirmed = 'true';
+                        form.submit();
+                    }
+                });
+            });
+        })();
+    </script>
+}
