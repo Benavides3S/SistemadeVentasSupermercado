@@ -20,6 +20,8 @@ namespace SistemadeVentasSupermercado.Web.Data
         public DbSet<SaleItem> SaleItems { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<CashSession> CashSessions { get; set; }
+        public DbSet<SaleReturn> SaleReturns { get; set; }
+        public DbSet<SaleReturnItem> SaleReturnItems { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -106,6 +108,49 @@ namespace SistemadeVentasSupermercado.Web.Data
                 t.HasCheckConstraint("CK_CashSessions_OpeningAmount_NonNegative", "[OpeningAmount] >= 0");
                 t.HasCheckConstraint("CK_CashSessions_CountedAmount_NonNegative", "[CountedAmount] IS NULL OR [CountedAmount] >= 0");
             });
+
+            // ---------- Devoluciones ----------
+            builder.Entity<SaleReturn>()
+                   .HasOne(r => r.Sale).WithMany(s => s.Returns)
+                   .HasForeignKey(r => r.SaleId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SaleReturn>()
+                   .HasOne(r => r.User).WithMany()
+                   .HasForeignKey(r => r.UserId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SaleReturn>()
+                   .HasOne(r => r.CashSession).WithMany()
+                   .HasForeignKey(r => r.CashSessionId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SaleReturnItem>()
+                   .HasOne(i => i.SaleReturn).WithMany(r => r.Items)
+                   .HasForeignKey(i => i.SaleReturnId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<SaleReturnItem>()
+                   .HasOne(i => i.SaleItem).WithMany()
+                   .HasForeignKey(i => i.SaleItemId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SaleReturnItem>()
+                   .HasOne(i => i.Product).WithMany()
+                   .HasForeignKey(i => i.ProductId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SaleReturn>().Property(r => r.Total).HasPrecision(18, 2);
+            builder.Entity<SaleReturnItem>().Property(i => i.UnitPrice).HasPrecision(18, 2);
+            builder.Entity<SaleReturnItem>().Property(i => i.Total).HasPrecision(18, 2);
+            builder.Entity<SaleReturnItem>().Property(i => i.Quantity).HasPrecision(18, 3);
+            builder.Entity<SaleReturnItem>().ToTable(t =>
+                t.HasCheckConstraint("CK_SaleReturnItems_Quantity_Positive", "[Quantity] > 0"));
+
+            // Lo devuelto nunca puede superar el total de la venta (red de seguridad en la base de datos).
+            builder.Entity<Sale>().Property(s => s.ReturnedTotal).HasPrecision(18, 2);
+            builder.Entity<Sale>().ToTable(t =>
+                t.HasCheckConstraint("CK_Sales_ReturnedTotal_Range", "[ReturnedTotal] >= 0 AND [ReturnedTotal] <= [Total]"));
         }
 
         private void ConfigureIndexes(ModelBuilder builder)
@@ -136,6 +181,7 @@ namespace SistemadeVentasSupermercado.Web.Data
             builder.Entity<Category>().HasIndex(c => c.Name).IsUnique();
 
             builder.Entity<CashSession>().HasIndex(c => c.Number).IsUnique();
+            builder.Entity<SaleReturn>().HasIndex(r => r.Number).IsUnique();
 
             // Un cajero solo puede tener UN turno abierto (Status = 1 = Open).
             // Lo garantiza la base de datos, aunque dos pestañas intenten abrir caja a la vez.

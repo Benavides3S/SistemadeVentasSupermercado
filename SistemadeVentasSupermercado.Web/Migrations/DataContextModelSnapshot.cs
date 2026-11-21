@@ -396,6 +396,10 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("ReturnedTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -422,7 +426,10 @@ namespace SistemadeVentasSupermercado.Web.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Sales");
+                    b.ToTable("Sales", t =>
+                        {
+                            t.HasCheckConstraint("CK_Sales_ReturnedTotal_Range", "[ReturnedTotal] >= 0 AND [ReturnedTotal] <= [Total]");
+                        });
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.SaleItem", b =>
@@ -464,6 +471,109 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.HasIndex("SaleId");
 
                     b.ToTable("SaleItems");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.SaleReturn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CashSessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Number")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Number"));
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("RefundMethod")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SaleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashSessionId");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("SaleId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SaleReturns");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.SaleReturnItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<bool>("Restocked")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("SaleItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SaleReturnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Unit")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SaleItemId");
+
+                    b.HasIndex("SaleReturnId");
+
+                    b.ToTable("SaleReturnItems", t =>
+                        {
+                            t.HasCheckConstraint("CK_SaleReturnItems_Quantity_Positive", "[Quantity] > 0");
+                        });
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.SistemaVentasRole", b =>
@@ -726,6 +836,59 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.Navigation("Sale");
                 });
 
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.SaleReturn", b =>
+                {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.CashSession", "CashSession")
+                        .WithMany()
+                        .HasForeignKey("CashSessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.Sale", "Sale")
+                        .WithMany("Returns")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CashSession");
+
+                    b.Navigation("Sale");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.SaleReturnItem", b =>
+                {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.SaleItem", "SaleItem")
+                        .WithMany()
+                        .HasForeignKey("SaleItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.SaleReturn", "SaleReturn")
+                        .WithMany("Items")
+                        .HasForeignKey("SaleReturnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SaleItem");
+
+                    b.Navigation("SaleReturn");
+                });
+
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.User", b =>
                 {
                     b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.SistemaVentasRole", "SistemaVentasRole")
@@ -753,6 +916,13 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Sale", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Returns");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.SaleReturn", b =>
                 {
                     b.Navigation("Items");
                 });

@@ -76,6 +76,12 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         public string? CancelledByUserId { get; set; }
         public User? CancelledByUser { get; set; }
 
+        /// <summary>Suma de todo lo devuelto de esta venta (0 si no hay devoluciones).</summary>
+        [Display(Name = "Devuelto")]
+        public decimal ReturnedTotal { get; set; }
+
         public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
+
+        public ICollection<SaleReturn> Returns { get; set; } = new List<SaleReturn>();
     }
 }
