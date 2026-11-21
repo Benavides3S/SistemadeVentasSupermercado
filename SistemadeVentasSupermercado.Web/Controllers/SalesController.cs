@@ -1,8 +1,10 @@
 using AspNetCoreHero.ToastNotification.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Core.Attributes;
+using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.DTOs;
 using SistemadeVentasSupermercado.Web.Services.Abstractions;
 using System.Security.Claims;
@@ -14,11 +16,46 @@ namespace SistemadeVentasSupermercado.Web.Controllers
     {
         private readonly ISalesService _salesService;
         private readonly INotyfService _notyfService;
+        private readonly BusinessOptions _business;
 
-        public SalesController(ISalesService salesService, INotyfService notyfService)
+        public SalesController(ISalesService salesService, INotyfService notyfService, IOptions<BusinessOptions> business)
         {
             _salesService = salesService;
             _notyfService = notyfService;
+            _business = business.Value;
+        }
+
+        // ---------- Historial y comprobante ----------
+
+        [HttpGet]
+        [CustomAuthorize("showSales", "Ventas")]
+        public async Task<IActionResult> Index([FromQuery] PaginationRequest request)
+        {
+            Response<PaginationResponse<SaleListItemDTO>> response = await _salesService.GetPaginatedListAsync(request);
+
+            if (!response.IsSuccess)
+            {
+                _notyfService.Error(response.Message);
+                return RedirectToAction("Index", "Home");
+            }
+
+            return View(response.Result);
+        }
+
+        [HttpGet]
+        [CustomAuthorize("showSales", "Ventas")]
+        public async Task<IActionResult> Details([FromRoute] Guid id)
+        {
+            Response<SaleDetailDTO> response = await _salesService.GetOneAsync(id);
+
+            if (!response.IsSuccess)
+            {
+                _notyfService.Error(response.Message);
+                return RedirectToAction(nameof(Index));
+            }
+
+            ViewBag.Business = _business;
+            return View(response.Result);
         }
 
         // ---------- Punto de venta ----------

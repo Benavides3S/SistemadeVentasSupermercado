@@ -2,6 +2,7 @@
 using AspNetCoreHero.ToastNotification.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
 using SistemadeVentasSupermercado.Web.Data.Seeders;
@@ -84,6 +85,9 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddTransient<SeedDb>();
             builder.Services.AddScoped<ISalesService, SalesService>();
             builder.Services.AddTransient<ICombosHelper, CombosHelper>();
+
+            // Datos del negocio para el comprobante (sección "Negocio" de appsettings.json).
+            builder.Services.Configure<BusinessOptions>(builder.Configuration.GetSection(BusinessOptions.SectionName));
         }
 
         public static WebApplication AddCustomWebApplicationConfiguration(this WebApplication app)

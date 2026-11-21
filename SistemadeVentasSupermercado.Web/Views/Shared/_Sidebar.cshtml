@@ -22,6 +22,15 @@
             </li>
         }
 
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Sales" asp-action="Index">
+                    <i class="bi bi-receipt"></i><span>Ventas</span>
+                </a>
+            </li>
+        }
+
         @if (await _usersService.CurrentUserIsAuthorizedAsync("showProducts" , "Productos"))
         {
             <li class="nav">

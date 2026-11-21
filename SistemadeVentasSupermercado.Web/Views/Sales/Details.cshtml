@@ -1,0 +1,138 @@
+@model SaleDetailDTO
+
+@{
+    ViewData["Title"] = $"Venta #{Model.Number}";
+    BusinessOptions business = (BusinessOptions)ViewBag.Business;
+}
+
+<div class="pagetitle no-print">
+    <h1>Comprobante de venta</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index">Ventas</a></li>
+            <li class="breadcrumb-item active">Venta #@Model.Number</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="no-print mb-3 d-flex gap-2 justify-content-center">
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+        <i class="bi bi-printer"></i> Imprimir
+    </button>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver al historial</a>
+</div>
+
+@* Ancho pensado para impresora térmica de 80 mm (área imprimible ≈ 72 mm). *@
+<div class="receipt">
+    <div class="text-center">
+        <div class="receipt-title">@business.Nombre</div>
+        @if (!string.IsNullOrWhiteSpace(business.Nit))
+        {
+            <div>NIT @business.Nit</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(business.Direccion))
+        {
+            <div>@business.Direccion</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(business.Telefono))
+        {
+            <div>Tel. @business.Telefono</div>
+        }
+    </div>
+
+    <hr />
+
+    <div>Venta N.º <strong>@Model.Number</strong></div>
+    <div>Fecha: @DisplayFormat.DateTimeColombia(Model.CreatedAtUtc)</div>
+    <div>Cajero: @Model.CashierName</div>
+    @if (Model.ClientName != null)
+    {
+        <div>Cliente: @Model.ClientName</div>
+    }
+    @if (Model.Status == SaleStatus.Cancelled)
+    {
+        <div class="receipt-cancelled">*** VENTA ANULADA ***</div>
+    }
+
+    <hr />
+
+    @foreach (SaleDetailLineDTO line in Model.Items)
+    {
+        <div class="receipt-line">
+            <div>@line.ProductName</div>
+            <div class="d-flex justify-content-between">
+                <span>@DisplayFormat.Quantity(line.Quantity) @line.Unit.Abbreviation() × @DisplayFormat.Money(line.UnitPrice)</span>
+                <span>@DisplayFormat.Money(line.Total)</span>
+            </div>
+        </div>
+    }
+
+    <hr />
+
+    <div class="d-flex justify-content-between receipt-total">
+        <span>TOTAL</span>
+        <span>@DisplayFormat.Money(Model.Total)</span>
+    </div>
+    <div class="d-flex justify-content-between">
+        <span>Pago</span>
+        <span>@Model.PaymentMethod.Label()</span>
+    </div>
+
+    <hr />
+
+    <div class="text-center small">
+        Este documento no es una factura electrónica.<br />
+        ¡Gracias por su compra!
+    </div>
+</div>
+
+<style>
+    .receipt {
+        width: 72mm;
+        margin: 0 auto 2rem;
+        padding: 4mm;
+        background: #fff;
+        color: #000;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 12px;
+        line-height: 1.35;
+        border: 1px dashed #ccc;
+    }
+
+    .receipt hr {
+        border: 0;
+        border-top: 1px dashed #000;
+        opacity: 1;
+        margin: 6px 0;
+    }
+
+    .receipt-title { font-size: 15px; font-weight: bold; }
+    .receipt-total { font-size: 15px; font-weight: bold; }
+    .receipt-line { margin-bottom: 4px; }
+    .receipt-cancelled { text-align: center; font-weight: bold; margin-top: 4px; }
+
+    @@media print {
+        @@page {
+            size: 80mm auto;
+            margin: 0;
+        }
+
+        /* Solo se imprime el comprobante: se ocultan menú, encabezado y pie. */
+        #header, #sidebar, #footer, .back-to-top, .no-print, .notyf {
+            display: none !important;
+        }
+
+        body { background: #fff !important; }
+
+        #main {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .receipt {
+            margin: 0;
+            border: 0;
+        }
+    }
+</style>
