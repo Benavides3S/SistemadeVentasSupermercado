@@ -1,7 +1,7 @@
 # Sistema de Ventas para Supermercado
 
 ## Resumen
-Aplicación web de punto de venta y administración para un supermercado: inventario (productos por unidad o por peso, categorías), clientes, usuarios con roles y permisos, y ventas con varios cajeros a la vez (en construcción). Proyecto único: `SistemadeVentasSupermercado.Web` (ASP.NET Core 8 MVC, vistas Razor, EF Core 8 + SQL Server, ASP.NET Identity). Aún no hay proyecto de pruebas (se está creando).
+Aplicación web de punto de venta y administración para un supermercado: inventario (productos por unidad o por peso, categorías), clientes, usuarios con roles y permisos, y ventas con varios cajeros a la vez (en construcción). Proyecto único: `SistemadeVentasSupermercado.Web` (ASP.NET Core 8 MVC, vistas Razor, EF Core 8 + SQL Server, ASP.NET Identity). Pruebas en `SistemadeVentasSupermercado.Tests` (xUnit).
 
 **Sobre el dueño:** es estudiante y está aprendiendo. Explica tus decisiones en lenguaje simple y en español. Meta a largo plazo: poder venderlo a negocios reales en Colombia, así que importan la seguridad, la calidad y las licencias.
 
@@ -19,7 +19,7 @@ dotnet run        # http://localhost:5234 (perfil "http"); --launch-profile http
 - **Migraciones:** no se aplican solas al arrancar. En esta máquina la herramienta global `dotnet ef` es la versión 11 y NO funciona con EF 8: no la uses ni la reinstales. Las migraciones se crean y aplican desde la Consola del Administrador de paquetes de Visual Studio (`Add-Migration <Nombre>`, `Update-Database`). Si necesitas una migración, dime el nombre y qué debe contener, y espera a que yo la genere y te la muestre.
 - **Secretos:** `dotnet user-secrets set "Seed:PasswordInicial" "<clave>"`. Nunca escribir claves en el código.
 - Reglas de contraseña: mínimo 8 caracteres, mayúscula, minúscula, dígito y 4 caracteres distintos.
-- Pruebas (cuando existan): `dotnet test` desde la carpeta del `.sln`.
+- Pruebas: `dotnet test` desde la carpeta del `.sln`. Usan la base `SistemaVentasTests` (cadena en `SistemadeVentasSupermercado.Tests/appsettings.Tests.json`, se puede reemplazar con la variable de entorno `ConnectionStrings__TestsConnection`). `Infraestructura/BaseDeDatosFixture` la borra y recrea con las migraciones en cada ejecución, y se niega a correr si la base tiene otro nombre. Las pruebas corren en serie; cada prueba crea sus propios productos (con sufijo único, porque `Product.Name` es único) y cada "cajero" usa su propio `DataContext`.
 
 ## Arquitectura
 - **Inicio:** `Program.cs` es mínimo. DI, Identity, cookie (sesión de 8 h), AutoMapper, notificaciones Notyf y registro de servicios viven en `CustomConfiguration.cs` (`AddCustomConfiguration` / `AddCustomWebApplicationConfiguration`). Todo servicio nuevo se registra en `AddServices` ahí.
@@ -56,13 +56,14 @@ Copiar el patrón de `Category`: DTO, `I*Service` + servicio, controlador, vista
 - Productos por peso y unidad de medida.
 - Categorías como tabla administrable (sus permisos ya se siembran en `SeedAsync`).
 - Tablas `Sales` y `SaleItems` + `SalesService.CreateAsync` (sin pantalla todavía).
+- Pruebas automáticas de `SalesService.CreateAsync` (16 pruebas, incluidas concurrencia y rollback), todas en verde.
 
 **Problemas conocidos (corregir cuando se pueda):**
 - AutoMapper 12.0.1 tiene una vulnerabilidad conocida (GHSA-rvv3-g6hj-g44x) y las versiones corregidas (15.1.1+ y 16.1.1+) son comerciales. Decisión pendiente entre la licencia Community, Mapperly o mapeo manual. NO actualizar sin consultarme.
 - Restos de otra plantilla: permisos y rol de "Secciones" y "Blogs" (rol "Gestor de contenido"), título "PrivateBlog" y mensajes como "Sección obtenida con éxito".
 - `Response.Failure(string)` deja `Errors` en null.
 - Los productos de ejemplo se siembran también fuera de Development.
-- Sin pruebas automáticas todavía.
+- Solo el servicio de ventas tiene pruebas automáticas; el resto de servicios y los controladores no.
 
 ## Decisiones de diseño (no cambiarlas sin preguntarme)
 - Varios cajeros a la vez: el descuento atómico de stock es obligatorio.
@@ -71,7 +72,7 @@ Copiar el patrón de `Category`: DTO, `I*Service` + servicio, controlador, vista
 - Sin IVA por ahora. La facturación electrónica DIAN se hará integrando un proveedor autorizado (no software propio); los requisitos se confirman con un contador.
 
 ## Plan por etapas
-1. **(En curso)** Pruebas automáticas del servicio de ventas: proyecto xUnit `SistemadeVentasSupermercado.Tests`, con base de datos SEPARADA `SistemaVentasTests` en LocalDB (se borra y recrea con las migraciones; nunca tocar la base de desarrollo). Casos: venta simple, stock insuficiente, unidad con decimales, peso con decimales, líneas repetidas, rollback si una línea falla, venta vacía o método de pago inválido, dos cajeros por la última unidad, veinte ventas simultáneas con stock 10.
+1. **(Hecho)** Pruebas automáticas del servicio de ventas: proyecto xUnit `SistemadeVentasSupermercado.Tests`, con base de datos SEPARADA `SistemaVentasTests` en LocalDB (se borra y recrea con las migraciones; nunca tocar la base de desarrollo). Casos: venta simple, stock insuficiente, unidad con decimales, peso con decimales, líneas repetidas, rollback si una línea falla, venta vacía o método de pago inválido, dos cajeros por la última unidad, veinte ventas simultáneas con stock 10.
 2. **Pantalla de venta (POS):** buscador de productos, carrito, método de pago, cobro con `ISalesService`, historial de ventas y comprobante imprimible. Módulo de permisos "Ventas". Si el cobro se envía con fetch/AJAX, debe incluir el token antiforgery.
 3. Anulaciones y devoluciones (devuelven el stock de forma atómica) y caja (apertura y cierre de turno, arqueo).
 4. Reportes (ventas por día, más vendidos, exportar a Excel o PDF), README, Docker y copias de seguridad.
