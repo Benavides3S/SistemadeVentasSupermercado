@@ -58,6 +58,16 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 new Permission { Id = Guid.NewGuid(), Name = "deleteClients", Description = "Eliminar clientes", Module = "Clientes" }
             };
         }
+        private List<Permission> Categorias()
+        {
+            return new List<Permission>
+    {
+        new Permission { Id = Guid.NewGuid(), Name = "showCategories", Description = "Ver categorías", Module = "Categorias" },
+        new Permission { Id = Guid.NewGuid(), Name = "createCategories", Description = "Crear categorías", Module = "Categorias" },
+        new Permission { Id = Guid.NewGuid(), Name = "updateCategories", Description = "Editar categorías", Module = "Categorias" },
+        new Permission { Id = Guid.NewGuid(), Name = "deleteCategories", Description = "Eliminar categorías", Module = "Categorias" }
+    };
+        }
 
         private List<Permission> Secciones()
         {

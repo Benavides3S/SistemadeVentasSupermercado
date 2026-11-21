@@ -13,12 +13,11 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             _usersService = usersService;
         }
 
-        public async Task SeedAsync()
+        public async Task SeedAsync(string? passwordInicial, bool crearUsuariosDePrueba)
         {
             await new ProductsSeeder(_context).SeedProductsAsync();
             await new PermissionsSeeder(_context).SeedAsync();
-            await new UserRolesSeeder(_context, _usersService).SeedAsync();
-
+            await new UserRolesSeeder(_context, _usersService).SeedAsync(passwordInicial, crearUsuariosDePrueba);
         }
     }
 }

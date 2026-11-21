@@ -1,0 +1,48 @@
+﻿@model SistemadeVentasSupermercado.Web.DTOs.CategoryDTO
+
+@{
+    ViewData["Title"] = "Nueva Categoría";
+}
+
+<div class="pagetitle">
+    <h1>Agregar Categoría</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Category" asp-action="Index">Categorías</a></li>
+            <li class="breadcrumb-item active">Nueva</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Registrar nueva categoría</h5>
+
+            <form asp-action="Create" method="post" class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-check mt-4">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label"></label>
+                    </div>
+                </div>
+
+                <div class="col-12 text-end mt-3">
+                    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

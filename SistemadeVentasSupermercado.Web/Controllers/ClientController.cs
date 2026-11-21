@@ -38,14 +38,14 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
         // ➕ CREAR CLIENTE
         [HttpGet]
-        [CustomAuthorize("Clientes", "createClient")]
+        [CustomAuthorize("Clientes", "createClients")]
         public IActionResult Create()
         {
             return View();
         }
 
         [HttpPost]
-        [CustomAuthorize("createClient", "Clientes")]
+        [CustomAuthorize("createClients", "Clientes")]
         public async Task<IActionResult> Create([FromForm] ClientDTO dto)
         {
             if (!ModelState.IsValid)
@@ -68,7 +68,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
         // ✏️ EDITAR CLIENTE
         [HttpGet]
-        [CustomAuthorize("updateClient", "Clientes")]
+        [CustomAuthorize("updateClients", "Clientes")]
         public async Task<IActionResult> Edit([FromRoute] Guid id)
         {
             Response<ClientDTO> response = await _clientService.GetOneAsync(id);
@@ -83,7 +83,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         }
 
         [HttpPost]
-        [CustomAuthorize("updateClient", "Clientes")]
+        [CustomAuthorize("updateClients", "Clientes")]
         public async Task<IActionResult> Edit([FromForm] ClientDTO dto)
         {
             if (!ModelState.IsValid)
@@ -106,7 +106,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
         // 🗑️ ELIMINAR CLIENTE
         [HttpPost]
-        [CustomAuthorize("deleteClient", "Clientes")]
+        [CustomAuthorize("deleteClients", "Clientes")]
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
             Response<object> response = await _clientService.DeleteAsync(id);

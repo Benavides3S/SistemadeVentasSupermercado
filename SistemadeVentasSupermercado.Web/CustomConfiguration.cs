@@ -54,20 +54,20 @@ namespace SistemadeVentasSupermercado.Web
         {
             builder.Services.AddIdentity<User, IdentityRole>(conf =>
             {
-                conf.User.RequireUniqueEmail = true;
-                conf.Password.RequireDigit = false;
-                conf.Password.RequiredUniqueChars = 0;
-                conf.Password.RequireLowercase = false;
-                conf.Password.RequireUppercase = false;
+                conf.Password.RequireDigit = true;
+                conf.Password.RequiredUniqueChars = 4;
+                conf.Password.RequireLowercase = true;
+                conf.Password.RequireUppercase = true;
                 conf.Password.RequireNonAlphanumeric = false;
-                conf.Password.RequiredLength = 4;
+                conf.Password.RequiredLength = 8;
             }).AddEntityFrameworkStores<DataContext>()
               .AddDefaultTokenProviders();
 
             builder.Services.ConfigureApplicationCookie(conf =>
             {
                 conf.Cookie.Name = "Auth";
-                conf.ExpireTimeSpan = TimeSpan.FromDays(100);
+                conf.ExpireTimeSpan = TimeSpan.FromHours(8);
+                conf.SlidingExpiration = true;
                 conf.LoginPath = "/Account/Login";
                 conf.AccessDeniedPath = "/Error/403";
             });
@@ -79,10 +79,10 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddScoped<IClientService, ClientsService>();
             builder.Services.AddScoped<IRolesService, RolesService>();
             builder.Services.AddScoped<IUsersService, UsersService>();
-            
+            builder.Services.AddScoped<ICategoryService, CategoriesService>();
 
             builder.Services.AddTransient<SeedDb>();
-
+            builder.Services.AddScoped<ISalesService, SalesService>();
             builder.Services.AddTransient<ICombosHelper, CombosHelper>();
         }
 
@@ -101,7 +101,9 @@ namespace SistemadeVentasSupermercado.Web
 
             using IServiceScope scope = scopeFactory.CreateScope();
             SeedDb service = scope.ServiceProvider.GetService<SeedDb>();
-            service.SeedAsync().Wait();
+            string? passwordInicial = app.Configuration["Seed:PasswordInicial"];
+            service.SeedAsync(passwordInicial, app.Environment.IsDevelopment()).Wait();
+           
         }
     }
 }

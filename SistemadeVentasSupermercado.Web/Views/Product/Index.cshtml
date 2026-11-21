@@ -86,8 +86,8 @@
                                 <td>@item.Name</td>
                                 <td>@item.Description</td>
                                 <td>@item.Price</td>
-                                <td>@item.Stock</td>
-                                <td>@item.Category</td>
+                                <td>@item.Stock.ToString("0.###") @item.Unit.Abbreviation()</td>
+                                <td>@item.CategoryName</td>
                                 <td>
                                     @if (await _usersService.CurrentUserIsAuthorizedAsync("updateProducts", "Productos"))
                                     {

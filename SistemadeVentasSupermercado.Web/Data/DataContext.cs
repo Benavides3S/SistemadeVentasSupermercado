@@ -16,7 +16,10 @@ namespace SistemadeVentasSupermercado.Web.Data
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<SistemaVentasRole> SistemaVentasRoles { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
-       
+        public DbSet<Sale> Sales { get; set; }
+        public DbSet<SaleItem> SaleItems { get; set; }
+        public DbSet<Category> Categories { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -40,6 +43,37 @@ namespace SistemadeVentasSupermercado.Web.Data
                    .HasOne(rp => rp.Permission)
                    .WithMany(p => p.RolePermissions)
                    .HasForeignKey(rp => rp.PermissionId);
+            builder.Entity<Sale>()
+       .HasOne(s => s.User).WithMany()
+       .HasForeignKey(s => s.UserId)
+       .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Sale>()
+                   .HasOne(s => s.Client).WithMany()
+                   .HasForeignKey(s => s.ClientId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SaleItem>()
+                   .HasOne(i => i.Sale).WithMany(s => s.Items)
+                   .HasForeignKey(i => i.SaleId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<SaleItem>()
+                   .HasOne(i => i.Product).WithMany()
+                   .HasForeignKey(i => i.ProductId)
+                   .OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Product>()
+       .            HasOne(p => p.Category).WithMany(c => c.Products)
+       .            HasForeignKey(p => p.CategoryId)
+       .            OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Product>().Property(p => p.Price).HasPrecision(18, 2);
+            builder.Entity<Sale>().Property(s => s.Total).HasPrecision(18, 2);
+            builder.Entity<SaleItem>().Property(i => i.UnitPrice).HasPrecision(18, 2);
+            builder.Entity<SaleItem>().Property(i => i.Total).HasPrecision(18, 2);
+            builder.Entity<Product>().Property(p => p.Stock).HasPrecision(18, 3);
+            builder.Entity<SaleItem>().Property(i => i.Quantity).HasPrecision(18, 3);
+            builder.Entity<Product>().ToTable(t => t.HasCheckConstraint("CK_Products_Stock_NonNegative", "[Stock] >= 0"));
         }
 
         private void ConfigureIndexes(ModelBuilder builder)
@@ -65,6 +99,9 @@ namespace SistemadeVentasSupermercado.Web.Data
             builder.Entity<Permission>()
                    .HasIndex(p => p.Name)
                    .IsUnique();
+            builder.Entity<Sale>().HasIndex(s => s.Number).IsUnique();
+            builder.Entity<Sale>().HasIndex(s => s.CreatedAtUtc);
+            builder.Entity<Category>().HasIndex(c => c.Name).IsUnique();
         }
     }
 }

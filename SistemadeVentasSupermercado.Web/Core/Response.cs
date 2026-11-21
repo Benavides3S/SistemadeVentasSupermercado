@@ -20,7 +20,7 @@
                 Message = message,
                 Errors = new List<String>
                         {
-                           ex.Message,
+                           ex.GetBaseException().Message,
                         }
             };
             }

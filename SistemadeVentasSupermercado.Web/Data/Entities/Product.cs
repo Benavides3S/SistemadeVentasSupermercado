@@ -23,12 +23,16 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
 
         [Required(ErrorMessage = "El campo {0} es requerido")]
         [Display(Name = "Stock")]
-        public int Stock { get; set; }
+        public decimal Stock { get; set; }
+
+        [Display(Name = "Unidad de medida")]
+        public UnitOfMeasure Unit { get; set; } = UnitOfMeasure.Unit;
 
         [Required(ErrorMessage = "El campo {0} es requerido")]
-        [StringLength(50)]
-        [Display(Name = "Categoria")]
-        public string Category { get; set; } = String.Empty; // ✅ Ahora string
+        [Display(Name = "Categoría")]
+        public Guid CategoryId { get; set; }
+
+        public Category? Category { get; set; }
     }
 }
 
