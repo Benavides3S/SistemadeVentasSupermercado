@@ -54,6 +54,10 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         public Guid? ClientId { get; set; }
         public Client? Client { get; set; }
 
+        /// <summary>Turno de caja en que se hizo la venta (vacío en ventas anteriores a la caja).</summary>
+        public Guid? CashSessionId { get; set; }
+        public CashSession? CashSession { get; set; }
+
         [Display(Name = "Método de pago")]
         public PaymentMethod PaymentMethod { get; set; }
 

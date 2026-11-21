@@ -155,6 +155,74 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.CashSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClosedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal?>("CountedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("Difference")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ExpectedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Number")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Number"));
+
+                    b.Property<DateTime>("OpenedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("OpeningAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClosedByUserId");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CashSessions_UserId_OneOpen")
+                        .HasFilter("[Status] = 1");
+
+                    b.ToTable("CashSessions", t =>
+                        {
+                            t.HasCheckConstraint("CK_CashSessions_CountedAmount_NonNegative", "[CountedAmount] IS NULL OR [CountedAmount] >= 0");
+
+                            t.HasCheckConstraint("CK_CashSessions_OpeningAmount_NonNegative", "[OpeningAmount] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -307,6 +375,9 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.Property<DateTime?>("CancelledAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("CashSessionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("ClientId")
                         .HasColumnType("uniqueidentifier");
 
@@ -334,6 +405,8 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CashSessionId");
 
                     b.HasIndex("ClientId");
 
@@ -549,6 +622,24 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.CashSession", b =>
+                {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "ClosedByUser")
+                        .WithMany()
+                        .HasForeignKey("ClosedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClosedByUser");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Product", b =>
                 {
                     b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.Category", "Category")
@@ -581,6 +672,11 @@ namespace SistemadeVentasSupermercado.Web.Migrations
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Sale", b =>
                 {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.CashSession", "CashSession")
+                        .WithMany("Sales")
+                        .HasForeignKey("CashSessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.Client", "Client")
                         .WithMany()
                         .HasForeignKey("ClientId")
@@ -591,6 +687,8 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CashSession");
 
                     b.Navigation("Client");
 
@@ -625,6 +723,11 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .IsRequired();
 
                     b.Navigation("SistemaVentasRole");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.CashSession", b =>
+                {
+                    b.Navigation("Sales");
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Category", b =>
