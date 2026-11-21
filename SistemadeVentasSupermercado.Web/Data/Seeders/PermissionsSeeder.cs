@@ -21,6 +21,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 ..Clientes(),
                 ..Categorias(),
                 ..Ventas(),
+                ..Caja(),
                 ..Secciones(),
                 ..Roles(),
                 ..Users()
@@ -66,6 +67,15 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             {
                 new Permission { Id = Guid.NewGuid(), Name = "createSales", Description = "Usar el punto de venta", Module = "Ventas" },
                 new Permission { Id = Guid.NewGuid(), Name = "showSales", Description = "Ver historial y comprobantes de ventas", Module = "Ventas" }
+            };
+        }
+
+        private List<Permission> Caja()
+        {
+            return new List<Permission>
+            {
+                new Permission { Id = Guid.NewGuid(), Name = "manageCashSessions", Description = "Abrir y cerrar su propia caja", Module = "Caja" },
+                new Permission { Id = Guid.NewGuid(), Name = "showCashSessions", Description = "Ver todos los turnos de caja y cerrar cajas de otros", Module = "Caja" }
             };
         }
 

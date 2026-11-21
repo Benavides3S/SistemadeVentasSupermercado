@@ -45,6 +45,28 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 // Si salimos sin llegar a CommitAsync, la transacción se deshace sola.
                 await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
 
+                // Toda venta pertenece al turno de caja abierto del cajero.
+                const string noOpenSession = "Abre la caja para empezar a vender";
+
+                Guid? cashSessionId = await _context.CashSessions
+                    .Where(c => c.UserId == userId && c.Status == CashSessionStatus.Open)
+                    .Select(c => (Guid?)c.Id)
+                    .FirstOrDefaultAsync();
+
+                if (cashSessionId is null)
+                    return Fail(noOpenSession);
+
+                // Bloquea la fila del turno hasta el final de la transacción (actualización sin cambio real).
+                // Así un cierre de caja simultáneo espera a que esta venta termine, y si la caja
+                // se cerró justo antes, no se actualiza ninguna fila y la venta se rechaza.
+                // Orden de bloqueo en toda venta: primero el turno, después los productos por ProductId.
+                int sessionLocked = await _context.CashSessions
+                    .Where(c => c.Id == cashSessionId && c.Status == CashSessionStatus.Open)
+                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.Status, c => c.Status));
+
+                if (sessionLocked == 0)
+                    return Fail(noOpenSession);
+
                 if (dto.ClientId.HasValue &&
                     !await _context.Clients.AnyAsync(c => c.Id == dto.ClientId.Value))
                     return Fail("El cliente seleccionado no existe");
@@ -70,6 +92,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     ClientId = dto.ClientId,
+                    CashSessionId = cashSessionId,
                     PaymentMethod = dto.PaymentMethod,
                     Status = SaleStatus.Completed,
                     CreatedAtUtc = DateTime.UtcNow

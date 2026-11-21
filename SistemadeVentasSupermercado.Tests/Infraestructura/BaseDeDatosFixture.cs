@@ -78,11 +78,46 @@ namespace SistemadeVentasSupermercado.Tests.Infraestructura
             context.SistemaVentasRoles.Add(rol);
             context.Users.Add(cajero);
             context.Categories.AddRange(categoria, categoriaInactiva);
+
+            // El cajero principal tiene la caja abierta todo el tiempo: las pruebas de ventas la necesitan.
+            // Las pruebas de caja que cierran turnos usan cajeros propios (CrearCajeroAsync).
+            context.CashSessions.Add(new CashSession
+            {
+                Id = Guid.NewGuid(),
+                UserId = cajero.Id,
+                OpeningAmount = 0m,
+                Status = CashSessionStatus.Open
+            });
+
             await context.SaveChangesAsync();
 
+            RolId = rol.Id;
             CajeroId = cajero.Id;
             CategoriaId = categoria.Id;
             CategoriaInactivaId = categoriaInactiva.Id;
+        }
+
+        private Guid RolId { get; set; }
+
+        /// <summary>Crea un cajero nuevo (sin caja abierta) para pruebas que abren y cierran turnos.</summary>
+        public async Task<string> CrearCajeroAsync(string nombre = "Cajero")
+        {
+            await using DataContext context = CrearContexto();
+            string marca = Guid.NewGuid().ToString("N")[..8];
+
+            User cajero = new User
+            {
+                UserName = $"cajero-{marca}@pruebas.local",
+                Email = $"cajero-{marca}@pruebas.local",
+                Document = $"PRUEBAS-{marca}",
+                FirstName = nombre,
+                LastName = marca,
+                SistemaVentasRoleId = RolId
+            };
+
+            context.Users.Add(cajero);
+            await context.SaveChangesAsync();
+            return cajero.Id;
         }
 
         /// <summary>
