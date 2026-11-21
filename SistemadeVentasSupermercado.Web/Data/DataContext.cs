@@ -88,6 +88,11 @@ namespace SistemadeVentasSupermercado.Web.Data
                    .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Sale>()
+                   .HasOne(s => s.CancelledByUser).WithMany()
+                   .HasForeignKey(s => s.CancelledByUserId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Sale>()
                    .HasOne(s => s.CashSession).WithMany(c => c.Sales)
                    .HasForeignKey(s => s.CashSessionId)
                    .OnDelete(DeleteBehavior.Restrict);

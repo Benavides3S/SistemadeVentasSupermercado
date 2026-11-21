@@ -72,6 +72,10 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         [StringLength(200)]
         public string? CancelReason { get; set; }
 
+        /// <summary>Quién anuló la venta (vacío si no está anulada).</summary>
+        public string? CancelledByUserId { get; set; }
+        public User? CancelledByUser { get; set; }
+
         public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
     }
 }

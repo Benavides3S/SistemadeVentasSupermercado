@@ -375,6 +375,9 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.Property<DateTime?>("CancelledAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CancelledByUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<Guid?>("CashSessionId")
                         .HasColumnType("uniqueidentifier");
 
@@ -405,6 +408,8 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CancelledByUserId");
 
                     b.HasIndex("CashSessionId");
 
@@ -672,6 +677,11 @@ namespace SistemadeVentasSupermercado.Web.Migrations
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Sale", b =>
                 {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "CancelledByUser")
+                        .WithMany()
+                        .HasForeignKey("CancelledByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.CashSession", "CashSession")
                         .WithMany("Sales")
                         .HasForeignKey("CashSessionId")
@@ -687,6 +697,8 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CancelledByUser");
 
                     b.Navigation("CashSession");
 
