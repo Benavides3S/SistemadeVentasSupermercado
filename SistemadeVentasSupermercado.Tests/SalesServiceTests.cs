@@ -24,26 +24,9 @@ namespace SistemadeVentasSupermercado.Tests
 
         // ---------- Ayudantes ----------
 
-        /// <summary>Crea un producto en la base. El nombre lleva un sufijo único porque Name es único.</summary>
-        private async Task<Product> CrearProductoAsync(string nombre, decimal precio, decimal stock,
+        private Task<Product> CrearProductoAsync(string nombre, decimal precio, decimal stock,
             UnitOfMeasure unidad = UnitOfMeasure.Unit, Guid? id = null)
-        {
-            await using DataContext context = _fixture.CrearContexto();
-
-            Product producto = new Product
-            {
-                Id = id ?? Guid.NewGuid(),
-                Name = $"{nombre} {Guid.NewGuid().ToString("N")[..8]}",
-                Price = precio,
-                Stock = stock,
-                Unit = unidad,
-                CategoryId = _fixture.CategoriaId
-            };
-
-            context.Products.Add(producto);
-            await context.SaveChangesAsync();
-            return producto;
-        }
+            => _fixture.CrearProductoAsync(nombre, precio, stock, unidad, id);
 
         /// <summary>Registra una venta con un contexto y un servicio nuevos (como una petición web).</summary>
         private async Task<Response<SaleResultDTO>> VenderAsync(CreateSaleDTO venta)
@@ -270,6 +253,19 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.False(respuesta.IsSuccess);
             Assert.Contains("ya no existe", respuesta.Message);
             Assert.Equal(ventasAntes, await TotalVentasAsync());
+        }
+
+        [Fact]
+        public async Task Producto_de_categoria_desactivada_no_se_vende()
+        {
+            Product viejo = await _fixture.CrearProductoAsync("Descontinuado", 1000m, 5m,
+                categoriaId: _fixture.CategoriaInactivaId);
+
+            Response<SaleResultDTO> respuesta = await VenderAsync(Venta((viejo.Id, 1m)));
+
+            Assert.False(respuesta.IsSuccess);
+            Assert.Contains("categoría desactivada", respuesta.Message);
+            Assert.Equal(5m, await StockActualAsync(viejo.Id));
         }
 
         [Fact]

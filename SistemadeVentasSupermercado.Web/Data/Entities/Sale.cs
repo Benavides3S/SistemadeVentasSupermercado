@@ -6,15 +6,33 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
 {
     public enum PaymentMethod
     {
-        Cash = 1,
-        Card = 2,
-        Transfer = 3
+        [Display(Name = "Efectivo")] Cash = 1,
+        [Display(Name = "Tarjeta")] Card = 2,
+        [Display(Name = "Transferencia")] Transfer = 3
     }
 
     public enum SaleStatus
     {
-        Completed = 1,
-        Cancelled = 2
+        [Display(Name = "Completada")] Completed = 1,
+        [Display(Name = "Anulada")] Cancelled = 2
+    }
+
+    public static class SaleEnumExtensions
+    {
+        public static string Label(this PaymentMethod method) => method switch
+        {
+            PaymentMethod.Cash => "Efectivo",
+            PaymentMethod.Card => "Tarjeta",
+            PaymentMethod.Transfer => "Transferencia",
+            _ => method.ToString()
+        };
+
+        public static string Label(this SaleStatus status) => status switch
+        {
+            SaleStatus.Completed => "Completada",
+            SaleStatus.Cancelled => "Anulada",
+            _ => status.ToString()
+        };
     }
 
     public class Sale : IId

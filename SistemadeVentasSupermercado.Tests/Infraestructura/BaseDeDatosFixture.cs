@@ -20,6 +20,7 @@ namespace SistemadeVentasSupermercado.Tests.Infraestructura
 
         public string CajeroId { get; private set; } = string.Empty;
         public Guid CategoriaId { get; private set; }
+        public Guid CategoriaInactivaId { get; private set; }
 
         public BaseDeDatosFixture()
         {
@@ -72,14 +73,40 @@ namespace SistemadeVentasSupermercado.Tests.Infraestructura
             };
 
             Category categoria = new Category { Id = Guid.NewGuid(), Name = "Categoría pruebas" };
+            Category categoriaInactiva = new Category { Id = Guid.NewGuid(), Name = "Categoría desactivada", IsActive = false };
 
             context.SistemaVentasRoles.Add(rol);
             context.Users.Add(cajero);
-            context.Categories.Add(categoria);
+            context.Categories.AddRange(categoria, categoriaInactiva);
             await context.SaveChangesAsync();
 
             CajeroId = cajero.Id;
             CategoriaId = categoria.Id;
+            CategoriaInactivaId = categoriaInactiva.Id;
+        }
+
+        /// <summary>
+        /// Crea un producto. El nombre lleva un sufijo único porque Product.Name es único.
+        /// Si no se indica categoría, usa la categoría activa.
+        /// </summary>
+        public async Task<Product> CrearProductoAsync(string nombre, decimal precio, decimal stock,
+            UnitOfMeasure unidad = UnitOfMeasure.Unit, Guid? id = null, Guid? categoriaId = null)
+        {
+            await using DataContext context = CrearContexto();
+
+            Product producto = new Product
+            {
+                Id = id ?? Guid.NewGuid(),
+                Name = $"{nombre} {Guid.NewGuid().ToString("N")[..8]}",
+                Price = precio,
+                Stock = stock,
+                Unit = unidad,
+                CategoryId = categoriaId ?? CategoriaId
+            };
+
+            context.Products.Add(producto);
+            await context.SaveChangesAsync();
+            return producto;
         }
 
         // La base se deja como quedó para poder revisarla; la próxima ejecución la recrea.

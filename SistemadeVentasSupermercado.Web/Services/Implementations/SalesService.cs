@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
 using SistemadeVentasSupermercado.Web.DTOs;
@@ -52,11 +53,17 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
                 Dictionary<Guid, Product> products = await _context.Products
                     .AsNoTracking()
+                    .Include(p => p.Category)
                     .Where(p => productIds.Contains(p.Id))
                     .ToDictionaryAsync(p => p.Id);
 
                 if (products.Count != productIds.Count)
                     return Fail("Alguno de los productos ya no existe");
+
+                // Se revisa aquí (no solo en la pantalla) porque el navegador se puede manipular.
+                Product? inactive = products.Values.FirstOrDefault(p => p.Category is null || !p.Category.IsActive);
+                if (inactive is not null)
+                    return Fail($"\"{inactive.Name}\" pertenece a una categoría desactivada y no se puede vender");
 
                 Sale sale = new Sale
                 {
@@ -109,6 +116,171 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             catch (Exception ex)
             {
                 return Response<SaleResultDTO>.Failure(ex);
+            }
+        }
+
+        // ---------- Consultas para la pantalla de venta ----------
+
+        private const int MaxProductResults = 20;
+        private const int MaxClientResults = 10;
+
+        public async Task<Response<List<PosProductDTO>>> SearchProductsAsync(string? term)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return Response<List<PosProductDTO>>.Success(new List<PosProductDTO>());
+
+            try
+            {
+                string filter = term.Trim().ToLower();
+
+                List<PosProductDTO> products = await _context.Products
+                    .AsNoTracking()
+                    .Where(p => p.Stock > 0
+                             && p.Category != null && p.Category.IsActive
+                             && p.Name.ToLower().Contains(filter))
+                    .OrderBy(p => p.Name)
+                    .Take(MaxProductResults)
+                    .Select(p => new PosProductDTO
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Price = p.Price,
+                        Stock = p.Stock,
+                        Unit = p.Unit
+                    })
+                    .ToListAsync();
+
+                foreach (PosProductDTO product in products)
+                {
+                    product.UnitAbbreviation = product.Unit.Abbreviation();
+                    product.AllowsDecimals = product.Unit != UnitOfMeasure.Unit;
+                }
+
+                return Response<List<PosProductDTO>>.Success(products);
+            }
+            catch (Exception ex)
+            {
+                return Response<List<PosProductDTO>>.Failure(ex);
+            }
+        }
+
+        public async Task<Response<List<PosClientDTO>>> SearchClientsAsync(string? term)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return Response<List<PosClientDTO>>.Success(new List<PosClientDTO>());
+
+            try
+            {
+                string filter = term.Trim().ToLower();
+
+                List<PosClientDTO> clients = await _context.Clients
+                    .AsNoTracking()
+                    .Where(c => c.Name.ToLower().Contains(filter)
+                             || (c.Email != null && c.Email.ToLower().Contains(filter)))
+                    .OrderBy(c => c.Name)
+                    .Take(MaxClientResults)
+                    .Select(c => new PosClientDTO { Id = c.Id, Name = c.Name, Email = c.Email })
+                    .ToListAsync();
+
+                return Response<List<PosClientDTO>>.Success(clients);
+            }
+            catch (Exception ex)
+            {
+                return Response<List<PosClientDTO>>.Failure(ex);
+            }
+        }
+
+        public async Task<Response<PaginationResponse<SaleListItemDTO>>> GetPaginatedListAsync(PaginationRequest request)
+        {
+            try
+            {
+                IQueryable<Sale> query = _context.Sales.AsNoTracking();
+
+                if (!string.IsNullOrWhiteSpace(request.Filter))
+                {
+                    string filter = request.Filter.Trim().ToLower();
+
+                    // Si escriben un número, se busca la venta por su número exacto.
+                    if (int.TryParse(filter, out int number))
+                        query = query.Where(s => s.Number == number);
+                    else
+                        query = query.Where(s => (s.Client != null && s.Client.Name.ToLower().Contains(filter))
+                                              || (s.User!.FirstName + " " + s.User.LastName).ToLower().Contains(filter));
+                }
+
+                IQueryable<SaleListItemDTO> projected = query
+                    .OrderByDescending(s => s.Number)
+                    .Select(s => new SaleListItemDTO
+                    {
+                        Id = s.Id,
+                        Number = s.Number,
+                        CreatedAtUtc = s.CreatedAtUtc,
+                        CashierName = s.User!.FirstName + " " + s.User.LastName,
+                        ClientName = s.Client != null ? s.Client.Name : null,
+                        PaymentMethod = s.PaymentMethod,
+                        Status = s.Status,
+                        Total = s.Total
+                    });
+
+                PagedList<SaleListItemDTO> list = await PagedList<SaleListItemDTO>.ToPagedListAsync(projected, request);
+
+                PaginationResponse<SaleListItemDTO> response = new PaginationResponse<SaleListItemDTO>
+                {
+                    List = list,
+                    TotalCount = list.TotalCount,
+                    RecordsPerPage = list.RecordsPerPage,
+                    CurrentPage = list.CurrentPage,
+                    TotalPages = list.TotalPages,
+                    Filter = request.Filter
+                };
+
+                return Response<PaginationResponse<SaleListItemDTO>>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                return Response<PaginationResponse<SaleListItemDTO>>.Failure(ex);
+            }
+        }
+
+        public async Task<Response<SaleDetailDTO>> GetOneAsync(Guid id)
+        {
+            try
+            {
+                SaleDetailDTO? sale = await _context.Sales
+                    .AsNoTracking()
+                    .Where(s => s.Id == id)
+                    .Select(s => new SaleDetailDTO
+                    {
+                        Id = s.Id,
+                        Number = s.Number,
+                        CreatedAtUtc = s.CreatedAtUtc,
+                        CashierName = s.User!.FirstName + " " + s.User.LastName,
+                        ClientName = s.Client != null ? s.Client.Name : null,
+                        PaymentMethod = s.PaymentMethod,
+                        Status = s.Status,
+                        Total = s.Total,
+                        Items = s.Items
+                            .OrderBy(i => i.ProductName)
+                            .Select(i => new SaleDetailLineDTO
+                            {
+                                ProductName = i.ProductName,
+                                UnitPrice = i.UnitPrice,
+                                Quantity = i.Quantity,
+                                Unit = i.Unit,
+                                Total = i.Total
+                            })
+                            .ToList()
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (sale is null)
+                    return Response<SaleDetailDTO>.Failure("La venta no existe");
+
+                return Response<SaleDetailDTO>.Success(sale, "Venta obtenida con éxito");
+            }
+            catch (Exception ex)
+            {
+                return Response<SaleDetailDTO>.Failure(ex);
             }
         }
     }

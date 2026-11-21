@@ -20,6 +20,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 ..Productos(),
                 ..Clientes(),
                 ..Categorias(),
+                ..Ventas(),
                 ..Secciones(),
                 ..Roles(),
                 ..Users()
@@ -59,6 +60,15 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 new Permission { Id = Guid.NewGuid(), Name = "deleteClients", Description = "Eliminar clientes", Module = "Clientes" }
             };
         }
+        private List<Permission> Ventas()
+        {
+            return new List<Permission>
+            {
+                new Permission { Id = Guid.NewGuid(), Name = "createSales", Description = "Usar el punto de venta", Module = "Ventas" },
+                new Permission { Id = Guid.NewGuid(), Name = "showSales", Description = "Ver historial y comprobantes de ventas", Module = "Ventas" }
+            };
+        }
+
         private List<Permission> Categorias()
         {
             return new List<Permission>
