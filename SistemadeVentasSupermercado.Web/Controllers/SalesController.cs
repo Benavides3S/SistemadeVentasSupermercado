@@ -61,6 +61,30 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             return View(response.Result);
         }
 
+        // ---------- Anulación ----------
+
+        [HttpPost]
+        [CustomAuthorize("cancelSales", "Ventas")]
+        public async Task<IActionResult> Cancel([FromRoute] Guid id, [FromForm] CancelSaleDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                _notyfService.Error("Escribe el motivo de la anulación (máximo 200 caracteres)");
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            // Quien anula es siempre el usuario de la sesión.
+            string userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            Response<SaleDetailDTO> response = await _salesService.CancelAsync(id, dto, userId);
+
+            if (response.IsSuccess)
+                _notyfService.Success(response.Message);
+            else
+                _notyfService.Error(response.Message);
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         // ---------- Punto de venta ----------
 
         [HttpGet]

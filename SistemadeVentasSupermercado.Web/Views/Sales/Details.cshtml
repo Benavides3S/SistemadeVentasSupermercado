@@ -1,8 +1,10 @@
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
 @model SaleDetailDTO
 
 @{
     ViewData["Title"] = $"Venta #{Model.Number}";
     BusinessOptions business = (BusinessOptions)ViewBag.Business;
+    bool canCancel = Model.CanBeCancelled && await _usersService.CurrentUserIsAuthorizedAsync("cancelSales", "Ventas");
 }
 
 <div class="pagetitle no-print">
@@ -21,6 +23,13 @@
         <i class="bi bi-printer"></i> Imprimir
     </button>
     <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver al historial</a>
+    @if (canCancel)
+    {
+        <form asp-action="Cancel" asp-route-id="@Model.Id" method="post" id="cancelForm" class="d-inline">
+            <input type="hidden" name="Reason" id="cancelReason" />
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-x-octagon"></i> Anular venta</button>
+        </form>
+    }
 </div>
 
 @* Ancho pensado para impresora térmica de 80 mm (área imprimible ≈ 72 mm). *@
@@ -53,6 +62,18 @@
     @if (Model.Status == SaleStatus.Cancelled)
     {
         <div class="receipt-banner">*** VENTA ANULADA ***</div>
+        @if (Model.CancelledAtUtc.HasValue)
+        {
+            <div>Anulada: @DisplayFormat.DateTimeColombia(Model.CancelledAtUtc.Value)</div>
+        }
+        @if (Model.CancelledByName != null)
+        {
+            <div>Por: @Model.CancelledByName</div>
+        }
+        @if (Model.CancelReason != null)
+        {
+            <div>Motivo: @Model.CancelReason</div>
+        }
     }
 
     <hr />
@@ -88,3 +109,35 @@
 </div>
 
 <link rel="stylesheet" href="~/css/receipt.css" asp-append-version="true" />
+
+@section Scripts {
+    <script>
+        // Pide el motivo antes de anular (obligatorio, máximo 200 caracteres).
+        const cancelForm = document.getElementById('cancelForm');
+        if (cancelForm) {
+            cancelForm.addEventListener('submit', function (event) {
+                if (cancelForm.dataset.confirmed === 'true') return;
+                event.preventDefault();
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: '¿Anular la venta #@Model.Number?',
+                    text: 'El stock de los productos volverá al inventario. No se puede deshacer.',
+                    input: 'text',
+                    inputLabel: 'Motivo de la anulación',
+                    inputAttributes: { maxlength: '200' },
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, anular',
+                    cancelButtonText: 'No',
+                    inputValidator: value => (!value || !value.trim()) ? 'El motivo es obligatorio' : undefined
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        document.getElementById('cancelReason').value = result.value.trim();
+                        cancelForm.dataset.confirmed = 'true';
+                        cancelForm.submit();
+                    }
+                });
+            });
+        }
+    </script>
+}
