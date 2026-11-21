@@ -146,7 +146,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             }
         }
 
-        /// <summary>Monto inicial + ventas completadas en efectivo del turno.</summary>
+        /// <summary>Monto inicial + ventas completadas en efectivo − reembolsos en efectivo del turno.</summary>
         private async Task<decimal> ExpectedCashAsync(Guid sessionId, decimal openingAmount)
         {
             decimal cashSales = await _context.Sales
@@ -155,8 +155,14 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                          && s.PaymentMethod == PaymentMethod.Cash)
                 .SumAsync(s => (decimal?)s.Total) ?? 0m;
 
-            return openingAmount + cashSales;
+            return openingAmount + cashSales - await CashRefundsAsync(sessionId);
         }
+
+        /// <summary>Dinero en efectivo que salió del cajón de este turno por devoluciones.</summary>
+        private async Task<decimal> CashRefundsAsync(Guid sessionId)
+            => await _context.SaleReturns
+                .Where(r => r.CashSessionId == sessionId && r.RefundMethod == PaymentMethod.Cash)
+                .SumAsync(r => (decimal?)r.Total) ?? 0m;
 
         public async Task<Response<CashSessionSummaryDTO>> GetSummaryAsync(Guid sessionId)
         {
@@ -193,10 +199,20 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     CancelledTotal = cancelled.Sum(g => g.Total)
                 };
 
+                var cashRefunds = await _context.SaleReturns
+                    .AsNoTracking()
+                    .Where(r => r.CashSessionId == sessionId && r.RefundMethod == PaymentMethod.Cash)
+                    .GroupBy(r => 1)
+                    .Select(g => new { Count = g.Count(), Total = g.Sum(r => r.Total) })
+                    .FirstOrDefaultAsync();
+
+                summary.CashRefundsCount = cashRefunds?.Count ?? 0;
+                summary.CashRefundsTotal = cashRefunds?.Total ?? 0m;
+
                 decimal cashSales = summary.Payments.Single(p => p.PaymentMethod == PaymentMethod.Cash).Total;
 
                 // Si está cerrada, se muestra lo que quedó guardado en el cierre.
-                summary.ExpectedCash = session.ExpectedAmount ?? session.OpeningAmount + cashSales;
+                summary.ExpectedCash = session.ExpectedAmount ?? session.OpeningAmount + cashSales - summary.CashRefundsTotal;
 
                 return Response<CashSessionSummaryDTO>.Success(summary, "Reporte de caja obtenido con éxito");
             }

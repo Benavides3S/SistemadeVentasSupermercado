@@ -165,7 +165,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 var sale = await _context.Sales
                     .AsNoTracking()
                     .Where(s => s.Id == saleId)
-                    .Select(s => new { s.Status, s.CashSessionId })
+                    .Select(s => new { s.Status, s.CashSessionId, s.ReturnedTotal })
                     .FirstOrDefaultAsync();
 
                 if (sale is null)
@@ -173,6 +173,11 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
                 if (sale.Status != SaleStatus.Completed)
                     return Response<SaleDetailDTO>.Failure(alreadyCancelled);
+
+                // Con devoluciones, anular devolvería el stock dos veces.
+                const string hasReturns = "Esta venta tiene devoluciones: no se puede anular (haz otra devolución por lo que falte)";
+                if (sale.ReturnedTotal > 0)
+                    return Response<SaleDetailDTO>.Failure(hasReturns);
 
                 // Ventas anteriores a la caja no tienen turno: solo admiten devolución.
                 if (sale.CashSessionId is null)
@@ -187,11 +192,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 if (sessionLocked == 0)
                     return Response<SaleDetailDTO>.Failure(sessionClosed);
 
-                // 2. Cambio de estado atómico: solo si sigue "Completada".
-                //    Si dos supervisores anulan a la vez, solo uno actualiza la fila.
+                // 2. Cambio de estado atómico: solo si sigue "Completada" y sin devoluciones.
+                //    Si dos supervisores anulan a la vez (o alguien hace una devolución
+                //    en ese instante), solo una operación actualiza la fila.
                 DateTime now = DateTime.UtcNow;
                 int cancelled = await _context.Sales
-                    .Where(s => s.Id == saleId && s.Status == SaleStatus.Completed)
+                    .Where(s => s.Id == saleId && s.Status == SaleStatus.Completed && s.ReturnedTotal == 0)
                     .ExecuteUpdateAsync(s => s
                         .SetProperty(x => x.Status, SaleStatus.Cancelled)
                         .SetProperty(x => x.CancelledAtUtc, now)
@@ -199,7 +205,11 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         .SetProperty(x => x.CancelledByUserId, userId));
 
                 if (cancelled == 0)
-                    return Response<SaleDetailDTO>.Failure(alreadyCancelled);
+                {
+                    // Algo cambió justo antes: se averigua qué para dar el mensaje correcto.
+                    bool returnedMeanwhile = await _context.Sales.AnyAsync(s => s.Id == saleId && s.ReturnedTotal > 0);
+                    return Response<SaleDetailDTO>.Failure(returnedMeanwhile ? hasReturns : alreadyCancelled);
+                }
 
                 // 3. Devuelve el stock de forma atómica, ordenado por ProductId (evita bloqueos mutuos).
                 var lines = await _context.SaleItems
@@ -328,7 +338,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         ClientName = s.Client != null ? s.Client.Name : null,
                         PaymentMethod = s.PaymentMethod,
                         Status = s.Status,
-                        Total = s.Total
+                        Total = s.Total,
+                        ReturnedTotal = s.ReturnedTotal
                     });
 
                 PagedList<SaleListItemDTO> list = await PagedList<SaleListItemDTO>.ToPagedListAsync(projected, request);
@@ -372,8 +383,21 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         CancelReason = s.CancelReason,
                         CancelledByName = s.CancelledByUser != null ? s.CancelledByUser.FirstName + " " + s.CancelledByUser.LastName : null,
                         CanBeCancelled = s.Status == SaleStatus.Completed
+                                      && s.ReturnedTotal == 0
                                       && s.CashSession != null
                                       && s.CashSession.Status == CashSessionStatus.Open,
+                        ReturnedTotal = s.ReturnedTotal,
+                        CanBeReturned = s.Status == SaleStatus.Completed && s.ReturnedTotal < s.Total,
+                        Returns = s.Returns
+                            .OrderBy(r => r.Number)
+                            .Select(r => new SaleReturnSummaryDTO
+                            {
+                                Id = r.Id,
+                                Number = r.Number,
+                                CreatedAtUtc = r.CreatedAtUtc,
+                                Total = r.Total
+                            })
+                            .ToList(),
                         Items = s.Items
                             .OrderBy(i => i.ProductName)
                             .Select(i => new SaleDetailLineDTO

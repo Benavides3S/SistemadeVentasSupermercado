@@ -35,6 +35,7 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public PaymentMethod PaymentMethod { get; set; }
         public SaleStatus Status { get; set; }
         public decimal Total { get; set; }
+        public decimal ReturnedTotal { get; set; }
     }
 
     /// <summary>Una venta completa, para el comprobante.</summary>
@@ -55,8 +56,16 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public string? CancelReason { get; set; }
         public string? CancelledByName { get; set; }
 
-        /// <summary>Se puede anular si sigue completada y su turno de caja sigue abierto.</summary>
+        /// <summary>Se puede anular si sigue completada, sin devoluciones y con su turno de caja abierto.</summary>
         public bool CanBeCancelled { get; set; }
+
+        // ---------- Devoluciones ----------
+        public decimal ReturnedTotal { get; set; }
+
+        /// <summary>Se puede devolver si sigue completada y no se ha devuelto todo.</summary>
+        public bool CanBeReturned { get; set; }
+
+        public List<SaleReturnSummaryDTO> Returns { get; set; } = new();
     }
 
     /// <summary>Formulario de anulación.</summary>

@@ -64,9 +64,13 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public int CancelledCount { get; set; }
         public decimal CancelledTotal { get; set; }
 
+        /// <summary>Devoluciones reembolsadas en efectivo desde este turno.</summary>
+        public int CashRefundsCount { get; set; }
+        public decimal CashRefundsTotal { get; set; }
+
         /// <summary>
-        /// Efectivo que debería haber en el cajón: monto inicial + ventas completadas en efectivo.
-        /// Si el turno está cerrado, es el valor guardado al cerrar.
+        /// Efectivo que debería haber en el cajón: monto inicial + ventas completadas en efectivo
+        /// − reembolsos en efectivo. Si el turno está cerrado, es el valor guardado al cerrar.
         /// </summary>
         public decimal ExpectedCash { get; set; }
     }
