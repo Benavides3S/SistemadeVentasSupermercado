@@ -19,6 +19,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             List<Permission> permissions = [
                 ..Productos(),
                 ..Clientes(),
+                ..Categorias(),
                 ..Secciones(),
                 ..Roles(),
                 ..Users()
