@@ -9,5 +9,6 @@
 .env.*
 docker/
 backups/
+scripts/
 SistemadeVentasSupermercado.Tests/
 *.md
