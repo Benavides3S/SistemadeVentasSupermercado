@@ -120,6 +120,6 @@ El código de terceros y sus licencias están en [THIRD-PARTY-NOTICES.md](THIRD-
 
 ## Problemas conocidos
 
-- **AutoMapper 12.0.1** tiene vulnerabilidades conocidas y sus versiones corregidas son comerciales. Pendiente: reemplazarlo (por ejemplo, con mapeo manual o Mapperly).
-- **EF Core / Identity 8.0.0** traen dependencias con vulnerabilidades conocidas (`Microsoft.Data.SqlClient`, `System.Text.Json`, `Microsoft.Extensions.Caching.Memory`, `Azure.Identity`). Se corrigen actualizando a la última versión 8.0.x.
-- Si la red se corta justo después de registrar una venta, el cajero puede ver un error aunque la venta sí quedó: revisar el historial antes de cobrar otra vez.
+- Si la red se corta justo después de cobrar, el cajero puede volver a cobrar el mismo carrito sin riesgo: el sistema reconoce el reintento y no registra la venta dos veces. Pero si **recarga la página (F5)** después del error, el carrito se pierde; en ese caso revisar el historial antes de armar la venta de nuevo.
+- Al editar un producto, el stock se guarda como **ajuste** (la diferencia con lo que se veía al abrir el formulario), así no se pierden las ventas hechas mientras tanto. Todavía no hay historial de ajustes.
+- La unidad de medida de un producto no se puede cambiar después de crearlo.
