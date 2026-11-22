@@ -58,7 +58,7 @@ Tecnología: ASP.NET Core 8 MVC (Razor), Entity Framework Core 8, SQL Server, AS
    dotnet run            # http://localhost:5234
    ```
 
-   Al arrancar se crean (si no existen) los permisos, el rol **Admin**, categorías y productos de ejemplo y los usuarios iniciales. En ambiente *Development* también se crean dos usuarios de prueba sin el rol Admin (`anad@yopmail.com` y `jhond@yopmail.com`), útiles para probar permisos.
+   Al arrancar se crean (si no existen) los permisos, los roles **Admin**, **Cajero** y **Supervisor**, categorías de ejemplo y los usuarios iniciales. En ambiente *Development* también se crean productos de ejemplo y dos usuarios de prueba: `anad@yopmail.com` (Cajero) y `jhond@yopmail.com` (Supervisor), útiles para probar permisos.
 
    El Admin inicial entra con `Seed:PasswordInicial` y el sistema le pide cambiarla en el primer inicio de sesión.
 
@@ -104,7 +104,7 @@ El rol **Admin** tiene acceso a todo. Para los demás roles, asigna permisos en 
 | Productos, Categorías, Clientes, Usuarios, Roles | `show*`, `create*`, `update*`, `delete*` | Administración |
 | Usuarios | `resetPasswords` | Restablecer la contraseña de un usuario (genera una temporal) |
 
-Un cajero típico necesita `createSales` y `manageCashSessions`. Un supervisor, además, `showSales`, `cancelSales`, `createReturns`, `showCashSessions` y `showReports`.
+El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **Supervisor** (lo del cajero, más `showSales`, `cancelSales`, `createReturns`, `showCashSessions` y `showReports`). Puedes cambiarles los permisos en **Roles**; el sistema no los vuelve a poner.
 
 ## Flujo diario
 
