@@ -66,6 +66,13 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 string token = (await _usersService.GenerateConfirmationTokenAsync(user)).Result;
                 await _usersService.ConfirmUserAsync(user, token);
             }
+            else if (!user.MustChangePassword && await _usersService.CheckPasswordAsync(user, passwordInicial))
+            {
+                // El Admin se creó antes de existir el cambio obligatorio (la columna llegó en false)
+                // y sigue con la clave inicial, que conoce quien instaló: se le pide cambiarla.
+                user.MustChangePassword = true;
+                await _context.SaveChangesAsync();
+            }
             if (!crearUsuariosDePrueba) return;
             // Content manager
             user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == "anad@yopmail.com");

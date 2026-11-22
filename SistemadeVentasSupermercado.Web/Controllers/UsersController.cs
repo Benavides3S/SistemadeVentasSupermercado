@@ -66,6 +66,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             {
                 string detalle = response.Errors is null ? "" : " " + string.Join(" ", response.Errors);
                 _notifyService.Error(response.Message + detalle);
+                ModelState.AddModelError(string.Empty, response.Message + detalle);
 
                 dto.SistemaVentasRoles = await _combosHelper.GetComboRoles();
                 return View(dto);
@@ -142,6 +143,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 if (!response.IsSuccess)
                 {
                     _notifyService.Error(response.Message);
+                    ModelState.AddModelError(string.Empty, response.Message);
                     dto.SistemaVentasRoles = await _combosHelper.GetComboRoles();
                     return View(dto);
                 }

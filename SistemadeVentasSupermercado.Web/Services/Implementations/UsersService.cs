@@ -220,6 +220,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         public async Task<bool> MustChangePasswordAsync(string userName)
             => await _context.Users.AnyAsync(u => u.UserName == userName && u.MustChangePassword);
 
+        public Task<bool> CheckPasswordAsync(User user, string password) => _userManager.CheckPasswordAsync(user, password);
+
         private async Task<bool> IsSuperAdminRoleAsync(Guid roleId)
             => await _context.SistemaVentasRoles.AnyAsync(r => r.Id == roleId && r.Name == Env.SUPER_ADMIN_ROLE_NAME);
 

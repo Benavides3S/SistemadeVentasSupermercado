@@ -86,6 +86,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             }
 
             _notyfService.Error(createResponse.Message);
+            ModelState.AddModelError(string.Empty, createResponse.Message);
 
             Response<List<PermissionsForRoleDTO>> permissionsResponse2 = await _rolesService.GetPermissionsAsync();
 
@@ -144,6 +145,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             }
 
             _notyfService.Error(updateResponse.Message);
+            ModelState.AddModelError(string.Empty, updateResponse.Message);
 
             Response<List<PermissionsForRoleDTO>> permissionsResponse2 = await _rolesService.GetPermissionsAsync();
 
