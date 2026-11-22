@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Humanizer;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Web.Core;

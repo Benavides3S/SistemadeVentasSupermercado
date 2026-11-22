@@ -40,7 +40,6 @@ Llega **indirectamente** a través de ClosedXML. La licencia de Six Labors ("Six
 | xunit, xunit.runner.visualstudio | Apache-2.0 |
 | Microsoft.NET.Test.Sdk | MIT |
 | Microsoft.Extensions.Configuration.Json / .EnvironmentVariables | MIT |
-| Microsoft.VisualStudio.Web.CodeGeneration.Design | MIT |
 
 ## Librerías de JavaScript y CSS (`wwwroot`)
 
