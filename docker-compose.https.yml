@@ -1,0 +1,17 @@
+# OPCIONAL (recomendado en un negocio): HTTPS para que las contraseñas no viajen sin cifrar por la red.
+# Se usa junto con el archivo principal:
+#   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d
+# Requiere el certificado en certificados/certificado.pfx y CERT_PASSWORD en .env (ver docker/LEEME.md).
+
+services:
+  web:
+    environment:
+      ASPNETCORE_HTTPS_PORTS: "8443"
+      # Puerto público al que se redirige quien entre por HTTP.
+      ASPNETCORE_HTTPS_PORT: ${APP_HTTPS_PORT:-8443}
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/certificado.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${CERT_PASSWORD:?Falta CERT_PASSWORD en el archivo .env}
+    volumes:
+      - ./certificados:/https:ro
+    ports:
+      - "${APP_HTTPS_PORT:-8443}:8443"

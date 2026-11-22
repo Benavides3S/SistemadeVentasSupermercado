@@ -1,0 +1,114 @@
+@model PaginationResponse<CashSessionDTO>
+
+@{
+    ViewData["Title"] = "Turnos de caja";
+}
+
+<div class="pagetitle">
+    <h1>Turnos de caja</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item active">Turnos de caja</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary">Turnos de caja</h3>
+        </div>
+
+        <div class="card-body mt-3">
+            <form asp-action="Index" class="navbar-search" method="GET">
+                <input type="hidden" name="Page" value="1" />
+                <div class="row mt-3">
+                    <div class="col-md-auto">
+                        <select name="RecordsPerPage" class="form-select bg-light border-0 small">
+                            <option value="10" selected="@(Model.RecordsPerPage == 10)">10</option>
+                            <option value="15" selected="@(Model.RecordsPerPage == 15)">15</option>
+                            <option value="30" selected="@(Model.RecordsPerPage == 30)">30</option>
+                            <option value="50" selected="@(Model.RecordsPerPage == 50)">50</option>
+                        </select>
+                    </div>
+                    <div class="col-md-10">
+                        <div class="input-group mb-3">
+                            <input type="text" name="Filter" value="@Model.Filter" class="form-control bg-light border-0 small"
+                                   placeholder="Número de caja o cajero..." />
+                            <button class="btn btn-primary"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th>N.º</th>
+                            <th>Cajero</th>
+                            <th>Apertura</th>
+                            <th>Cierre</th>
+                            <th class="text-end">Esperado</th>
+                            <th class="text-end">Contado</th>
+                            <th class="text-end">Diferencia</th>
+                            <th>Estado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.List != null && Model.List.Any())
+                        {
+                            foreach (CashSessionDTO item in Model.List)
+                            {
+                                <tr>
+                                    <td>@item.Number</td>
+                                    <td>@item.CashierName</td>
+                                    <td>@DisplayFormat.DateTimeColombia(item.OpenedAtUtc)</td>
+                                    <td>@(item.ClosedAtUtc.HasValue ? DisplayFormat.DateTimeColombia(item.ClosedAtUtc.Value) : "—")</td>
+                                    <td class="text-end">@(item.ExpectedAmount.HasValue ? DisplayFormat.Money(item.ExpectedAmount.Value) : "—")</td>
+                                    <td class="text-end">@(item.CountedAmount.HasValue ? DisplayFormat.Money(item.CountedAmount.Value) : "—")</td>
+                                    <td class="text-end">
+                                        @if (item.Difference.HasValue)
+                                        {
+                                            string css = item.Difference.Value < 0 ? "text-danger" : item.Difference.Value > 0 ? "text-warning" : "text-success";
+                                            <span class="fw-bold @css">@DisplayFormat.Money(item.Difference.Value)</span>
+                                        }
+                                        else
+                                        {
+                                            <span>—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.Status == CashSessionStatus.Open)
+                                        {
+                                            <span class="badge bg-success">Abierta</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Cerrada</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <a asp-action="Report" asp-route-id="@item.Id" class="btn btn-sm btn-info" title="Ver reporte">
+                                            <i class="bi bi-file-earmark-text"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center">No hay turnos de caja.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @await Html.PartialAsync("_PaginationComponent", Model)
+        </div>
+    </div>
+</section>

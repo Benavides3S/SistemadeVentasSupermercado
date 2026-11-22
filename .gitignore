@@ -482,3 +482,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Docker: certificados HTTPS y copias de seguridad (nunca a git)
+certificados/
+backups/

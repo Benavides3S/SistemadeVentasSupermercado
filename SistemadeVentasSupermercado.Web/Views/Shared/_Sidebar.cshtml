@@ -13,6 +13,51 @@
             </a>
         </li>
 
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("createSales", "Ventas"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Sales" asp-action="Create">
+                    <i class="bi bi-cart3"></i><span>Punto de venta</span>
+                </a>
+            </li>
+        }
+
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Sales" asp-action="Index">
+                    <i class="bi bi-receipt"></i><span>Ventas</span>
+                </a>
+            </li>
+        }
+
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("manageCashSessions", "Caja"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="CashSessions" asp-action="Current">
+                    <i class="bi bi-safe"></i><span>Mi caja</span>
+                </a>
+            </li>
+        }
+
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showCashSessions", "Caja"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="CashSessions" asp-action="Index">
+                    <i class="bi bi-journal-check"></i><span>Turnos de caja</span>
+                </a>
+            </li>
+        }
+
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showReports", "Reportes"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Reports" asp-action="Index">
+                    <i class="bi bi-bar-chart-line"></i><span>Reportes</span>
+                </a>
+            </li>
+        }
+
         @if (await _usersService.CurrentUserIsAuthorizedAsync("showProducts" , "Productos"))
         {
             <li class="nav">

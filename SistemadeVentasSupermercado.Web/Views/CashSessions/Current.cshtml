@@ -1,0 +1,115 @@
+@model CashSessionDTO?
+
+@{
+    ViewData["Title"] = "Mi caja";
+}
+
+<div class="pagetitle">
+    <h1>Mi caja</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item active">Mi caja</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+
+            @if (Model is null)
+            {
+                @* ---------- Apertura ---------- *@
+                <div class="card">
+                    <div class="card-body pt-3">
+                        <h5 class="card-title">Abrir caja</h5>
+                        <p>Cuenta el efectivo con el que empiezas el turno (la base del cajón).</p>
+
+                        <form asp-action="Open" method="post">
+                            <label for="OpeningAmount" class="form-label fw-bold">Monto inicial en efectivo</label>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="any" min="0" id="OpeningAmount" name="OpeningAmount"
+                                       class="form-control form-control-lg" value="0" required autofocus />
+                            </div>
+                            <button type="submit" class="btn btn-success btn-lg w-100">
+                                <i class="bi bi-unlock"></i> Abrir caja
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @* ---------- Caja abierta: cierre con arqueo ciego ---------- *@
+                <div class="card">
+                    <div class="card-body pt-3">
+                        <h5 class="card-title">Caja N.º @Model.Number <span class="badge bg-success">Abierta</span></h5>
+                        <p class="mb-1">Apertura: @DisplayFormat.DateTimeColombia(Model.OpenedAtUtc)</p>
+                        <p>Monto inicial: <strong>@DisplayFormat.Money(Model.OpeningAmount)</strong></p>
+
+                        <a asp-controller="Sales" asp-action="Create" class="btn btn-primary w-100">
+                            <i class="bi bi-cart3"></i> Ir al punto de venta
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body pt-3">
+                        <h5 class="card-title">Cerrar caja</h5>
+                        <p>
+                            Cuenta <strong>todo el efectivo</strong> que hay en el cajón (incluida la base inicial)
+                            y escribe el total. El sistema te mostrará la diferencia después de cerrar.
+                        </p>
+
+                        <form asp-action="Close" method="post" id="closeForm">
+                            <label for="CountedAmount" class="form-label fw-bold">Efectivo contado</label>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="any" min="0" id="CountedAmount" name="CountedAmount"
+                                       class="form-control form-control-lg" required />
+                            </div>
+
+                            <label for="Notes" class="form-label">Observaciones (opcional)</label>
+                            <textarea id="Notes" name="Notes" class="form-control mb-3" maxlength="500" rows="2"></textarea>
+
+                            <button type="submit" class="btn btn-danger btn-lg w-100">
+                                <i class="bi bi-lock"></i> Cerrar caja
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        // Confirmación antes de cerrar: un cierre no se puede deshacer.
+        const closeForm = document.getElementById('closeForm');
+        if (closeForm) {
+            closeForm.addEventListener('submit', function (event) {
+                if (closeForm.dataset.confirmed === 'true') return;
+                event.preventDefault();
+                if (!closeForm.reportValidity()) return;
+
+                Swal.fire({
+                    icon: 'question',
+                    title: '¿Cerrar la caja?',
+                    text: 'Después de cerrar no podrás vender en este turno ni cambiar el conteo.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, cerrar',
+                    cancelButtonText: 'Cancelar'
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        closeForm.dataset.confirmed = 'true';
+                        closeForm.submit();
+                    }
+                });
+            });
+        }
+    </script>
+}

@@ -1,0 +1,125 @@
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
+
+@{
+    ViewData["Title"] = "Punto de venta";
+    bool canShowSales = await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas");
+    CashSessionDTO? cashSession = ViewBag.CashSession as CashSessionDTO;
+}
+
+<div class="pagetitle">
+    <h1>Punto de venta</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item active">Punto de venta</li>
+        </ol>
+    </nav>
+    @if (cashSession != null)
+    {
+        <span class="badge bg-success">
+            <i class="bi bi-unlock"></i> Caja N.º @cashSession.Number abierta desde @DisplayFormat.DateTimeColombia(cashSession.OpenedAtUtc)
+        </span>
+    }
+</div>
+
+@* Token antiforgery: el JavaScript lo lee de aquí y lo envía en el encabezado del cobro. *@
+@Html.AntiForgeryToken()
+
+<section class="section"
+         id="pos"
+         data-search-products-url="@Url.Action("SearchProducts", "Sales")"
+         data-search-clients-url="@Url.Action("SearchClients", "Sales")"
+         data-create-url="@Url.Action("Create", "Sales")"
+         data-details-url="@(canShowSales ? Url.Action("Details", "Sales") : "")">
+    <div class="row">
+
+        @* ---------- Columna izquierda: buscador y carrito ---------- *@
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body pt-3">
+                    <label for="productSearch" class="form-label fw-bold">Buscar producto</label>
+                    <div class="position-relative">
+                        <input type="text" id="productSearch" class="form-control form-control-lg"
+                               placeholder="Escribe el nombre del producto..." autocomplete="off" autofocus />
+                        <div id="productResults" class="list-group position-absolute w-100 shadow" style="z-index: 1000;"></div>
+                    </div>
+                    <div class="form-text">Enter agrega el primer resultado. Esc limpia la búsqueda.</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body pt-3">
+                    <h5 class="card-title py-0">Carrito</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-end">Precio</th>
+                                    <th style="width: 170px;">Cantidad</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cartBody"></tbody>
+                        </table>
+                    </div>
+                    <p id="cartEmpty" class="text-center text-muted my-3">El carrito está vacío.</p>
+                </div>
+            </div>
+        </div>
+
+        @* ---------- Columna derecha: cliente, pago y cobro ---------- *@
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body pt-3">
+                    <label for="clientSearch" class="form-label fw-bold">Cliente (opcional)</label>
+                    <div id="clientSelected" class="alert alert-info py-2 d-none justify-content-between align-items-center">
+                        <span id="clientSelectedName"></span>
+                        <button type="button" id="clientClear" class="btn btn-sm btn-outline-secondary" title="Quitar cliente">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="position-relative" id="clientSearchBox">
+                        <input type="text" id="clientSearch" class="form-control"
+                               placeholder="Nombre o correo..." autocomplete="off" />
+                        <div id="clientResults" class="list-group position-absolute w-100 shadow" style="z-index: 1000;"></div>
+                    </div>
+
+                    <label for="paymentMethod" class="form-label fw-bold mt-3">Método de pago</label>
+                    <select id="paymentMethod" class="form-select"
+                            asp-items="Html.GetEnumSelectList<PaymentMethod>()"></select>
+
+                    <div id="cashBox" class="mt-3">
+                        <label for="cashReceived" class="form-label fw-bold">Recibido en efectivo</label>
+                        <input type="number" step="any" min="0" id="cashReceived" class="form-control" placeholder="Opcional" />
+                        <div class="d-flex justify-content-between mt-2">
+                            <span>Cambio:</span>
+                            <span id="cashChange" class="fw-bold">—</span>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <div class="d-flex justify-content-between align-items-baseline">
+                        <span class="fs-5">Total estimado</span>
+                        <span id="cartTotal" class="fs-3 fw-bold">$ 0</span>
+                    </div>
+                    <div class="form-text mb-3">El total definitivo lo calcula el sistema con los precios actuales.</div>
+
+                    <button type="button" id="btnCharge" class="btn btn-success btn-lg w-100" disabled>
+                        <i class="bi bi-cash-coin"></i> Cobrar
+                    </button>
+                    <button type="button" id="btnClear" class="btn btn-outline-danger w-100 mt-2" disabled>
+                        <i class="bi bi-trash"></i> Vaciar carrito
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/pos.js" asp-append-version="true"></script>
+}

@@ -38,30 +38,30 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                 nullable: true);
 
             // 2) Una categoría por cada texto distinto que ya existe
-            migrationBuilder.Sql(@"
+            migrationBuilder.Sql(@"EXEC(N'
         INSERT INTO Categories (Id, Name, IsActive)
         SELECT NEWID(), x.Name, 1
         FROM (SELECT DISTINCT LTRIM(RTRIM(Category)) AS Name
               FROM Products
-              WHERE LTRIM(RTRIM(Category)) <> '') x;");
+              WHERE LTRIM(RTRIM(Category)) <> '''') x;')");
 
             // 3) Por si algún producto tuviera la categoría vacía
-            migrationBuilder.Sql(@"
-        IF EXISTS (SELECT 1 FROM Products WHERE Category IS NULL OR LTRIM(RTRIM(Category)) = '')
-           AND NOT EXISTS (SELECT 1 FROM Categories WHERE Name = N'Sin categoría')
-            INSERT INTO Categories (Id, Name, IsActive) VALUES (NEWID(), N'Sin categoría', 1);");
+            migrationBuilder.Sql(@"EXEC(N'
+        IF EXISTS (SELECT 1 FROM Products WHERE Category IS NULL OR LTRIM(RTRIM(Category)) = '''')
+           AND NOT EXISTS (SELECT 1 FROM Categories WHERE Name = N''Sin categoría'')
+            INSERT INTO Categories (Id, Name, IsActive) VALUES (NEWID(), N''Sin categoría'', 1);')");
 
             // 4) Enlazar cada producto con su categoría
-            migrationBuilder.Sql(@"
+            migrationBuilder.Sql(@"EXEC(N'
         UPDATE p SET p.CategoryId = c.Id
         FROM Products p
-        INNER JOIN Categories c ON c.Name = LTRIM(RTRIM(p.Category));");
+        INNER JOIN Categories c ON c.Name = LTRIM(RTRIM(p.Category));')");
 
-            migrationBuilder.Sql(@"
+            migrationBuilder.Sql(@"EXEC(N'
         UPDATE p SET p.CategoryId = c.Id
         FROM Products p
-        INNER JOIN Categories c ON c.Name = N'Sin categoría'
-        WHERE p.CategoryId IS NULL;");
+        INNER JOIN Categories c ON c.Name = N''Sin categoría''
+        WHERE p.CategoryId IS NULL;')");
 
             // 5) Ahora sí obligatoria, con su relación
             migrationBuilder.AlterColumn<Guid>(
