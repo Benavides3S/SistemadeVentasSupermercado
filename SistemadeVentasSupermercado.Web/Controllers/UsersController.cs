@@ -137,7 +137,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                     return View(dto);
                 }
 
-                Response<UserDTO> response = await _usersService.EditAsync(dto);
+                Response<UserDTO> response = await _usersService.EditAsync(dto, User.Identity!.Name!);
 
                 if (!response.IsSuccess)
                 {

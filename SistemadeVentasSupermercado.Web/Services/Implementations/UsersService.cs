@@ -306,7 +306,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         //    throw new NotImplementedException();
         //}
 
-        public async Task<Response<UserDTO>> EditAsync(UserDTO dto)
+        public async Task<Response<UserDTO>> EditAsync(UserDTO dto, string requestedByUserName)
         {
             try
             {
@@ -317,20 +317,44 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     return Response<UserDTO>.Failure("No existe usuario.");
                 }
 
+                // Si no llega rol, se conserva el actual.
+                Guid newRoleId = user.SistemaVentasRoleId;
+                if (!string.IsNullOrWhiteSpace(dto.SistemaVentasRoleId))
+                {
+                    if (!Guid.TryParse(dto.SistemaVentasRoleId, out newRoleId)
+                        || !await _context.SistemaVentasRoles.AnyAsync(r => r.Id == newRoleId))
+                        return Response<UserDTO>.Failure("Seleccione un rol válido.");
+                }
+
+                bool roleChanges = newRoleId != user.SistemaVentasRoleId;
+                bool targetIsAdmin = await IsSuperAdminRoleAsync(user.SistemaVentasRoleId);
+                bool newRoleIsAdmin = await IsSuperAdminRoleAsync(newRoleId);
+
+                // Sin esto, quien tiene "updateUsers" podría darse el rol Admin a sí mismo o a un cómplice,
+                // o cambiarle los datos a un Admin. Solo otro Admin puede tocar usuarios Admin o asignar ese rol.
+                if ((targetIsAdmin || newRoleIsAdmin) && !await IsSuperAdminUserAsync(requestedByUserName))
+                    return Response<UserDTO>.Failure(
+                        $"Solo un usuario con rol '{Env.SUPER_ADMIN_ROLE_NAME}' puede editar usuarios con ese rol o asignarlo.");
+
+                // Nadie cambia su propio rol: evita ascenderse y también que un Admin se quite el rol por error.
+                if (roleChanges && string.Equals(user.UserName, requestedByUserName, StringComparison.OrdinalIgnoreCase))
+                    return Response<UserDTO>.Failure("No puedes cambiar tu propio rol. Pídeselo a otro administrador.");
+
+                // Siempre debe quedar al menos un Admin.
+                if (roleChanges && targetIsAdmin && !newRoleIsAdmin
+                    && !await _context.Users.AnyAsync(u => u.Id != user.Id && u.SistemaVentasRoleId == user.SistemaVentasRoleId))
+                    return Response<UserDTO>.Failure($"No se puede quitar el rol '{Env.SUPER_ADMIN_ROLE_NAME}' al único administrador.");
+
                 user.PhoneNumber = dto.PhoneNumber;
                 user.Document = dto.Document;
                 user.FirstName = dto.FirstName;
                 user.LastName = dto.LastName;
-
-                // dto.SistemaVentasRoleId is expected to be a string representation of a Guid
-                if (!string.IsNullOrWhiteSpace(dto.SistemaVentasRoleId) && Guid.TryParse(dto.SistemaVentasRoleId, out var roleGuid))
-                {
-                    user.SistemaVentasRoleId = roleGuid;
-                }
-
-                _context.Users.Update(user);
+                user.SistemaVentasRoleId = newRoleId;
 
                 await _context.SaveChangesAsync();
+
+                if (roleChanges)
+                    _logger.LogInformation("Rol cambiado: {Email} por {CambiadoPor}", user.Email, requestedByUserName);
 
                 return Response<UserDTO>.Success(dto, "Usuario actualizado con éxito");
             }

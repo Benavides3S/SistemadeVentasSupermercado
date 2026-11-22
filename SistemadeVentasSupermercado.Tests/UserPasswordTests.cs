@@ -340,5 +340,127 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.NotNull(guardado.LockoutEnd);
             Assert.InRange(guardado.LockoutEnd!.Value, DateTimeOffset.UtcNow.AddMinutes(14), DateTimeOffset.UtcNow.AddMinutes(16));
         }
+    
+
+        // ---------- Editar usuario (cambio de rol) ----------
+
+        private static UserDTO EdicionDe(User usuario, Guid rolId) => new()
+        {
+            Id = Guid.Parse(usuario.Id),
+            Email = usuario.Email!,
+            Document = usuario.Document,
+            FirstName = "Editado",
+            LastName = usuario.LastName,
+            PhoneNumber = "3110000000",
+            SistemaVentasRoleId = rolId.ToString()
+        };
+
+        [Fact]
+        public async Task Quien_no_es_Admin_no_puede_darse_el_rol_Admin()
+        {
+            User cajero = await CrearUsuarioAsync(await RolCajeroAsync());
+
+            Response<UserDTO> respuesta =
+                await ConServicioAsync(async (s, _) => await s.EditAsync(EdicionDe(cajero, await RolAdminAsync()), cajero.UserName!));
+
+            Assert.False(respuesta.IsSuccess);
+            Assert.Contains("Solo un usuario con rol 'Admin'", respuesta.Message);
+            User guardado = await LeerUsuarioAsync(cajero.Id);
+            Assert.Equal(await RolCajeroAsync(), guardado.SistemaVentasRoleId);
+            Assert.Equal("Usuario", guardado.FirstName); // tampoco se guardó lo demás
+        }
+
+        [Fact]
+        public async Task Quien_no_es_Admin_no_puede_dar_el_rol_Admin_a_otro()
+        {
+            User cajero = await CrearUsuarioAsync(await RolCajeroAsync());
+            User otro = await CrearUsuarioAsync(await RolCajeroAsync());
+
+            Response<UserDTO> respuesta =
+                await ConServicioAsync(async (s, _) => await s.EditAsync(EdicionDe(otro, await RolAdminAsync()), cajero.UserName!));
+
+            Assert.False(respuesta.IsSuccess);
+            Assert.Equal(await RolCajeroAsync(), (await LeerUsuarioAsync(otro.Id)).SistemaVentasRoleId);
+        }
+
+        [Fact]
+        public async Task Quien_no_es_Admin_no_puede_editar_a_un_Admin()
+        {
+            User admin = await CrearUsuarioAsync(await RolAdminAsync());
+            User cajero = await CrearUsuarioAsync(await RolCajeroAsync());
+
+            Response<UserDTO> respuesta =
+                await ConServicioAsync(async (s, _) => await s.EditAsync(EdicionDe(admin, await RolCajeroAsync()), cajero.UserName!));
+
+            Assert.False(respuesta.IsSuccess);
+            User guardado = await LeerUsuarioAsync(admin.Id);
+            Assert.Equal(await RolAdminAsync(), guardado.SistemaVentasRoleId);
+            Assert.Equal("Usuario", guardado.FirstName);
+        }
+
+        [Fact]
+        public async Task Quien_no_es_Admin_puede_editar_a_otro_sin_dar_el_rol_Admin()
+        {
+            User cajero = await CrearUsuarioAsync(await RolCajeroAsync());
+            User otro = await CrearUsuarioAsync(await RolCajeroAsync());
+
+            Response<UserDTO> respuesta =
+                await ConServicioAsync(async (s, _) => await s.EditAsync(EdicionDe(otro, await RolCajeroAsync()), cajero.UserName!));
+
+            Assert.True(respuesta.IsSuccess, respuesta.Message);
+            Assert.Equal("Editado", (await LeerUsuarioAsync(otro.Id)).FirstName);
+        }
+
+        [Fact]
+        public async Task Un_Admin_puede_dar_el_rol_Admin()
+        {
+            User admin = await CrearUsuarioAsync(await RolAdminAsync());
+            User cajero = await CrearUsuarioAsync(await RolCajeroAsync());
+
+            Response<UserDTO> respuesta =
+                await ConServicioAsync(async (s, _) => await s.EditAsync(EdicionDe(cajero, await RolAdminAsync()), admin.UserName!));
+
+            Assert.True(respuesta.IsSuccess, respuesta.Message);
+            Assert.Equal(await RolAdminAsync(), (await LeerUsuarioAsync(cajero.Id)).SistemaVentasRoleId);
+        }
+
+        [Fact]
+        public async Task Nadie_puede_cambiar_su_propio_rol()
+        {
+            User admin = await CrearUsuarioAsync(await RolAdminAsync());
+            await CrearUsuarioAsync(await RolAdminAsync()); // hay otro Admin, así que no es el "único"
+
+            Response<UserDTO> respuesta =
+                await ConServicioAsync(async (s, _) => await s.EditAsync(EdicionDe(admin, await RolCajeroAsync()), admin.UserName!));
+
+            Assert.False(respuesta.IsSuccess);
+            Assert.Contains("tu propio rol", respuesta.Message);
+            Assert.Equal(await RolAdminAsync(), (await LeerUsuarioAsync(admin.Id)).SistemaVentasRoleId);
+        }
+
+        [Fact]
+        public async Task Editar_sus_propios_datos_sin_cambiar_el_rol_si_se_puede()
+        {
+            User cajero = await CrearUsuarioAsync(await RolCajeroAsync());
+
+            Response<UserDTO> respuesta =
+                await ConServicioAsync(async (s, _) => await s.EditAsync(EdicionDe(cajero, await RolCajeroAsync()), cajero.UserName!));
+
+            Assert.True(respuesta.IsSuccess, respuesta.Message);
+            Assert.Equal("Editado", (await LeerUsuarioAsync(cajero.Id)).FirstName);
+        }
+
+        [Fact]
+        public async Task Editar_con_un_rol_inexistente_falla()
+        {
+            User admin = await CrearUsuarioAsync(await RolAdminAsync());
+            User cajero = await CrearUsuarioAsync(await RolCajeroAsync());
+
+            Response<UserDTO> respuesta =
+                await ConServicioAsync((s, _) => s.EditAsync(EdicionDe(cajero, Guid.NewGuid()), admin.UserName!));
+
+            Assert.False(respuesta.IsSuccess);
+            Assert.Equal(await RolCajeroAsync(), (await LeerUsuarioAsync(cajero.Id)).SistemaVentasRoleId);
+        }
     }
 }
