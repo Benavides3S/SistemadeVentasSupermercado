@@ -303,12 +303,13 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             try
             {
                 string filter = term.Trim().ToLower();
+                string? code = BarcodeHelper.Normalize(term);
 
                 List<PosProductDTO> products = await _context.Products
                     .AsNoTracking()
                     .Where(p => p.Stock > 0
                              && p.Category != null && p.Category.IsActive
-                             && p.Name.ToLower().Contains(filter))
+                             && (p.Name.ToLower().Contains(filter) || (code != null && p.Barcode == code)))
                     .OrderBy(p => p.Name)
                     .Take(MaxProductResults)
                     .Select(p => new PosProductDTO
@@ -321,11 +322,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     })
                     .ToListAsync();
 
-                foreach (PosProductDTO product in products)
-                {
-                    product.UnitAbbreviation = product.Unit.Abbreviation();
-                    product.AllowsDecimals = product.Unit != UnitOfMeasure.Unit;
-                }
+                products.ForEach(CompletePosProduct);
 
                 return Response<List<PosProductDTO>>.Success(products);
             }
@@ -333,6 +330,53 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             {
                 return Response<List<PosProductDTO>>.Failure(ex);
             }
+        }
+
+        public async Task<Response<BarcodeLookupDTO>> FindByBarcodeAsync(string? code)
+        {
+            string? normalized = BarcodeHelper.Normalize(code);
+            if (normalized is null || BarcodeHelper.Validate(normalized) is not null)
+                return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.NotFound },
+                                                          $"No hay ningún producto con el código {code?.Trim()}.");
+
+            try
+            {
+                var product = await _context.Products
+                    .AsNoTracking()
+                    .Where(p => p.Barcode == normalized)
+                    .Select(p => new
+                    {
+                        Pos = new PosProductDTO { Id = p.Id, Name = p.Name, Price = p.Price, Stock = p.Stock, Unit = p.Unit },
+                        CategoryActive = p.Category != null && p.Category.IsActive
+                    })
+                    .SingleOrDefaultAsync();
+
+                if (product is null)
+                    return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.NotFound },
+                                                              $"No hay ningún producto con el código {normalized}.");
+
+                // Mismas reglas que el buscador por nombre y que la venta: sin stock o con la categoría desactivada no se vende.
+                if (!product.CategoryActive)
+                    return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.InactiveCategory },
+                                                              $"\"{product.Pos.Name}\" es de una categoría desactivada: no se puede vender.");
+
+                if (product.Pos.Stock <= 0)
+                    return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.OutOfStock },
+                                                              $"\"{product.Pos.Name}\" no tiene stock.");
+
+                CompletePosProduct(product.Pos);
+                return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.Found, Product = product.Pos });
+            }
+            catch (Exception ex)
+            {
+                return Response<BarcodeLookupDTO>.Failure(ex);
+            }
+        }
+
+        private static void CompletePosProduct(PosProductDTO product)
+        {
+            product.UnitAbbreviation = product.Unit.Abbreviation();
+            product.AllowsDecimals = product.Unit != UnitOfMeasure.Unit;
         }
 
         public async Task<Response<List<PosClientDTO>>> SearchClientsAsync(string? term)

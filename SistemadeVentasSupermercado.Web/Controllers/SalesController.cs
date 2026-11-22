@@ -115,6 +115,21 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             return Json(new { isSuccess = response.IsSuccess, message = response.Message, items = response.Result });
         }
 
+        /// <summary>Lo llama el punto de venta al escanear (Enter en el buscador). Devuelve JSON.</summary>
+        [HttpGet]
+        [CustomAuthorize("createSales", "Ventas")]
+        public async Task<IActionResult> FindByBarcode([FromQuery] string? code)
+        {
+            Response<BarcodeLookupDTO> response = await _salesService.FindByBarcodeAsync(code);
+            return Json(new
+            {
+                isSuccess = response.IsSuccess,
+                message = response.Message,
+                status = response.Result?.Status.ToString(),
+                item = response.Result?.Product
+            });
+        }
+
         [HttpGet]
         [CustomAuthorize("createSales", "Ventas")]
         public async Task<IActionResult> SearchClients([FromQuery] string? term)

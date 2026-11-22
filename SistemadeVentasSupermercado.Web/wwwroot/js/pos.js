@@ -5,6 +5,8 @@
 //  - Cada cobro lleva un código único (idempotencyKey) que se conserva hasta que la venta
 //    queda registrada: si la red falla y el cajero reintenta, el servidor no la registra dos veces.
 //  - Los nombres se pintan con textContent (nunca innerHTML) para evitar inyección de HTML.
+//  - Lector de código de barras: "escribe" el código y oprime Enter. El Enter busca primero el
+//    código exacto en el servidor; si no es un código, agrega el primer resultado por nombre.
 (function () {
     'use strict';
 
@@ -14,6 +16,7 @@
     const urls = {
         searchProducts: root.dataset.searchProductsUrl,
         searchClients: root.dataset.searchClientsUrl,
+        findBarcode: root.dataset.findBarcodeUrl,
         create: root.dataset.createUrl,
         details: root.dataset.detailsUrl // vacío si el usuario no tiene permiso showSales
     };
@@ -23,6 +26,7 @@
     const el = {
         productSearch: document.getElementById('productSearch'),
         productResults: document.getElementById('productResults'),
+        scanMessage: document.getElementById('scanMessage'),
         cartBody: document.getElementById('cartBody'),
         cartEmpty: document.getElementById('cartEmpty'),
         cartTotal: document.getElementById('cartTotal'),
@@ -68,10 +72,41 @@
 
     function debounce(fn, ms) {
         let timer;
-        return (...args) => {
+        const debounced = (...args) => {
             clearTimeout(timer);
             timer = setTimeout(() => fn(...args), ms);
         };
+        debounced.cancel = () => clearTimeout(timer); // el Enter del lector no espera la búsqueda pendiente
+        return debounced;
+    }
+
+    // Pitido de error (Web Audio, sin archivos). El cajero no siempre mira la pantalla al escanear.
+    let audioContext = null;
+    function beep() {
+        try {
+            audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            oscillator.type = 'square';
+            oscillator.frequency.value = 330;
+            gain.gain.value = 0.08;
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.3);
+        } catch {
+            // Sin audio en este navegador: queda el mensaje en pantalla.
+        }
+    }
+
+    // Mensaje bajo el buscador. No se usa una ventana (Swal) porque le quitaría el foco al
+    // buscador y el siguiente escaneo se perdería.
+    let scanMessageTimer;
+    function showScanMessage(text, isError) {
+        clearTimeout(scanMessageTimer);
+        el.scanMessage.textContent = text;
+        el.scanMessage.className = 'small fw-bold mt-1 ' + (isError ? 'text-danger' : 'text-success');
+        scanMessageTimer = setTimeout(() => { el.scanMessage.textContent = ''; }, isError ? 6000 : 2500);
     }
 
     function notify(icon, title, text) {
@@ -184,11 +219,56 @@
         el.productSearch.focus();
     }
 
+    // Los escaneos se atienden en orden, uno tras otro, aunque el lector dispare varios seguidos.
+    let scanQueue = Promise.resolve();
+
+    async function handleEnter(term) {
+        try {
+            const lookup = await fetchJson(urls.findBarcode + '?code=' + encodeURIComponent(term));
+            if (!lookup.isSuccess) throw new Error(lookup.message);
+
+            if (lookup.status === 'Found') {
+                addToCart(lookup.item, { keepSearch: true });
+                showScanMessage('✓ ' + lookup.item.name, false);
+                return;
+            }
+            if (lookup.status !== 'NotFound') {
+                // El producto existe pero no se puede vender (sin stock o categoría desactivada).
+                beep();
+                showScanMessage(lookup.message, true);
+                return;
+            }
+
+            // No es un código: se busca por nombre (lo que se hacía antes con Enter) y se agrega el primero.
+            const data = await fetchJson(urls.searchProducts + '?term=' + encodeURIComponent(term));
+            const items = data.items || [];
+            if (items.length > 0) {
+                addToCart(items[0], { keepSearch: true });
+                showScanMessage('✓ ' + items[0].name, false);
+            } else {
+                beep();
+                showScanMessage('No hay ningún producto con el código o nombre "' + term + '" (o no tiene stock).', true);
+            }
+        } catch (err) {
+            beep();
+            showScanMessage(err.message, true);
+        }
+    }
+
     el.productSearch.addEventListener('input', () => searchProducts(el.productSearch.value));
     el.productSearch.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (lastProductResults.length > 0) addToCart(lastProductResults[0]);
+            const term = el.productSearch.value.trim();
+            if (!term) return;
+
+            // Se limpia de una vez: si el lector manda otro código enseguida, entra limpio.
+            searchProducts.cancel();
+            el.productSearch.value = '';
+            lastProductResults = [];
+            clearResults(el.productResults);
+
+            scanQueue = scanQueue.then(() => handleEnter(term));
         } else if (e.key === 'Escape') {
             resetProductSearch();
         }
@@ -196,7 +276,8 @@
 
     // ---------- Carrito ----------
 
-    function addToCart(product) {
+    /** keepSearch: no borrar el buscador (al escanear ya se limpió y puede estar llegando el siguiente código). */
+    function addToCart(product, { keepSearch = false } = {}) {
         const existing = cart.get(product.id);
         if (existing) {
             existing.quantity = round(existing.quantity + 1, 3);
@@ -211,7 +292,12 @@
                 quantity: 1
             });
         }
-        resetProductSearch();
+        if (keepSearch) {
+            lastProductResults = [];
+            clearResults(el.productResults);
+        } else {
+            resetProductSearch();
+        }
         renderCart();
 
         // En productos por peso se selecciona la cantidad para escribir el peso de una vez.

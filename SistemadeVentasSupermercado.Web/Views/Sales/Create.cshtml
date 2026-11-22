@@ -29,6 +29,7 @@
          id="pos"
          data-search-products-url="@Url.Action("SearchProducts", "Sales")"
          data-search-clients-url="@Url.Action("SearchClients", "Sales")"
+         data-find-barcode-url="@Url.Action("FindByBarcode", "Sales")"
          data-create-url="@Url.Action("Create", "Sales")"
          data-details-url="@(canShowSales ? Url.Action("Details", "Sales") : "")">
     <div class="row">
@@ -37,13 +38,14 @@
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-body pt-3">
-                    <label for="productSearch" class="form-label fw-bold">Buscar producto</label>
+                    <label for="productSearch" class="form-label fw-bold">Escanear o buscar producto</label>
                     <div class="position-relative">
                         <input type="text" id="productSearch" class="form-control form-control-lg"
-                               placeholder="Escribe el nombre del producto..." autocomplete="off" autofocus />
+                               placeholder="Escanea el código o escribe el nombre..." autocomplete="off" autofocus />
                         <div id="productResults" class="list-group position-absolute w-100 shadow" style="z-index: 1000;"></div>
                     </div>
-                    <div class="form-text">Enter agrega el primer resultado. Esc limpia la búsqueda.</div>
+                    <div id="scanMessage" class="small fw-bold mt-1" role="status" aria-live="assertive"></div>
+                    <div class="form-text">Enter agrega el producto con ese código o, si no es un código, el primer resultado. Esc limpia la búsqueda.</div>
                 </div>
             </div>
 
