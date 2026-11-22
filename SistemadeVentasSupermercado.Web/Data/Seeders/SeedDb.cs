@@ -13,11 +13,13 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             _usersService = usersService;
         }
 
-        public async Task SeedAsync(string? passwordInicial, bool crearUsuariosDePrueba)
+        /// <param name="esDesarrollo">En Development se crean también productos y usuarios de prueba.</param>
+        public async Task SeedAsync(string? passwordInicial, bool esDesarrollo)
         {
-            await new ProductsSeeder(_context).SeedProductsAsync();
+            // Las categorías de ejemplo se crean siempre (punto de partida); los productos solo en desarrollo.
+            await new ProductsSeeder(_context).SeedAsync(crearProductos: esDesarrollo);
             await new PermissionsSeeder(_context).SeedAsync();
-            await new UserRolesSeeder(_context, _usersService).SeedAsync(passwordInicial, crearUsuariosDePrueba);
+            await new UserRolesSeeder(_context, _usersService).SeedAsync(passwordInicial, esDesarrollo);
         }
     }
 }

@@ -23,7 +23,6 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 ..Ventas(),
                 ..Caja(),
                 ..Reportes(),
-                ..Secciones(),
                 ..Roles(),
                 ..Users()
             ];
@@ -39,6 +38,29 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             }
 
             await _context.SaveChangesAsync();
+
+            await RemoveObsoleteAsync();
+        }
+
+        /// <summary>Módulos de la plantilla original que el sistema no tiene.</summary>
+        public static readonly string[] ObsoleteModules = ["Secciones", "Blogs"];
+
+        /// <summary>
+        /// Borra los permisos de módulos que ya no existen (y sus asignaciones a roles).
+        /// Así se limpian también bases ya instaladas, sin migración.
+        /// </summary>
+        public async Task RemoveObsoleteAsync()
+        {
+            await _context.RolePermissions
+                          .Where(rp => ObsoleteModules.Contains(rp.Permission.Module))
+                          .ExecuteDeleteAsync();
+
+            int removed = await _context.Permissions
+                                        .Where(p => ObsoleteModules.Contains(p.Module))
+                                        .ExecuteDeleteAsync();
+
+            if (removed > 0)
+                Console.WriteLine($"Se borraron {removed} permisos obsoletos (módulos {string.Join(", ", ObsoleteModules)}).");
         }
 
         private List<Permission> Productos()
@@ -99,17 +121,6 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
         new Permission { Id = Guid.NewGuid(), Name = "updateCategories", Description = "Editar categorías", Module = "Categorias" },
         new Permission { Id = Guid.NewGuid(), Name = "deleteCategories", Description = "Eliminar categorías", Module = "Categorias" }
     };
-        }
-
-        private List<Permission> Secciones()
-        {
-            return new List<Permission>
-            {
-                new Permission { Id = Guid.NewGuid(), Name = "showSections", Description = "Ver secciones", Module = "Secciones" },
-                new Permission { Id = Guid.NewGuid(), Name = "createSections", Description = "Crear secciones", Module = "Secciones" },
-                new Permission { Id = Guid.NewGuid(), Name = "updateSections", Description = "Editar secciones", Module = "Secciones" },
-                new Permission { Id = Guid.NewGuid(), Name = "deleteSections", Description = "Eliminar secciones", Module = "Secciones" }
-            };
         }
 
         private List<Permission> Roles()
