@@ -109,7 +109,7 @@ El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **
 ## Flujo diario
 
 1. El cajero entra a **Mi caja** y la abre con la base en efectivo.
-2. Vende en el **Punto de venta**. Sin caja abierta no se puede vender.
+2. Vende en el **Punto de venta**. Sin caja abierta no se puede vender. Con un **lector de código de barras** USB (cualquiera que funcione como teclado) basta con escanear: el producto se agrega al carrito; si el código no existe o el producto no tiene stock, suena un pitido y aparece el motivo bajo el buscador. El código de cada producto se registra en **Productos** (se puede escanear sobre el campo).
 3. Si hay un error, un supervisor **anula** la venta desde su comprobante (solo con el turno abierto). Si el cliente vuelve después, se hace una **devolución**.
 4. Al final del turno, el cajero cuenta el efectivo y **cierra la caja**. El reporte de cierre muestra sobrante o faltante.
 
