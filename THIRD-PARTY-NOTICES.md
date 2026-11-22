@@ -50,16 +50,8 @@ Llega **indirectamente** a través de ClosedXML. La licencia de Six Labors ("Six
 | jQuery Validation | 1.19.5 | MIT | `lib/jquery-validation` |
 | jQuery Validation Unobtrusive | 4.0.0 | MIT | `lib/jquery-validation-unobtrusive` |
 | SweetAlert2 | 11.23.0 | MIT | `lib/sweetalert2` |
-| ApexCharts | 3.47.0 | MIT (las versiones 4+ cambiaron de licencia: no actualizar sin revisar) | `assets/vendor/apexcharts` |
-| Chart.js | 4.4.2 | MIT | `assets/vendor/chart.js` |
-| Apache ECharts | 5.5.0 | Apache-2.0 | `assets/vendor/echarts` |
-| Quill | 1.3.7 | BSD-3-Clause | `assets/vendor/quill` |
-| TinyMCE | 6.8.3 | MIT (las versiones 7+ son GPL o comerciales: no actualizar sin revisar) | `assets/vendor/tinymce` |
-| Remix Icon | 4.2.0 | Apache-2.0 (según el encabezado incluido) | `assets/vendor/remixicon` |
-| Boxicons | — | MIT | `assets/vendor/boxicons` |
-| simple-datatables | — | LGPL-3.0 (verificar la versión; usar el archivo sin modificar) | `assets/vendor/simple-datatables` |
 
-Varias de estas librerías vienen con la plantilla y **no se usan** en las pantallas del sistema (ApexCharts, Chart.js, ECharts, Quill, TinyMCE, simple-datatables). Quitarlas reduciría el tamaño y la lista de licencias por cumplir.
+La plantilla NiceAdmin traía además ApexCharts, Chart.js, ECharts, Quill, TinyMCE, Remix Icon, Boxicons, simple-datatables y php-email-form. No se usaban y se quitaron del proyecto. Si alguna vez se vuelve a agregar una, revisar su licencia (ApexCharts 4+ y TinyMCE 7+ ya no son MIT).
 
 ### Nota sobre SweetAlert2
 
