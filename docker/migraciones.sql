@@ -32,7 +32,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20250928224240_SectionsTable', N'8.0.0');
+    VALUES (N'20250928224240_SectionsTable', N'8.0.34');
 END;
 GO
 
@@ -65,7 +65,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20250930001650_CreateProductsTable', N'8.0.0');
+    VALUES (N'20250930001650_CreateProductsTable', N'8.0.34');
 END;
 GO
 
@@ -97,7 +97,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20251110175631_AddClientEntity', N'8.0.0');
+    VALUES (N'20251110175631_AddClientEntity', N'8.0.34');
 END;
 GO
 
@@ -432,7 +432,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20251111165951_users', N'8.0.0');
+    VALUES (N'20251111165951_users', N'8.0.34');
 END;
 GO
 
@@ -457,7 +457,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20251111223528_roles', N'8.0.0');
+    VALUES (N'20251111223528_roles', N'8.0.34');
 END;
 GO
 
@@ -570,7 +570,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20261120204607_Ventas', N'8.0.0');
+    VALUES (N'20261120204607_Ventas', N'8.0.34');
 END;
 GO
 
@@ -634,7 +634,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20261120211437_PesoYUnidades', N'8.0.0');
+    VALUES (N'20261120211437_PesoYUnidades', N'8.0.34');
 END;
 GO
 
@@ -781,7 +781,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20261120232017_Categorias', N'8.0.0');
+    VALUES (N'20261120232017_Categorias', N'8.0.34');
 END;
 GO
 
@@ -806,7 +806,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20261121025525_StockNoNegativo', N'8.0.0');
+    VALUES (N'20261121025525_StockNoNegativo', N'8.0.34');
 END;
 GO
 
@@ -903,7 +903,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20261121164123_Caja', N'8.0.0');
+    VALUES (N'20261121164123_Caja', N'8.0.34');
 END;
 GO
 
@@ -946,7 +946,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20261121170658_AnulacionVentas', N'8.0.0');
+    VALUES (N'20261121170658_AnulacionVentas', N'8.0.34');
 END;
 GO
 
@@ -1091,7 +1091,41 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20261121172609_Devoluciones', N'8.0.0');
+    VALUES (N'20261121172609_Devoluciones', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261122183930_IdempotenciaVentas'
+)
+BEGIN
+    ALTER TABLE [Sales] ADD [IdempotencyKey] uniqueidentifier NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261122183930_IdempotenciaVentas'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_Sales_IdempotencyKey_UserId] ON [Sales] ([IdempotencyKey], [UserId]) WHERE [IdempotencyKey] IS NOT NULL');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261122183930_IdempotenciaVentas'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261122183930_IdempotenciaVentas', N'8.0.34');
 END;
 GO
 
