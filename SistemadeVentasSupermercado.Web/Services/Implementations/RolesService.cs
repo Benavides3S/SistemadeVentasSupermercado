@@ -1,8 +1,8 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Newtonsoft.Json;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Mappings;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
@@ -15,12 +15,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
     public class RolesService : CustomQueryableOperationsService, IRolesService
     {
         private readonly DataContext _context;
-        private readonly IMapper _mapper;
 
-        public RolesService(DataContext context, IMapper mapper) : base(context, mapper)
+        public RolesService(DataContext context) : base(context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
         public async Task<Response<SistemaVentaRoleDTO>> CreateAsync(SistemaVentaRoleDTO dto)
@@ -32,7 +30,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     Guid newRoleId = Guid.NewGuid();
 
                     // Role
-                    SistemaVentasRole role = _mapper.Map<SistemaVentasRole>(dto);
+                    SistemaVentasRole role = dto.ToEntity();
 
                     await _context.SistemaVentasRoles.AddAsync(role);
 
@@ -90,7 +88,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 }
 
                 // Role
-                SistemaVentasRole role = _mapper.Map<SistemaVentasRole>(dto);
+                SistemaVentasRole role = dto.ToEntity();
                 _context.SistemaVentasRoles.Update(role);
 
                 // Permissions
@@ -129,7 +127,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         public async Task<Response<SistemaVentaRoleDTO>> GetOneAsync(Guid id)
         {
-            Response<SistemaVentaRoleDTO> response = await GetOneAsync<SistemaVentasRole, SistemaVentaRoleDTO>(id);
+            Response<SistemaVentaRoleDTO> response = await GetOneAsync<SistemaVentasRole, SistemaVentaRoleDTO>(id, r => r.ToDTO());
 
             if (!response.IsSuccess)
             {
@@ -160,12 +158,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 query = query.Where(r => r.Name.ToLower().Contains(request.Filter.ToLower()));
             }
 
-            return await GetPaginationAsync<SistemaVentasRole, SistemaVentaRoleDTO>(request, query);
+            return await GetPaginationAsync<SistemaVentasRole, SistemaVentaRoleDTO>(request, r => r.ToDTO(), query);
         }
 
         public async Task<Response<List<PermissionsForRoleDTO>>> GetPermissionsAsync()
         {
-            Response<List<PermissionDTO>> permissionsResponse = await GetCompleteListAsync<Permission, PermissionDTO>();
+            Response<List<PermissionDTO>> permissionsResponse = await GetCompleteListAsync<Permission, PermissionDTO>(p => p.ToDTO());
 
             if (!permissionsResponse.IsSuccess)
             {

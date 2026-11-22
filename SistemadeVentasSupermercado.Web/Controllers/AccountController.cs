@@ -1,9 +1,9 @@
 ﻿using AspNetCoreHero.ToastNotification.Abstractions;
-using AutoMapper;
 using SistemadeVentasSupermercado.Web.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemadeVentasSupermercado.Web.Data.Entities;
+using SistemadeVentasSupermercado.Web.Core.Mappings;
 using SistemadeVentasSupermercado.Web.DTOs;
 using SistemadeVentasSupermercado.Web.Services.Abstractions;
 
@@ -12,13 +12,11 @@ namespace SistemadeVentasSupermercado.Web.Controllers
     public class AccountController : Controller
     {
         private readonly IUsersService _usersService;
-        private readonly IMapper _mapper;
         private readonly INotyfService _notyfService;
 
-        public AccountController(IUsersService usersService, IMapper mapper, INotyfService notyfService)
+        public AccountController(IUsersService usersService, INotyfService notyfService)
         {
             _usersService = usersService;
-            _mapper = mapper;
             _notyfService = notyfService;
         }
 
@@ -65,7 +63,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 return NotFound();
             }
 
-            return View(_mapper.Map<AccountUserDTO>(user));
+            return View(user.ToAccountUserDTO());
         }
 
         [Authorize]

@@ -19,7 +19,6 @@ Este sistema usa componentes de terceros. Cada uno conserva su propia licencia. 
 | Microsoft.AspNetCore.Identity.EntityFrameworkCore | 8.0.34 | MIT |
 | AspNetCoreHero.ToastNotification (notificaciones Notyf) | 1.1.0 | MIT |
 | Newtonsoft.Json (versión corregida de la que trae ToastNotification) | 13.0.4 | MIT |
-| AutoMapper / AutoMapper.Extensions.Microsoft.DependencyInjection | 12.0.1 | MIT (las versiones 13+ son comerciales) |
 | CsvHelper | 33.1.0 | MS-PL o Apache-2.0 (a elección) |
 | ClosedXML | 0.105.1 | MIT |
 | ClosedXML.Parser | 2.0.0 | MIT |

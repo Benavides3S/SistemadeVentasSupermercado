@@ -30,9 +30,6 @@ namespace SistemadeVentasSupermercado.Web
                 options.UseSqlServer(builder.Configuration.GetConnectionString("MyConnection"));
             });
 
-            // AutoMapper
-            builder.Services.AddAutoMapper(typeof(Program));
-
             // Toast Notification Setup
             builder.Services.AddNotyf(config =>
             {

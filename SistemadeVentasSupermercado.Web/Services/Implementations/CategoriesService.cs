@@ -1,6 +1,6 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Mappings;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
@@ -13,7 +13,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
     {
         private readonly DataContext _context;
 
-        public CategoriesService(DataContext context, IMapper mapper) : base(context, mapper)
+        public CategoriesService(DataContext context) : base(context)
         {
             _context = context;
         }
@@ -29,7 +29,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             if (await _context.Categories.AnyAsync(c => c.Name == dto.Name))
                 return Response<CategoryDTO>.Failure($"Ya existe la categoría \"{dto.Name}\"");
 
-            return await CreateAsync<Category, CategoryDTO>(dto);
+            return await CreateAsync<Category, CategoryDTO>(dto, d => d.ToEntity());
         }
 
         public async Task<Response<CategoryDTO>> EditAsync(CategoryDTO dto)
@@ -39,7 +39,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             if (await _context.Categories.AnyAsync(c => c.Name == dto.Name && c.Id != dto.Id))
                 return Response<CategoryDTO>.Failure($"Ya existe otra categoría llamada \"{dto.Name}\"");
 
-            return await EditAsync<Category, CategoryDTO>(dto, dto.Id);
+            return await EditAsync<Category, CategoryDTO>(dto, dto.Id, (d, c) => d.ApplyTo(c));
         }
 
         public async Task<Response<object>> DeleteAsync(Guid id)
@@ -51,7 +51,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         }
 
         public async Task<Response<CategoryDTO>> GetOneAsync(Guid id)
-            => await GetOneAsync<Category, CategoryDTO>(id);
+            => await GetOneAsync<Category, CategoryDTO>(id, c => c.ToDTO());
 
         public async Task<Response<PaginationResponse<CategoryDTO>>> GetPaginatedListAsync(PaginationRequest request)
         {
@@ -65,7 +65,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
             query = query.OrderBy(c => c.Name);
 
-            return await GetPaginationAsync<Category, CategoryDTO>(request, query);
+            return await GetPaginationAsync<Category, CategoryDTO>(request, c => c.ToDTO(), query);
         }
     }
 }

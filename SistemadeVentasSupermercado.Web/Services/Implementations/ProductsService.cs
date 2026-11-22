@@ -1,7 +1,7 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
+﻿using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Mappings;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
@@ -13,12 +13,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
     public class ProductsService : CustomQueryableOperationsService, IProductService
     {
         private readonly DataContext _context;
-        private readonly IMapper _mapper;
 
-        public ProductsService(DataContext context, IMapper mapper) : base(context, mapper)
+        public ProductsService(DataContext context) : base(context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
         public async Task<Response<ProductDTO>> CreateAsync(ProductDTO dto)
@@ -31,7 +29,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId && c.IsActive))
                 return Response<ProductDTO>.Failure("Seleccione una categoría válida y activa");
 
-            return await CreateAsync<Product, ProductDTO>(dto);
+            return await CreateAsync<Product, ProductDTO>(dto, d => d.ToEntity());
         }
 
         public async Task<Response<object>> DeleteAsync(Guid id)
@@ -69,12 +67,16 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId))
                 return Response<ProductDTO>.Failure("La categoría seleccionada no existe");
 
-            return await EditAsync<Product, ProductDTO>(dto, dto.Id);
+            return await EditAsync<Product, ProductDTO>(dto, dto.Id, (d, p) =>
+            {
+                d.ApplyTo(p);
+                p.Stock = d.Stock; // Igual que antes; se reemplaza por un ajuste atómico en el siguiente paso.
+            });
         }
 
 
         public async Task<Response<List<ProductDTO>>> GetListAsync()
-    => await GetCompleteListAsync<Product, ProductDTO>(_context.Products.Include(p => p.Category));
+    => await GetCompleteListAsync<Product, ProductDTO>(p => p.ToDTO(), _context.Products.Include(p => p.Category));
 
 
         public async Task<Response<PaginationResponse<ProductDTO>>> GetPaginatedListAsync(PaginationRequest request)
@@ -91,9 +93,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
             query = query.OrderBy(p => p.Name);
 
-            return await GetPaginationAsync<Product, ProductDTO>(request, query);
+            return await GetPaginationAsync<Product, ProductDTO>(request, p => p.ToDTO(), query);
         }
         public async Task<Response<ProductDTO>> GetOneAsync(Guid id)
-      => await GetOneAsync<Product, ProductDTO>(id, _context.Products.Include(p => p.Category));
+      => await GetOneAsync<Product, ProductDTO>(id, p => p.ToDTO(), _context.Products.Include(p => p.Category));
     }
 }

@@ -1,8 +1,8 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Mappings;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
@@ -19,7 +19,6 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly IMapper _mapper;
         private readonly ILogger<UsersService> _logger; // ✅ Agregar esto
 
 
@@ -27,15 +26,13 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         SignInManager<User> signInManager,
                         UserManager<User> userManager,
                         IHttpContextAccessor httpContextAccessor,
-                        IMapper mapper,
-                        ILogger<UsersService> logger) : base(context, mapper) // ✅ Agregar logger
+                        ILogger<UsersService> logger) : base(context) // ✅ Agregar logger
 
         {
             _context = context;
             _signInManager = signInManager;
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
-            _mapper = mapper;
             _logger = logger;
         }
 
@@ -99,7 +96,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     return Response<UserDTO>.Failure("El email ya está registrado.");
                 }
 
-                User user = _mapper.Map<User>(dto);
+                User user = dto.ToEntity();
                 user.Id = Guid.NewGuid().ToString();
                 user.UserName = dto.Email;
                 user.EmailConfirmed = true;
@@ -129,7 +126,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("✅ USUARIO CREADO EXITOSAMENTE: {Email}", dto.Email);
 
-                return Response<UserDTO>.Success(_mapper.Map<UserDTO>(user), "Usuario creado con éxito");
+                return Response<UserDTO>.Success(user.ToUserDTO(), "Usuario creado con éxito");
             }
             catch (Exception ex)
             {
@@ -270,7 +267,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 );
             }
 
-            return await GetPaginationAsync<User, UserDTO>(request, queryable);
+            return await GetPaginationAsync<User, UserDTO>(request, u => u.ToUserDTO(), queryable);
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)

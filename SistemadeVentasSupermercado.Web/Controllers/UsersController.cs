@@ -1,11 +1,11 @@
 ﻿using AspNetCoreHero.ToastNotification.Abstractions;
-using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Core.Attributes;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data.Entities;
+using SistemadeVentasSupermercado.Web.Core.Mappings;
 using SistemadeVentasSupermercado.Web.DTOs;
 using SistemadeVentasSupermercado.Web.Helpers.Abstractions;
 using SistemadeVentasSupermercado.Web.Services.Abstractions;
@@ -19,14 +19,12 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             private readonly IUsersService _usersService;
             private readonly INotyfService _notifyService;
             private readonly ICombosHelper _combosHelper;
-            private readonly IMapper _mapper;
 
-            public UsersController(IUsersService sectionsService, INotyfService notifyService, ICombosHelper combosHelper, IMapper mapper)
+            public UsersController(IUsersService sectionsService, INotyfService notifyService, ICombosHelper combosHelper)
             {
                 _usersService = sectionsService;
                 _notifyService = notifyService;
                 _combosHelper = combosHelper;
-                _mapper = mapper;
             }
 
             [HttpGet]
@@ -104,7 +102,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                     return NotFound();
                 }
 
-                UserDTO dto = _mapper.Map<UserDTO>(user);
+                UserDTO dto = user.ToUserDTO();
                 dto.SistemaVentasRoles = await _combosHelper.GetComboRoles();
 
                 return View(dto);
