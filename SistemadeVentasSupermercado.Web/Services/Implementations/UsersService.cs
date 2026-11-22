@@ -449,53 +449,6 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 return Response<AccountUserDTO>.Failure(ex);
             }
         }
-        public async Task LogCurrentUserPermissions()
-        {
-            try
-            {
-                ClaimsPrincipal? claimsUser = _httpContextAccessor.HttpContext?.User;
-
-                if (claimsUser?.Identity?.IsAuthenticated == true)
-                {
-                    string userName = claimsUser.Identity.Name;
-                    User? user = await GetUserByEmailAsync(userName);
-
-                    if (user != null)
-                    {
-                        _logger.LogInformation($"=== PERMISOS DEL USUARIO ACTUAL ===");
-                        _logger.LogInformation($"Usuario: {userName}");
-                        _logger.LogInformation($"Rol: {user.SistemaVentasRole?.Name} (ID: {user.SistemaVentasRoleId})");
-
-                        var permissions = await _context.RolePermissions
-                            .Include(rp => rp.Permission)
-                            .Where(rp => rp.SistemaVentasRoleId == user.SistemaVentasRoleId)
-                            .Select(rp => new { rp.Permission.Module, rp.Permission.Name, rp.Permission.Description })
-                            .ToListAsync();
-
-                        _logger.LogInformation($"Permisos asignados ({permissions.Count}):");
-                        foreach (var perm in permissions)
-                        {
-                            _logger.LogInformation($" - {perm.Module}.{perm.Name}: {perm.Description}");
-                        }
-
-                        // También mostrar todos los permisos disponibles para comparar
-                        var allPermissions = await _context.Permissions
-                            .Select(p => new { p.Module, p.Name, p.Description })
-                            .ToListAsync();
-
-                        _logger.LogInformation($"=== TODOS LOS PERMISOS DISPONIBLES ({allPermissions.Count}) ===");
-                        foreach (var perm in allPermissions)
-                        {
-                            _logger.LogInformation($" - {perm.Module}.{perm.Name}: {perm.Description}");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loggeando permisos del usuario");
-            }
-        }
 
         private async Task<User> GetUserAsync(string? id)
         {

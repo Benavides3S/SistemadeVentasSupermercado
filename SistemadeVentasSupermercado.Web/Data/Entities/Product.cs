@@ -1,5 +1,4 @@
-﻿using CsvHelper.Configuration.Attributes;
-using SistemadeVentasSupermercado.Web.Data.Abstractions;
+﻿using SistemadeVentasSupermercado.Web.Data.Abstractions;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemadeVentasSupermercado.Web.Data.Entities
