@@ -167,7 +167,7 @@ namespace SistemadeVentasSupermercado.Tests
             {
                 respuesta = await new ProductsService(context).EditAsync(new ProductDTO
                 {
-                    Id = queso.Id, Name = queso.Name, Price = 13000m, Stock = 5m, CategoryId = queso.CategoryId
+                    Id = queso.Id, Name = queso.Name, Price = 13000m, Stock = 5m, StockOriginal = 5m, CategoryId = queso.CategoryId
                     // Unit no viene del formulario: queda en su valor por defecto (Unidad)
                 });
             }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Core.Mappings;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
@@ -67,12 +68,66 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId))
                 return Response<ProductDTO>.Failure("La categoría seleccionada no existe");
 
-            return await EditAsync<Product, ProductDTO>(dto, dto.Id, (d, p) =>
+            // El stock se guarda como AJUSTE: la diferencia entre lo que escribió el administrador y lo
+            // que vio al abrir el formulario. Si en ese tiempo un cajero vendió, la venta no se pierde.
+            decimal delta = dto.Stock - dto.StockOriginal;
+
+            try
             {
-                d.ApplyTo(p);
-                p.Stock = d.Stock; // Igual que antes; se reemplaza por un ajuste atómico en el siguiente paso.
-            });
+                // Si salimos sin llegar a CommitAsync, la transacción se deshace sola
+                // (ni el ajuste ni los demás cambios quedan a medias).
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
+                Product? product = await _context.Products.FirstOrDefaultAsync(p => p.Id == dto.Id);
+                if (product is null)
+                    return Response<ProductDTO>.Failure($"No existe el producto con id: {dto.Id}");
+
+                if (delta != 0)
+                {
+                    // Una sola operación en la base (sin leer y luego guardar), igual que el descuento
+                    // de las ventas: SET Stock = Stock + delta WHERE Stock + delta >= 0.
+                    int updated = await _context.Products
+                        .Where(p => p.Id == dto.Id && p.Stock + delta >= 0)
+                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + delta));
+
+                    if (updated == 0)
+                    {
+                        decimal current = await CurrentStockAsync(dto.Id);
+                        return Response<ProductDTO>.Failure(
+                            $"No se guardó: el ajuste de {Signed(delta)} dejaría el stock negativo. " +
+                            $"Stock actual: {DisplayFormat.Quantity(current)} (pudo cambiar por ventas mientras editabas).");
+                    }
+                }
+
+                // Los demás campos (nombre, precio, etc.). ApplyTo no toca el stock, así que EF no lo
+                // incluye en el UPDATE aunque el valor cargado arriba ya esté desactualizado.
+                dto.ApplyTo(product);
+                await _context.SaveChangesAsync();
+
+                decimal stock = await CurrentStockAsync(dto.Id);
+                await transaction.CommitAsync();
+
+                dto.Stock = stock;
+                dto.StockOriginal = stock;
+
+                string message = delta == 0
+                    ? $"Producto actualizado con éxito. Stock actual: {DisplayFormat.Quantity(stock)}"
+                    : $"Producto actualizado. Stock ajustado {Signed(delta)}; stock actual: {DisplayFormat.Quantity(stock)}";
+
+                return Response<ProductDTO>.Success(dto, message);
+            }
+            catch (Exception ex)
+            {
+                return Response<ProductDTO>.Failure(ex);
+            }
         }
+
+        private Task<decimal> CurrentStockAsync(Guid productId)
+            => _context.Products.Where(p => p.Id == productId).Select(p => p.Stock).SingleAsync();
+
+        /// <summary>+2 o -1,5 (con signo).</summary>
+        private static string Signed(decimal value)
+            => (value > 0 ? "+" : "") + DisplayFormat.Quantity(value);
 
 
         public async Task<Response<List<ProductDTO>>> GetListAsync()

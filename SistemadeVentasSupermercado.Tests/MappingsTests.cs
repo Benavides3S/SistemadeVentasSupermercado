@@ -101,6 +101,7 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.Equal("Campesino", dto.Description);
             Assert.Equal(12000.50m, dto.Price);
             Assert.Equal(3.250m, dto.Stock);
+            Assert.Equal(3.250m, dto.StockOriginal); // el formulario de edición lo envía de vuelta oculto
             Assert.Equal(UnitOfMeasure.Kilogram, dto.Unit);
             Assert.Equal(categoria.Id, dto.CategoryId);
             Assert.Equal("Quesos", dto.CategoryName);

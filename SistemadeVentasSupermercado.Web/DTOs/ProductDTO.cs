@@ -23,6 +23,12 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         [Range(0, 1000000000, ErrorMessage = "El campo {0} no puede ser negativo")]
         public decimal Stock { get; set; }
 
+        /// <summary>
+        /// Al editar: el stock que había cuando se abrió el formulario (campo oculto).
+        /// El servidor guarda Stock − StockOriginal como ajuste, sin pisar las ventas hechas mientras tanto.
+        /// </summary>
+        public decimal StockOriginal { get; set; }
+
         [Display(Name = "Unidad de medida")]
         public UnitOfMeasure Unit { get; set; }
         [Display(Name = "Categoría")]

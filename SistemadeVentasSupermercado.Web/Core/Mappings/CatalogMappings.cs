@@ -73,6 +73,7 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
             Description = product.Description,
             Price = product.Price,
             Stock = product.Stock,
+            StockOriginal = product.Stock,
             Unit = product.Unit,
             CategoryId = product.CategoryId,
             CategoryName = product.Category?.Name
