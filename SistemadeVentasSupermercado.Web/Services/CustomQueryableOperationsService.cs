@@ -122,7 +122,7 @@ namespace SistemadeVentasSupermercado.Web.Services
                 TDTO dto = toDto(entity);
 
                 
-                return Response<TDTO>.Success(dto, "Sección obtenida con éxito");
+                return Response<TDTO>.Success(dto, "Registro obtenido con éxito");
             }
             catch (Exception ex)
             {
