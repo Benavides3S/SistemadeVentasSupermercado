@@ -80,6 +80,13 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         [Display(Name = "Devuelto")]
         public decimal ReturnedTotal { get; set; }
 
+        /// <summary>
+        /// Código único que el punto de venta genera para cada cobro. Si la red se corta y el
+        /// cajero vuelve a cobrar con el mismo código, se devuelve la venta ya registrada en vez
+        /// de crear otra. Vacío en las ventas anteriores a este cambio.
+        /// </summary>
+        public Guid? IdempotencyKey { get; set; }
+
         public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
 
         public ICollection<SaleReturn> Returns { get; set; } = new List<SaleReturn>();
