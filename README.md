@@ -60,6 +60,16 @@ Tecnología: ASP.NET Core 8 MVC (Razor), Entity Framework Core 8, SQL Server, AS
 
    Al arrancar se crean (si no existen) los permisos, el rol **Admin**, categorías y productos de ejemplo y los usuarios iniciales. En ambiente *Development* también se crean dos usuarios de prueba sin el rol Admin (`anad@yopmail.com` y `jhond@yopmail.com`), útiles para probar permisos.
 
+   El Admin inicial entra con `Seed:PasswordInicial` y el sistema le pide cambiarla en el primer inicio de sesión.
+
+## Usuarios y contraseñas
+
+- **Crear usuario:** el sistema genera una **contraseña temporal** y la muestra **una sola vez**. Entrégala en privado; al entrar, el usuario debe cambiarla por una propia.
+- **Olvidó su contraseña:** en **Usuarios**, el botón 🔑 (permiso `resetPasswords`) genera una temporal nueva y desbloquea la cuenta.
+- **Bloqueo:** 5 intentos fallidos bloquean la cuenta 15 minutos (o hasta que se restablezca).
+- **Cambiar contraseña:** cualquiera, desde el menú de su nombre (arriba a la derecha).
+- **Protección del rol Admin:** solo un Admin puede crear o editar usuarios Admin, asignar ese rol o restablecer la contraseña de un Admin. Nadie puede cambiar su propio rol y siempre queda al menos un Admin.
+
 ## Instalación con Docker (para un negocio)
 
 Ver la guía [docker/LEEME.md](docker/LEEME.md): primera instalación, actualizaciones, HTTPS y seguridad.
@@ -76,7 +86,7 @@ dotnet test           # desde la carpeta del .sln
 
 - Usan una base **separada**, `SistemaVentasTests` (cadena en `SistemadeVentasSupermercado.Tests/appsettings.Tests.json`, o la variable de entorno `ConnectionStrings__TestsConnection`).
 - **Esa base se borra y se recrea** con las migraciones en cada ejecución. Por seguridad, las pruebas se niegan a correr si la cadena apunta a una base con otro nombre.
-- Cubren ventas (incluidos varios cajeros a la vez), caja, anulaciones, devoluciones, reportes y formatos.
+- Cubren ventas (incluidos varios cajeros a la vez), caja, anulaciones, devoluciones, reportes, formatos, edición de productos y contraseñas y roles de usuarios.
 
 ## Permisos
 
@@ -92,6 +102,7 @@ El rol **Admin** tiene acceso a todo. Para los demás roles, asigna permisos en 
 | Caja | `showCashSessions` | Ver todos los turnos y cerrar cajas olvidadas |
 | Reportes | `showReports` | Ver y exportar reportes |
 | Productos, Categorías, Clientes, Usuarios, Roles | `show*`, `create*`, `update*`, `delete*` | Administración |
+| Usuarios | `resetPasswords` | Restablecer la contraseña de un usuario (genera una temporal) |
 
 Un cajero típico necesita `createSales` y `manageCashSessions`. Un supervisor, además, `showSales`, `cancelSales`, `createReturns`, `showCashSessions` y `showReports`.
 
