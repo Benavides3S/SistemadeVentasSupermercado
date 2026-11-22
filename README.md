@@ -64,6 +64,10 @@ Tecnología: ASP.NET Core 8 MVC (Razor), Entity Framework Core 8, SQL Server, AS
 
 Ver la guía [docker/LEEME.md](docker/LEEME.md): primera instalación, actualizaciones, HTTPS y seguridad.
 
+## Copias de seguridad
+
+Copia completa verificada, con fecha en el nombre y borrado automático de las viejas, programable cada día en Windows, para SQL Server instalado o para Docker. Incluye cómo restaurar. Ver [scripts/LEEME.md](scripts/LEEME.md).
+
 ## Pruebas automáticas
 
 ```bash

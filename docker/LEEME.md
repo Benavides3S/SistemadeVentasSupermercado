@@ -54,7 +54,7 @@ Todos los comandos se ejecutan en la carpeta raíz del repositorio.
 ## Actualizar a una versión nueva
 
 1. Trae el código nuevo (`git pull`).
-2. **Haz una copia de seguridad** de la base de datos.
+2. **Haz una copia de seguridad** de la base de datos: `powershell -ExecutionPolicy Bypass -File scripts\backup.ps1 -Docker` (ver [scripts/LEEME.md](../scripts/LEEME.md)).
 3. Si hay migraciones nuevas: regenera `docker/migraciones.sql` (paso 2) y aplícalo (paso 3).
 4. `docker compose up -d --build`
 
@@ -91,6 +91,7 @@ La carpeta `certificados/` está en `.gitignore`: **nunca subas el `.pfx` a git*
 | Apagar (sin borrar datos) | `docker compose stop` |
 | Encender | `docker compose up -d` |
 | Conectarse con Management Studio | servidor `localhost,14330`, usuario `sa` |
+| Copia de seguridad ahora | `powershell -ExecutionPolicy Bypass -File scripts\backup.ps1 -Docker` |
 
 Los contenedores tienen `restart: unless-stopped`: vuelven a encender solos cuando reinicia el computador, siempre que Docker Desktop arranque con Windows (*Settings → General → Start Docker Desktop when you sign in*).
 
@@ -100,4 +101,4 @@ Los contenedores tienen `restart: unless-stopped`: vuelven a encender solos cuan
 - La aplicación se conecta como `sa`. Mejora futura: un usuario de SQL con permisos limitados a esta base.
 - SQL Server solo se publica en `127.0.0.1` (este computador); las cajas no pueden conectarse a la base, solo a la aplicación.
 - Las llaves de sesión (volumen `dp-keys`) se guardan sin cifrar dentro del volumen. Quien tenga acceso a Docker en el servidor podría leerlas: no des acceso al servidor a personas que no lo necesitan.
-- Copias de seguridad: pendiente (siguiente paso del plan).
+- **Copias de seguridad:** `powershell -ExecutionPolicy Bypass -File scripts\backup.ps1 -Docker` (programarla cada día y restaurar: ver [scripts/LEEME.md](../scripts/LEEME.md)).
