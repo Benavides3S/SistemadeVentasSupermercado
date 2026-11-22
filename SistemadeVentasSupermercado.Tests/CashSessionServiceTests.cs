@@ -45,7 +45,8 @@ namespace SistemadeVentasSupermercado.Tests
             return await new SalesService(context).CreateAsync(new CreateSaleDTO
             {
                 PaymentMethod = metodo,
-                Items = { new SaleLineDTO { ProductId = productoId, Quantity = cantidad } }
+                Items = { new SaleLineDTO { ProductId = productoId, Quantity = cantidad } },
+                IdempotencyKey = Guid.NewGuid()
             }, cajeroId);
         }
 

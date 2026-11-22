@@ -28,7 +28,8 @@ namespace SistemadeVentasSupermercado.Tests
             return await new SalesService(context).CreateAsync(new CreateSaleDTO
             {
                 PaymentMethod = metodo,
-                Items = lineas.Select(l => new SaleLineDTO { ProductId = l.productoId, Quantity = l.cantidad }).ToList()
+                Items = lineas.Select(l => new SaleLineDTO { ProductId = l.productoId, Quantity = l.cantidad }).ToList(),
+                IdempotencyKey = Guid.NewGuid()
             }, cajeroId);
         }
 

@@ -1,4 +1,4 @@
-using AspNetCoreHero.ToastNotification.Abstractions;
+﻿using AspNetCoreHero.ToastNotification.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -150,7 +150,8 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 message = response.Message,
                 saleId = response.Result!.Id,
                 number = response.Result.Number,
-                total = response.Result.Total
+                total = response.Result.Total,
+                alreadyRegistered = response.Result.AlreadyRegistered
             });
         }
     }
