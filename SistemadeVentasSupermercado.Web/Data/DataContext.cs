@@ -165,6 +165,13 @@ namespace SistemadeVentasSupermercado.Web.Data
                    .HasIndex(p => p.Name)
                    .IsUnique();
 
+            // Dos productos no pueden tener el mismo código de barras. Los productos sin código quedan fuera del índice.
+            builder.Entity<Product>()
+                   .HasIndex(p => p.Barcode)
+                   .IsUnique()
+                   .HasFilter("[Barcode] IS NOT NULL")
+                   .HasDatabaseName("IX_Products_Barcode");
+
             builder.Entity<Client>()
                    .HasIndex(c => c.Email)
                    .IsUnique();
