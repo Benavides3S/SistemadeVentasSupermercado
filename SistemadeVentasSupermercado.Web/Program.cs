@@ -11,6 +11,8 @@ CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+    // Con contraseña temporal, toda página lleva a "Cambiar contraseña".
+    options.Filters.Add<SistemadeVentasSupermercado.Web.Core.Filters.MustChangePasswordFilter>();
 });
 
 builder.AddCustomConfiguration();

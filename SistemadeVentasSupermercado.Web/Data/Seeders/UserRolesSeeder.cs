@@ -55,7 +55,10 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                     PhoneNumber = "3000000000",
                     UserName = "manuel@yopmail.com",
                     Document = "1111",
-                    SistemaVentasRoleId = adminRole!.Id
+                    SistemaVentasRoleId = adminRole!.Id,
+                    // Seed:PasswordInicial es conocida por quien instala: el Admin debe cambiarla al entrar.
+                    // (Los usuarios de prueba anad y jhond, solo en Development, no la cambian.)
+                    MustChangePassword = true
                 };
 
                 await _usersService.AddUserAsync(user, passwordInicial);

@@ -3,6 +3,7 @@ using SistemadeVentasSupermercado.Web.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemadeVentasSupermercado.Web.Data.Entities;
+using SistemadeVentasSupermercado.Web.Core.Filters;
 using SistemadeVentasSupermercado.Web.Core.Mappings;
 using SistemadeVentasSupermercado.Web.DTOs;
 using SistemadeVentasSupermercado.Web.Services.Abstractions;
@@ -21,12 +22,14 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         }
 
         [HttpGet]
+        [SkipMustChangePassword]
         public IActionResult Login()
         {
             return View();
         }
 
         [HttpPost]
+        [SkipMustChangePassword]
         public async Task<IActionResult> Login(LoginDTO dto)
         {
             if (ModelState.IsValid)
@@ -35,10 +38,20 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
                 if (result.IsSuccess)
                 {
+                    // Si tiene contraseña temporal, el filtro global lo lleva a cambiarla.
                     return RedirectToAction("Index", "Home");
                 }
 
-                ModelState.AddModelError(string.Empty, "Email o contraseña incorrectos");
+                if (result.Result?.IsLockedOut == true)
+                {
+                    ModelState.AddModelError(string.Empty,
+                        "La cuenta está bloqueada por demasiados intentos fallidos. Intenta de nuevo en 15 minutos " +
+                        "o pide a un administrador que restablezca tu contraseña.");
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "Email o contraseña incorrectos");
+                }
             }
 
             return View(dto);
@@ -46,10 +59,47 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
         [Authorize]
         [HttpGet]
+        [SkipMustChangePassword]
         public async Task<IActionResult> Logout()
         {
             await _usersService.LogoutAsync();
             return RedirectToAction(nameof(Login));
+        }
+
+        [Authorize]
+        [HttpGet]
+        [SkipMustChangePassword]
+        public async Task<IActionResult> ChangePassword()
+        {
+            ViewBag.MustChange = await _usersService.MustChangePasswordAsync(User.Identity!.Name!);
+            return View(new ChangePasswordDTO());
+        }
+
+        [Authorize]
+        [HttpPost]
+        [SkipMustChangePassword]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDTO dto)
+        {
+            string userName = User.Identity!.Name!;
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.MustChange = await _usersService.MustChangePasswordAsync(userName);
+                return View(dto);
+            }
+
+            Response<User> result = await _usersService.ChangePasswordAsync(userName, dto);
+
+            if (!result.IsSuccess)
+            {
+                ModelState.AddModelError(string.Empty, result.Message ?? "No se pudo cambiar la contraseña.");
+                ViewBag.MustChange = await _usersService.MustChangePasswordAsync(userName);
+                return View(new ChangePasswordDTO()); // nunca se devuelven las contraseñas al formulario
+            }
+
+            await _usersService.RefreshSignInAsync(result.Result!);
+            _notyfService.Success(result.Message);
+            return RedirectToAction("Index", "Home");
         }
 
         [Authorize]

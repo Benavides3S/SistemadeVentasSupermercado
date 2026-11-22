@@ -60,29 +60,47 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 return View(dto);
             }
 
-            Response<UserDTO> response = await _usersService.CreateAsync(dto);
+            Response<TemporaryPasswordDTO> response = await _usersService.CreateAsync(dto, User.Identity!.Name!);
 
             if (!response.IsSuccess)
             {
-                // ✅ Mostrar errores específicos
-                _notifyService.Error($"Error: {response.Message}");
-
-                // Log adicional en consola
-                Console.WriteLine($"ERROR CREANDO USUARIO: {response.Message}");
-                if (response.Errors != null)
-                {
-                    foreach (var error in response.Errors)
-                    {
-                        Console.WriteLine($" - {error}");
-                    }
-                }
+                string detalle = response.Errors is null ? "" : " " + string.Join(" ", response.Errors);
+                _notifyService.Error(response.Message + detalle);
 
                 dto.SistemaVentasRoles = await _combosHelper.GetComboRoles();
                 return View(dto);
             }
 
-            _notifyService.Success(response.Message);
-            return RedirectToAction(nameof(Index));
+            return TemporaryPasswordView(response.Result!);
+        }
+
+        /// <summary>
+        /// Pone una contraseña temporal nueva (por ejemplo, si el usuario olvidó la suya).
+        /// Un Admin solo puede ser restablecido por otro Admin (lo revisa el servicio).
+        /// </summary>
+        [HttpPost]
+        [CustomAuthorize(permission: "resetPasswords", module: "Usuarios")]
+        public async Task<IActionResult> ResetPassword([FromRoute] Guid id)
+        {
+            Response<TemporaryPasswordDTO> response = await _usersService.ResetPasswordAsync(id, User.Identity!.Name!);
+
+            if (!response.IsSuccess)
+            {
+                _notifyService.Error(response.Message);
+                return RedirectToAction(nameof(Index));
+            }
+
+            return TemporaryPasswordView(response.Result!);
+        }
+
+        /// <summary>
+        /// Muestra la contraseña temporal directamente como respuesta del POST (sin redirigir), así no
+        /// queda guardada en TempData, en la URL ni en el historial. "no-store": el navegador no la guarda en caché.
+        /// </summary>
+        private IActionResult TemporaryPasswordView(TemporaryPasswordDTO dto)
+        {
+            Response.Headers.CacheControl = "no-store";
+            return View("TemporaryPassword", dto);
         }
 
 
