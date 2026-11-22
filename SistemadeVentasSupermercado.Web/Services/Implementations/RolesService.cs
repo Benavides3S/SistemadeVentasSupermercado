@@ -27,10 +27,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             {
                 try
                 {
-                    Guid newRoleId = Guid.NewGuid();
+                    if (IsReservedName(dto.Name))
+                        return Response<SistemaVentaRoleDTO>.Failure(ReservedNameMessage);
 
                     // Role
                     SistemaVentasRole role = dto.ToEntity();
+                    role.Name = dto.Name.Trim();
 
                     await _context.SistemaVentasRoles.AddAsync(role);
 
@@ -82,14 +84,22 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         {
             try
             {
-                if (dto.Name == Env.SUPER_ADMIN_ROLE_NAME)
-                {
-                    return Response<SistemaVentaRoleDTO>.Failure($"El rol '{Env.SUPER_ADMIN_ROLE_NAME}' no puede ser editado");
-                }
+                SistemaVentasRole? role = await _context.SistemaVentasRoles.FindAsync(dto.Id);
 
-                // Role
-                SistemaVentasRole role = dto.ToEntity();
-                _context.SistemaVentasRoles.Update(role);
+                if (role is null)
+                    return Response<SistemaVentaRoleDTO>.Failure("El rol no existe.");
+
+                // Se revisa el rol GUARDADO, no el nombre que llega del formulario: antes se podía
+                // renombrar "Admin" a otra cosa (todos perdían el acceso total).
+                if (IsReservedName(role.Name))
+                    return Response<SistemaVentaRoleDTO>.Failure($"El rol '{Env.SUPER_ADMIN_ROLE_NAME}' no puede ser editado.");
+
+                // Y ningún otro rol puede llamarse "Admin" (ni "ADMIN" o " admin "): el sistema reconoce
+                // al administrador por ese nombre, así que sería darle acceso total.
+                if (IsReservedName(dto.Name))
+                    return Response<SistemaVentaRoleDTO>.Failure(ReservedNameMessage);
+
+                role.Name = dto.Name.Trim();
 
                 // Permissions
                 List<Guid> permissionIds = new();
@@ -124,6 +134,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 return Response<SistemaVentaRoleDTO>.Failure(ex);
             }
         }
+
+        private static string ReservedNameMessage =>
+            $"El nombre '{Env.SUPER_ADMIN_ROLE_NAME}' está reservado para el administrador del sistema.";
+
+        private static bool IsReservedName(string? name)
+            => string.Equals(name?.Trim(), Env.SUPER_ADMIN_ROLE_NAME, StringComparison.OrdinalIgnoreCase);
 
         public async Task<Response<SistemaVentaRoleDTO>> GetOneAsync(Guid id)
         {
