@@ -27,6 +27,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             if (await _context.Products.AnyAsync(p => p.Name == dto.Name))
                 return Response<ProductDTO>.Failure($"Ya existe un producto con el nombre \"{dto.Name}\"");
 
+            string? barcodeError = await PrepareBarcodeAsync(dto);
+            if (barcodeError is not null)
+                return Response<ProductDTO>.Failure(barcodeError);
+
             if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId && c.IsActive))
                 return Response<ProductDTO>.Failure("Seleccione una categoría válida y activa");
 
@@ -64,6 +68,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
             if (await _context.Products.AnyAsync(p => p.Name == dto.Name && p.Id != dto.Id))
                 return Response<ProductDTO>.Failure($"Ya existe otro producto con el nombre \"{dto.Name}\"");
+
+            string? barcodeError = await PrepareBarcodeAsync(dto);
+            if (barcodeError is not null)
+                return Response<ProductDTO>.Failure(barcodeError);
 
             if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId))
                 return Response<ProductDTO>.Failure("La categoría seleccionada no existe");
@@ -122,6 +130,26 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             }
         }
 
+        /// <summary>
+        /// Normaliza el código (sin espacios; vacío = sin código), lo valida y revisa que ningún otro
+        /// producto lo tenga. Devuelve el mensaje de error o null. El índice único de la base es la garantía final.
+        /// </summary>
+        private async Task<string?> PrepareBarcodeAsync(ProductDTO dto)
+        {
+            dto.Barcode = BarcodeHelper.Normalize(dto.Barcode);
+
+            string? error = BarcodeHelper.Validate(dto.Barcode);
+            if (error is not null) return error;
+            if (dto.Barcode is null) return null;
+
+            string? owner = await _context.Products
+                                          .Where(p => p.Barcode == dto.Barcode && p.Id != dto.Id)
+                                          .Select(p => p.Name)
+                                          .FirstOrDefaultAsync();
+
+            return owner is null ? null : $"El código {dto.Barcode} ya lo tiene el producto \"{owner}\".";
+        }
+
         private Task<decimal> CurrentStockAsync(Guid productId)
             => _context.Products.Where(p => p.Id == productId).Select(p => p.Stock).SingleAsync();
 
@@ -142,6 +170,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             {
                 string filter = request.Filter.ToLower();
                 query = query.Where(p => p.Name.ToLower().Contains(filter)
+                                      || (p.Barcode != null && p.Barcode.Contains(filter.Replace(" ", "")))
                                       || (p.Description != null && p.Description.ToLower().Contains(filter))
                                       || p.Category!.Name.ToLower().Contains(filter));
             }

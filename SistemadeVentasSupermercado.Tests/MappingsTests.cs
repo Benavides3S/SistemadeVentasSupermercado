@@ -90,7 +90,7 @@ namespace SistemadeVentasSupermercado.Tests
             Category categoria = new Category { Id = Guid.NewGuid(), Name = "Quesos" };
             Product producto = new Product
             {
-                Id = Guid.NewGuid(), Name = "Queso", Description = "Campesino", Price = 12000.50m, Stock = 3.250m,
+                Id = Guid.NewGuid(), Name = "Queso", Barcode = "7701234567890", Description = "Campesino", Price = 12000.50m, Stock = 3.250m,
                 Unit = UnitOfMeasure.Kilogram, CategoryId = categoria.Id, Category = categoria
             };
 
@@ -98,6 +98,7 @@ namespace SistemadeVentasSupermercado.Tests
 
             Assert.Equal(producto.Id, dto.Id);
             Assert.Equal("Queso", dto.Name);
+            Assert.Equal("7701234567890", dto.Barcode);
             Assert.Equal("Campesino", dto.Description);
             Assert.Equal(12000.50m, dto.Price);
             Assert.Equal(3.250m, dto.Stock);
@@ -121,7 +122,7 @@ namespace SistemadeVentasSupermercado.Tests
             Guid categoriaId = Guid.NewGuid();
             ProductDTO dto = new ProductDTO
             {
-                Id = Guid.NewGuid(), Name = "Arroz", Description = "Libra", Price = 2500m, Stock = 10m,
+                Id = Guid.NewGuid(), Name = "Arroz", Barcode = "ARROZ-1", Description = "Libra", Price = 2500m, Stock = 10m,
                 Unit = UnitOfMeasure.Pound, CategoryId = categoriaId, CategoryName = "se ignora"
             };
 
@@ -129,6 +130,7 @@ namespace SistemadeVentasSupermercado.Tests
 
             Assert.Equal(dto.Id, producto.Id);
             Assert.Equal("Arroz", producto.Name);
+            Assert.Equal("ARROZ-1", producto.Barcode);
             Assert.Equal("Libra", producto.Description);
             Assert.Equal(2500m, producto.Price);
             Assert.Equal(10m, producto.Stock);
@@ -150,12 +152,13 @@ namespace SistemadeVentasSupermercado.Tests
 
             new ProductDTO
             {
-                Id = Guid.NewGuid(), Name = "Queso costeño", Description = "Nuevo", Price = 11000m,
+                Id = Guid.NewGuid(), Name = "Queso costeño", Barcode = "123", Description = "Nuevo", Price = 11000m,
                 Stock = 99m, Unit = UnitOfMeasure.Unit, CategoryId = categoriaNueva
             }.ApplyTo(producto);
 
             Assert.Equal(id, producto.Id);
             Assert.Equal("Queso costeño", producto.Name);
+            Assert.Equal("123", producto.Barcode);
             Assert.Equal("Nuevo", producto.Description);
             Assert.Equal(11000m, producto.Price);
             Assert.Equal(categoriaNueva, producto.CategoryId);

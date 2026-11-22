@@ -69,6 +69,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             {
                 string detalle = response.Errors is null ? "" : string.Join(" | ", response.Errors);
                 _notyfService.Error($"{response.Message} {detalle}");
+                ModelState.AddModelError(string.Empty, $"{response.Message} {detalle}".Trim());
                 await LoadCategoriesAsync(dto.CategoryId);
                 return View(dto);
             }
@@ -110,6 +111,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             {
                 string detalle = response.Errors is null ? "" : string.Join(" | ", response.Errors);
                 _notyfService.Error($"{response.Message} {detalle}");
+                ModelState.AddModelError(string.Empty, $"{response.Message} {detalle}".Trim());
                 await LoadCategoriesAsync(dto.CategoryId);
                 return View(dto);
             }

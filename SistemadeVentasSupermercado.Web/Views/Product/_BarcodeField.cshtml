@@ -1,0 +1,13 @@
+@model ProductDTO
+
+@* Campo de código de barras: se puede escribir o escanear con el lector (el Enter del lector
+   no envía el formulario, pasa al siguiente campo; ver wwwroot/js/barcode-input.js). *@
+<div class="col-md-12">
+    <div class="form-floating">
+        <input asp-for="Barcode" class="form-control font-monospace" data-barcode-input autocomplete="off"
+               maxlength="50" placeholder="Código de barras">
+        <label asp-for="Barcode"></label>
+        <span asp-validation-for="Barcode" class="text-danger"></span>
+    </div>
+    <div class="form-text">Opcional. Puedes escanearlo con el lector. Dos productos no pueden tener el mismo código.</div>
+</div>

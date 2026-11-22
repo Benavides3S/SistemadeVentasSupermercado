@@ -12,6 +12,10 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         [StringLength(100, ErrorMessage = "El campo {0} admite máximo {1} caracteres")]
         public string Name { get; set; } = String.Empty;
 
+        [Display(Name = "Código de barras")]
+        [StringLength(50, ErrorMessage = "El campo {0} admite máximo {1} caracteres")]
+        public string? Barcode { get; set; }
+
         [Display(Name = "Descripción")]
         public string? Description { get; set; }
 

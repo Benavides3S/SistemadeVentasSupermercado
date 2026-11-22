@@ -70,6 +70,7 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
         {
             Id = product.Id,
             Name = product.Name,
+            Barcode = product.Barcode,
             Description = product.Description,
             Price = product.Price,
             Stock = product.Stock,
@@ -83,6 +84,7 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
         {
             Id = dto.Id,
             Name = dto.Name,
+            Barcode = dto.Barcode,
             Description = dto.Description,
             Price = dto.Price,
             Stock = dto.Stock,
@@ -99,6 +101,7 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
         public static void ApplyTo(this ProductDTO dto, Product product)
         {
             product.Name = dto.Name;
+            product.Barcode = dto.Barcode;
             product.Description = dto.Description;
             product.Price = dto.Price;
             if (dto.CategoryId.HasValue)
