@@ -19,7 +19,8 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
         /// <summary>Permisos con los que nace cada rol de ejemplo. Después el dueño los puede cambiar en Roles.</summary>
         public static readonly string[] CashierPermissions = ["createSales", "manageCashSessions"];
         public static readonly string[] SupervisorPermissions =
-            [.. CashierPermissions, "showSales", "cancelSales", "createReturns", "showCashSessions", "showReports"];
+            [.. CashierPermissions, "showSales", "cancelSales", "createReturns", "showCashSessions", "showReports",
+             "showPurchases", "createPurchases", "cancelPurchases"];
 
         public UserRolesSeeder(DataContext context, IUsersService usersService)
         {

@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
 using SistemadeVentasSupermercado.Web.DTOs;
@@ -307,6 +308,188 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             catch (Exception ex)
             {
                 return Response<PurchaseResultDTO>.Failure(ex);
+            }
+        }
+
+        // ---------- Consultas ----------
+
+        private const int MaxProductResults = 20;
+
+        public async Task<Response<PaginationResponse<PurchaseListItemDTO>>> GetPaginatedListAsync(PaginationRequest request)
+        {
+            try
+            {
+                IQueryable<Purchase> query = _context.Purchases.AsNoTracking();
+
+                if (!string.IsNullOrWhiteSpace(request.Filter))
+                {
+                    string filter = request.Filter.Trim().ToLower();
+
+                    // Si escriben un número, se busca la compra por su número exacto.
+                    if (int.TryParse(filter, out int number))
+                        query = query.Where(p => p.Number == number);
+                    else
+                        query = query.Where(p => p.Supplier!.Name.ToLower().Contains(filter)
+                                              || (p.SupplierInvoiceNumber != null && p.SupplierInvoiceNumber.ToLower().Contains(filter))
+                                              || (p.User!.FirstName + " " + p.User.LastName).ToLower().Contains(filter));
+                }
+
+                IQueryable<PurchaseListItemDTO> projected = query
+                    .OrderByDescending(p => p.Number)
+                    .Select(p => new PurchaseListItemDTO
+                    {
+                        Id = p.Id,
+                        Number = p.Number,
+                        CreatedAtUtc = p.CreatedAtUtc,
+                        SupplierName = p.Supplier!.Name,
+                        SupplierInvoiceNumber = p.SupplierInvoiceNumber,
+                        UserName = p.User!.FirstName + " " + p.User.LastName,
+                        Status = p.Status,
+                        Total = p.Total
+                    });
+
+                PagedList<PurchaseListItemDTO> list = await PagedList<PurchaseListItemDTO>.ToPagedListAsync(projected, request);
+
+                PaginationResponse<PurchaseListItemDTO> response = new PaginationResponse<PurchaseListItemDTO>
+                {
+                    List = list,
+                    TotalCount = list.TotalCount,
+                    RecordsPerPage = list.RecordsPerPage,
+                    CurrentPage = list.CurrentPage,
+                    TotalPages = list.TotalPages,
+                    Filter = request.Filter
+                };
+
+                return Response<PaginationResponse<PurchaseListItemDTO>>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                return Response<PaginationResponse<PurchaseListItemDTO>>.Failure(ex);
+            }
+        }
+
+        public async Task<Response<PurchaseDetailDTO>> GetOneAsync(Guid id)
+        {
+            try
+            {
+                PurchaseDetailDTO? purchase = await _context.Purchases
+                    .AsNoTracking()
+                    .Where(p => p.Id == id)
+                    .Select(p => new PurchaseDetailDTO
+                    {
+                        Id = p.Id,
+                        Number = p.Number,
+                        CreatedAtUtc = p.CreatedAtUtc,
+                        SupplierName = p.Supplier!.Name,
+                        SupplierInvoiceNumber = p.SupplierInvoiceNumber,
+                        Notes = p.Notes,
+                        UserName = p.User!.FirstName + " " + p.User.LastName,
+                        Status = p.Status,
+                        Total = p.Total,
+                        CancelledAtUtc = p.CancelledAtUtc,
+                        CancelReason = p.CancelReason,
+                        CancelledByName = p.CancelledByUser != null ? p.CancelledByUser.FirstName + " " + p.CancelledByUser.LastName : null,
+                        CanBeCancelled = p.Status == PurchaseStatus.Completed,
+                        Items = p.Items
+                            .OrderBy(i => i.ProductName)
+                            .ThenBy(i => i.UnitCost)
+                            .Select(i => new PurchaseDetailLineDTO
+                            {
+                                ProductName = i.ProductName,
+                                Unit = i.Unit,
+                                UnitCost = i.UnitCost,
+                                Quantity = i.Quantity,
+                                Total = i.Total
+                            })
+                            .ToList()
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (purchase is null)
+                    return Response<PurchaseDetailDTO>.Failure("La compra no existe");
+
+                return Response<PurchaseDetailDTO>.Success(purchase, "Compra obtenida con éxito");
+            }
+            catch (Exception ex)
+            {
+                return Response<PurchaseDetailDTO>.Failure(ex);
+            }
+        }
+
+        private static void CompleteProduct(PurchaseProductDTO product)
+        {
+            product.UnitAbbreviation = product.Unit.Abbreviation();
+            product.AllowsDecimals = product.Unit != UnitOfMeasure.Unit;
+        }
+
+        public async Task<Response<List<PurchaseProductDTO>>> SearchProductsAsync(string? term)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return Response<List<PurchaseProductDTO>>.Success(new List<PurchaseProductDTO>());
+
+            try
+            {
+                string filter = term.Trim().ToLower();
+                string? code = BarcodeHelper.Normalize(term);
+
+                // Sin filtrar por stock ni por categoría: justo así llega mercancía nueva.
+                List<PurchaseProductDTO> products = await _context.Products
+                    .AsNoTracking()
+                    .Where(p => p.Name.ToLower().Contains(filter) || (code != null && p.Barcode == code))
+                    .OrderBy(p => p.Name)
+                    .Take(MaxProductResults)
+                    .Select(p => new PurchaseProductDTO
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Barcode = p.Barcode,
+                        Stock = p.Stock,
+                        Cost = p.Cost,
+                        Unit = p.Unit
+                    })
+                    .ToListAsync();
+
+                products.ForEach(CompleteProduct);
+
+                return Response<List<PurchaseProductDTO>>.Success(products);
+            }
+            catch (Exception ex)
+            {
+                return Response<List<PurchaseProductDTO>>.Failure(ex);
+            }
+        }
+
+        public async Task<Response<PurchaseProductDTO?>> FindProductByBarcodeAsync(string? code)
+        {
+            string? normalized = BarcodeHelper.Normalize(code);
+            if (normalized is null || BarcodeHelper.Validate(normalized) is not null)
+                return Response<PurchaseProductDTO?>.Success(null, $"No hay ningún producto con el código {code?.Trim()}.");
+
+            try
+            {
+                PurchaseProductDTO? product = await _context.Products
+                    .AsNoTracking()
+                    .Where(p => p.Barcode == normalized)
+                    .Select(p => new PurchaseProductDTO
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Barcode = p.Barcode,
+                        Stock = p.Stock,
+                        Cost = p.Cost,
+                        Unit = p.Unit
+                    })
+                    .SingleOrDefaultAsync();
+
+                if (product is null)
+                    return Response<PurchaseProductDTO?>.Success(null, $"No hay ningún producto con el código {normalized}.");
+
+                CompleteProduct(product);
+                return Response<PurchaseProductDTO?>.Success(product);
+            }
+            catch (Exception ex)
+            {
+                return Response<PurchaseProductDTO?>.Failure(ex);
             }
         }
     }

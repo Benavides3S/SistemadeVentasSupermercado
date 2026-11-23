@@ -21,6 +21,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 ..Clientes(),
                 ..Categorias(),
                 ..Proveedores(),
+                ..Compras(),
                 ..Ventas(),
                 ..Caja(),
                 ..Reportes(),
@@ -132,6 +133,16 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 new Permission { Id = Guid.NewGuid(), Name = "createSuppliers", Description = "Crear proveedores", Module = "Proveedores" },
                 new Permission { Id = Guid.NewGuid(), Name = "updateSuppliers", Description = "Editar proveedores", Module = "Proveedores" },
                 new Permission { Id = Guid.NewGuid(), Name = "deleteSuppliers", Description = "Eliminar proveedores", Module = "Proveedores" }
+            };
+        }
+
+        private List<Permission> Compras()
+        {
+            return new List<Permission>
+            {
+                new Permission { Id = Guid.NewGuid(), Name = "showPurchases", Description = "Ver historial y detalle de compras", Module = "Compras" },
+                new Permission { Id = Guid.NewGuid(), Name = "createPurchases", Description = "Registrar compras a proveedores (suma el stock)", Module = "Compras" },
+                new Permission { Id = Guid.NewGuid(), Name = "cancelPurchases", Description = "Anular compras (resta el stock si todavía alcanza)", Module = "Compras" }
             };
         }
 
