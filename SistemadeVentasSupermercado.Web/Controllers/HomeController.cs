@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SistemadeVentasSupermercado.Web.Models;
 using System.Diagnostics;
 
@@ -6,6 +7,8 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 {
     public class HomeController : Controller
     {
+        // Sin sesión se manda al login (antes se veía el inicio con el menú vacío).
+        [Authorize]
         public IActionResult Index()
         {
             return View();

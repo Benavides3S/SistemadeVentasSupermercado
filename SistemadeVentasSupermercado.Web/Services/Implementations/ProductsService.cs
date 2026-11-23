@@ -87,6 +87,16 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             //{
             //    return Response<object>.Failure(ex);
             //}
+            // Ventas, compras y movimientos de inventario guardan el producto (FK Restrict): con historial no se borra.
+            // Se revisa antes para dar un mensaje claro en lugar del error técnico de la base de datos.
+            bool hasHistory = await _context.SaleItems.AnyAsync(i => i.ProductId == id)
+                              || await _context.PurchaseItems.AnyAsync(i => i.ProductId == id)
+                              || await _context.InventoryMovements.AnyAsync(m => m.ProductId == id);
+
+            if (hasHistory)
+                return Response<object>.Failure("Este producto tiene ventas, compras o movimientos de inventario registrados y no se puede borrar. " +
+                                                "Para que no se venda, desactiva su categoría o déjalo sin stock.");
+
             return await DeleteAsync<Product>(id);
         }
 
