@@ -104,11 +104,13 @@ El rol **Admin** tiene acceso a todo. Para los demás roles, asigna permisos en 
 | Compras | `showPurchases` | Ver el historial y el detalle de las compras |
 | Compras | `createPurchases` | Registrar compras a proveedores (suma el stock) |
 | Compras | `cancelPurchases` | Anular compras (resta el stock, solo si todavía alcanza) |
+| Inventario | `showInventory` | Ver el historial de movimientos de inventario |
+| Inventario | `adjustInventory` | Ajustar el stock a mano (mermas, pérdidas, conteo físico) |
 | Reportes | `showReports` | Ver y exportar reportes |
 | Productos, Categorías, Proveedores, Clientes, Usuarios, Roles | `show*`, `create*`, `update*`, `delete*` | Administración |
 | Usuarios | `resetPasswords` | Restablecer la contraseña de un usuario (genera una temporal) |
 
-El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **Supervisor** (lo del cajero, más `showSales`, `cancelSales`, `createReturns`, `showCashSessions`, `showReports`, `showPurchases`, `createPurchases` y `cancelPurchases`). Puedes cambiarles los permisos en **Roles**; el sistema no los vuelve a poner. En una instalación que ya existía, el rol **Supervisor** no recibe los permisos de Compras solo: márcalos en **Roles**.
+El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **Supervisor** (lo del cajero, más `showSales`, `cancelSales`, `createReturns`, `showCashSessions`, `showReports`, `showPurchases`, `createPurchases`, `cancelPurchases` y `showInventory`). Puedes cambiarles los permisos en **Roles**; el sistema no los vuelve a poner. En una instalación que ya existía, el rol **Supervisor** no recibe los permisos de Compras ni de Inventario solo: márcalos en **Roles**. El permiso `adjustInventory` no se da a ningún rol de ejemplo: solo el Admin ajusta stock hasta que lo marques.
 
 ## Flujo diario
 
@@ -123,6 +125,12 @@ El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **
 2. En **Compras → Registrar compra**, elige el proveedor, escribe la factura (opcional) y agrega los productos escaneando o buscando. Cada línea lleva la **cantidad** y el **costo por unidad** (se precarga el último costo). Aquí aparecen también los productos sin stock.
 3. Al guardar, el stock de cada producto sube y su **último costo** pasa a ser el de esa compra (se ve en la lista de **Productos**). Si repites la factura de un proveedor, el sistema **avisa**, pero deja registrar la compra.
 4. Si hubo un error, se **anula** desde el detalle de la compra (con motivo). Solo se puede si todavía queda stock suficiente: si parte de esa mercancía ya se vendió, el sistema lo rechaza y dice qué producto falta.
+
+### Inventario
+
+- **Inventario** muestra cada movimiento de stock: ventas, anulaciones, devoluciones, compras, ajustes y el stock inicial, con quién, cuándo y cuánto quedó. Filtra por producto, tipo, fechas o texto; desde la lista de **Productos** hay un botón de historial por producto.
+- Para corregir el stock (merma, pérdida, conteo físico, consumo interno) usa **Ajustar stock**: eliges entrada o salida, cantidad y motivo (con notas si es "Otro"). El stock ya no se edita en el formulario de Editar producto.
+- Al instalar esta versión, cada producto con stock recibe un movimiento "Saldo inicial del historial": el historial empieza ahí, no reconstruye lo anterior.
 
 ## Reglas importantes del diseño
 
@@ -143,7 +151,6 @@ El código de terceros y sus licencias están en [THIRD-PARTY-NOTICES.md](THIRD-
 ## Problemas conocidos
 
 - Si la red se corta justo después de cobrar, el cajero puede volver a cobrar el mismo carrito sin riesgo: el sistema reconoce el reintento y no registra la venta dos veces. Pero si **recarga la página (F5)** después del error, el carrito se pierde; en ese caso revisar el historial antes de armar la venta de nuevo.
-- Al editar un producto, el stock se guarda como **ajuste** (la diferencia con lo que se veía al abrir el formulario), así no se pierden las ventas hechas mientras tanto. Todavía no hay historial de ajustes.
 - La unidad de medida de un producto no se puede cambiar después de crearlo.
-- El producto guarda solo el **último** costo de compra. Al anular una compra el stock se descuenta, pero el costo anterior no se restaura. Tampoco hay historial de movimientos de inventario todavía.
+- El producto guarda solo el **último** costo de compra (no hay historial de costos). Al anular una compra, el costo vuelve al de la compra anterior si esa era la más reciente.
 - Un proveedor con compras no se puede borrar: se desactiva. Tampoco hay pagos ni cuentas por pagar.
