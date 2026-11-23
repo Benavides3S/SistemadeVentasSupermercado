@@ -12,7 +12,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             _context = context;
         }
 
-        public async Task SeedProductsAsync()
+        public async Task SeedAsync(bool crearProductos)
         {
             string[] categoryNames = { "Granos", "Aceites", "Bebidas", "Aseo", "Frutas y verduras" };
 
@@ -25,6 +25,9 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
             }
 
             await _context.SaveChangesAsync();
+
+            // Una instalación real no debe arrancar con productos de ejemplo (aparecerían en el punto de venta).
+            if (!crearProductos) return;
 
             Dictionary<string, Guid> categories = await _context.Categories
                 .ToDictionaryAsync(c => c.Name, c => c.Id, StringComparer.OrdinalIgnoreCase);

@@ -39,7 +39,8 @@ namespace SistemadeVentasSupermercado.Tests
         private static CreateSaleDTO Venta(params (Guid productoId, decimal cantidad)[] lineas) => new CreateSaleDTO
         {
             PaymentMethod = PaymentMethod.Cash,
-            Items = lineas.Select(l => new SaleLineDTO { ProductId = l.productoId, Quantity = l.cantidad }).ToList()
+            Items = lineas.Select(l => new SaleLineDTO { ProductId = l.productoId, Quantity = l.cantidad }).ToList(),
+            IdempotencyKey = Guid.NewGuid() // cada venta, un cobro distinto
         };
 
         private async Task<decimal> StockActualAsync(Guid productoId)

@@ -15,11 +15,10 @@ Este sistema usa componentes de terceros. Cada uno conserva su propia licencia. 
 
 | Paquete | Versión | Licencia |
 |---|---|---|
-| Microsoft.EntityFrameworkCore / .SqlServer / .Tools | 8.0.0 | MIT |
-| Microsoft.AspNetCore.Identity.EntityFrameworkCore | 8.0.0 | MIT |
+| Microsoft.EntityFrameworkCore / .SqlServer / .Tools | 8.0.34 | MIT |
+| Microsoft.AspNetCore.Identity.EntityFrameworkCore | 8.0.34 | MIT |
 | AspNetCoreHero.ToastNotification (notificaciones Notyf) | 1.1.0 | MIT |
-| AutoMapper / AutoMapper.Extensions.Microsoft.DependencyInjection | 12.0.1 | MIT (las versiones 13+ son comerciales) |
-| CsvHelper | 33.1.0 | MS-PL o Apache-2.0 (a elección) |
+| Newtonsoft.Json (versión corregida de la que trae ToastNotification) | 13.0.4 | MIT |
 | ClosedXML | 0.105.1 | MIT |
 | ClosedXML.Parser | 2.0.0 | MIT |
 | DocumentFormat.OpenXml | 3.1.1 | MIT |
@@ -40,7 +39,6 @@ Llega **indirectamente** a través de ClosedXML. La licencia de Six Labors ("Six
 | xunit, xunit.runner.visualstudio | Apache-2.0 |
 | Microsoft.NET.Test.Sdk | MIT |
 | Microsoft.Extensions.Configuration.Json / .EnvironmentVariables | MIT |
-| Microsoft.VisualStudio.Web.CodeGeneration.Design | MIT |
 
 ## Librerías de JavaScript y CSS (`wwwroot`)
 
@@ -52,16 +50,8 @@ Llega **indirectamente** a través de ClosedXML. La licencia de Six Labors ("Six
 | jQuery Validation | 1.19.5 | MIT | `lib/jquery-validation` |
 | jQuery Validation Unobtrusive | 4.0.0 | MIT | `lib/jquery-validation-unobtrusive` |
 | SweetAlert2 | 11.23.0 | MIT | `lib/sweetalert2` |
-| ApexCharts | 3.47.0 | MIT (las versiones 4+ cambiaron de licencia: no actualizar sin revisar) | `assets/vendor/apexcharts` |
-| Chart.js | 4.4.2 | MIT | `assets/vendor/chart.js` |
-| Apache ECharts | 5.5.0 | Apache-2.0 | `assets/vendor/echarts` |
-| Quill | 1.3.7 | BSD-3-Clause | `assets/vendor/quill` |
-| TinyMCE | 6.8.3 | MIT (las versiones 7+ son GPL o comerciales: no actualizar sin revisar) | `assets/vendor/tinymce` |
-| Remix Icon | 4.2.0 | Apache-2.0 (según el encabezado incluido) | `assets/vendor/remixicon` |
-| Boxicons | — | MIT | `assets/vendor/boxicons` |
-| simple-datatables | — | LGPL-3.0 (verificar la versión; usar el archivo sin modificar) | `assets/vendor/simple-datatables` |
 
-Varias de estas librerías vienen con la plantilla y **no se usan** en las pantallas del sistema (ApexCharts, Chart.js, ECharts, Quill, TinyMCE, simple-datatables). Quitarlas reduciría el tamaño y la lista de licencias por cumplir.
+La plantilla NiceAdmin traía además ApexCharts, Chart.js, ECharts, Quill, TinyMCE, Remix Icon, Boxicons, simple-datatables y php-email-form. No se usaban y se quitaron del proyecto. Si alguna vez se vuelve a agregar una, revisar su licencia (ApexCharts 4+ y TinyMCE 7+ ya no son MIT).
 
 ### Nota sobre SweetAlert2
 

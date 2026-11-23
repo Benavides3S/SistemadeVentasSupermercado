@@ -16,6 +16,25 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public bool AllowsDecimals { get; set; }
     }
 
+    public enum BarcodeLookupStatus
+    {
+        /// <summary>Existe y se puede vender: se agrega al carrito.</summary>
+        Found = 1,
+        /// <summary>Ningún producto tiene ese código (puede que sea un nombre: se busca por nombre).</summary>
+        NotFound = 2,
+        OutOfStock = 3,
+        InactiveCategory = 4
+    }
+
+    /// <summary>Resultado de escanear un código en el punto de venta.</summary>
+    public class BarcodeLookupDTO
+    {
+        public BarcodeLookupStatus Status { get; set; }
+
+        /// <summary>Solo cuando Status = Found.</summary>
+        public PosProductDTO? Product { get; set; }
+    }
+
     /// <summary>Cliente tal como lo ve el buscador del punto de venta.</summary>
     public class PosClientDTO
     {

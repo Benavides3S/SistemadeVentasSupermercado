@@ -20,11 +20,17 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         public Task LogoutAsync();
         public Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto);
         // For Management
-        public Task<Response<UserDTO>> CreateAsync(UserDTO dto);
+        public Task<Response<TemporaryPasswordDTO>> CreateAsync(UserDTO dto, string requestedByUserName);
+        public Task<Response<TemporaryPasswordDTO>> ResetPasswordAsync(Guid userId, string requestedByUserName);
+        public Task<Response<User>> ChangePasswordAsync(string userName, ChangePasswordDTO dto);
+        public Task RefreshSignInAsync(User user);
+        public Task<bool> MustChangePasswordAsync(string userName);
+
+        /// <summary>Indica si esa es la contraseña actual del usuario (no cuenta como intento fallido).</summary>
+        public Task<bool> CheckPasswordAsync(User user, string password);
         //public Task<Response<object>> DeleteAsync(Guid id);
-        public Task<Response<UserDTO>> EditAsync(UserDTO dto);
+        public Task<Response<UserDTO>> EditAsync(UserDTO dto, string requestedByUserName);
         //public Task<Response<UserDTO>> GetOneAsync(Guid id);
-        Task LogCurrentUserPermissions();
         public Task<Response<PaginationResponse<UserDTO>>> GetPaginatedListAsync(PaginationRequest request);
     }
 }

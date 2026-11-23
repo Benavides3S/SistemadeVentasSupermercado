@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
@@ -21,8 +22,38 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         private static Response<SaleResultDTO> Fail(string message)
             => Response<SaleResultDTO>.Failure(message);
 
+        private const string IdempotencyIndexName = "IX_Sales_IdempotencyKey_UserId";
+
+        /// <summary>
+        /// Busca una venta del mismo cajero con el mismo código de cobro (un reintento).
+        /// Se filtra también por cajero: nadie puede ver la venta de otro adivinando su código.
+        /// </summary>
+        private async Task<Response<SaleResultDTO>?> FindAlreadyRegisteredAsync(Guid idempotencyKey, string userId)
+        {
+            SaleResultDTO? existing = await _context.Sales
+                .AsNoTracking()
+                .Where(s => s.IdempotencyKey == idempotencyKey && s.UserId == userId)
+                .Select(s => new SaleResultDTO { Id = s.Id, Number = s.Number, Total = s.Total, AlreadyRegistered = true })
+                .FirstOrDefaultAsync();
+
+            return existing is null
+                ? null
+                : Response<SaleResultDTO>.Success(existing, "Esta venta ya estaba registrada");
+        }
+
+        /// <summary>2601 y 2627: valor duplicado en un índice único; se revisa que sea el del código de cobro.</summary>
+        private static bool IsDuplicateIdempotencyKey(DbUpdateException ex)
+            => ex.GetBaseException() is SqlException sql
+               && (sql.Number == 2601 || sql.Number == 2627)
+               && sql.Message.Contains(IdempotencyIndexName, StringComparison.OrdinalIgnoreCase);
+
         public async Task<Response<SaleResultDTO>> CreateAsync(CreateSaleDTO dto, string userId)
         {
+            // Sin código no se puede detectar un reintento. Pasa si la página quedó abierta
+            // desde antes de este cambio (pos.js viejo en el navegador).
+            if (dto.IdempotencyKey == Guid.Empty)
+                return Fail("Falta el código del cobro. Recarga la página (F5) e inténtalo de nuevo.");
+
             if (dto.Items == null || dto.Items.Count == 0)
                 return Fail("La venta debe tener al menos un producto");
 
@@ -42,6 +73,13 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
             try
             {
+                // ¿Es un reintento de una venta que ya quedó? (por ejemplo, se cortó la red antes de
+                // recibir la respuesta). Se revisa ANTES de mirar la caja: si la venta quedó y luego
+                // cerraron el turno, el cajero debe ver su venta y no "Abre la caja".
+                Response<SaleResultDTO>? alreadyRegistered = await FindAlreadyRegisteredAsync(dto.IdempotencyKey, userId);
+                if (alreadyRegistered is not null)
+                    return alreadyRegistered;
+
                 // Si salimos sin llegar a CommitAsync, la transacción se deshace sola.
                 await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
 
@@ -66,6 +104,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
                 if (sessionLocked == 0)
                     return Fail(noOpenSession);
+
+                // Se revisa otra vez con el turno bloqueado: si dos reintentos llegan a la vez, el
+                // segundo esperó aquí a que el primero terminara, y ahora encuentra su venta.
+                alreadyRegistered = await FindAlreadyRegisteredAsync(dto.IdempotencyKey, userId);
+                if (alreadyRegistered is not null)
+                    return alreadyRegistered;
 
                 if (dto.ClientId.HasValue &&
                     !await _context.Clients.AnyAsync(c => c.Id == dto.ClientId.Value))
@@ -95,7 +139,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     CashSessionId = cashSessionId,
                     PaymentMethod = dto.PaymentMethod,
                     Status = SaleStatus.Completed,
-                    CreatedAtUtc = DateTime.UtcNow
+                    CreatedAtUtc = DateTime.UtcNow,
+                    IdempotencyKey = dto.IdempotencyKey
                 };
 
                 foreach (var line in lines)
@@ -135,6 +180,13 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 return Response<SaleResultDTO>.Success(
                     new SaleResultDTO { Id = sale.Id, Number = sale.Number, Total = sale.Total },
                     "Venta registrada con éxito");
+            }
+            catch (DbUpdateException ex) when (IsDuplicateIdempotencyKey(ex))
+            {
+                // Respaldo: la base de datos rechazó un segundo registro con el mismo código.
+                // La transacción ya se deshizo (el stock volvió), así que se devuelve la venta que sí quedó.
+                return await FindAlreadyRegisteredAsync(dto.IdempotencyKey, userId)
+                       ?? Fail("No se pudo registrar la venta. Revisa el historial antes de volver a cobrar.");
             }
             catch (Exception ex)
             {
@@ -251,12 +303,13 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             try
             {
                 string filter = term.Trim().ToLower();
+                string? code = BarcodeHelper.Normalize(term);
 
                 List<PosProductDTO> products = await _context.Products
                     .AsNoTracking()
                     .Where(p => p.Stock > 0
                              && p.Category != null && p.Category.IsActive
-                             && p.Name.ToLower().Contains(filter))
+                             && (p.Name.ToLower().Contains(filter) || (code != null && p.Barcode == code)))
                     .OrderBy(p => p.Name)
                     .Take(MaxProductResults)
                     .Select(p => new PosProductDTO
@@ -269,11 +322,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     })
                     .ToListAsync();
 
-                foreach (PosProductDTO product in products)
-                {
-                    product.UnitAbbreviation = product.Unit.Abbreviation();
-                    product.AllowsDecimals = product.Unit != UnitOfMeasure.Unit;
-                }
+                products.ForEach(CompletePosProduct);
 
                 return Response<List<PosProductDTO>>.Success(products);
             }
@@ -281,6 +330,53 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             {
                 return Response<List<PosProductDTO>>.Failure(ex);
             }
+        }
+
+        public async Task<Response<BarcodeLookupDTO>> FindByBarcodeAsync(string? code)
+        {
+            string? normalized = BarcodeHelper.Normalize(code);
+            if (normalized is null || BarcodeHelper.Validate(normalized) is not null)
+                return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.NotFound },
+                                                          $"No hay ningún producto con el código {code?.Trim()}.");
+
+            try
+            {
+                var product = await _context.Products
+                    .AsNoTracking()
+                    .Where(p => p.Barcode == normalized)
+                    .Select(p => new
+                    {
+                        Pos = new PosProductDTO { Id = p.Id, Name = p.Name, Price = p.Price, Stock = p.Stock, Unit = p.Unit },
+                        CategoryActive = p.Category != null && p.Category.IsActive
+                    })
+                    .SingleOrDefaultAsync();
+
+                if (product is null)
+                    return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.NotFound },
+                                                              $"No hay ningún producto con el código {normalized}.");
+
+                // Mismas reglas que el buscador por nombre y que la venta: sin stock o con la categoría desactivada no se vende.
+                if (!product.CategoryActive)
+                    return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.InactiveCategory },
+                                                              $"\"{product.Pos.Name}\" es de una categoría desactivada: no se puede vender.");
+
+                if (product.Pos.Stock <= 0)
+                    return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.OutOfStock },
+                                                              $"\"{product.Pos.Name}\" no tiene stock.");
+
+                CompletePosProduct(product.Pos);
+                return Response<BarcodeLookupDTO>.Success(new BarcodeLookupDTO { Status = BarcodeLookupStatus.Found, Product = product.Pos });
+            }
+            catch (Exception ex)
+            {
+                return Response<BarcodeLookupDTO>.Failure(ex);
+            }
+        }
+
+        private static void CompletePosProduct(PosProductDTO product)
+        {
+            product.UnitAbbreviation = product.Unit.Abbreviation();
+            product.AllowsDecimals = product.Unit != UnitOfMeasure.Unit;
         }
 
         public async Task<Response<List<PosClientDTO>>> SearchClientsAsync(string? term)

@@ -12,6 +12,10 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         [StringLength(100, ErrorMessage = "El campo {0} admite máximo {1} caracteres")]
         public string Name { get; set; } = String.Empty;
 
+        [Display(Name = "Código de barras")]
+        [StringLength(50, ErrorMessage = "El campo {0} admite máximo {1} caracteres")]
+        public string? Barcode { get; set; }
+
         [Display(Name = "Descripción")]
         public string? Description { get; set; }
 
@@ -22,6 +26,12 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         [Display(Name = "Stock")]
         [Range(0, 1000000000, ErrorMessage = "El campo {0} no puede ser negativo")]
         public decimal Stock { get; set; }
+
+        /// <summary>
+        /// Al editar: el stock que había cuando se abrió el formulario (campo oculto).
+        /// El servidor guarda Stock − StockOriginal como ajuste, sin pisar las ventas hechas mientras tanto.
+        /// </summary>
+        public decimal StockOriginal { get; set; }
 
         [Display(Name = "Unidad de medida")]
         public UnitOfMeasure Unit { get; set; }

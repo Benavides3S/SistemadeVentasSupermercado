@@ -2,7 +2,11 @@
 // Reglas importantes:
 //  - Al servidor solo se envían ProductId y cantidad: los precios siempre salen de la base de datos.
 //  - El cobro lleva el token antiforgery en el encabezado RequestVerificationToken.
+//  - Cada cobro lleva un código único (idempotencyKey) que se conserva hasta que la venta
+//    queda registrada: si la red falla y el cajero reintenta, el servidor no la registra dos veces.
 //  - Los nombres se pintan con textContent (nunca innerHTML) para evitar inyección de HTML.
+//  - Lector de código de barras: "escribe" el código y oprime Enter. El Enter busca primero el
+//    código exacto en el servidor; si no es un código, agrega el primer resultado por nombre.
 (function () {
     'use strict';
 
@@ -12,6 +16,7 @@
     const urls = {
         searchProducts: root.dataset.searchProductsUrl,
         searchClients: root.dataset.searchClientsUrl,
+        findBarcode: root.dataset.findBarcodeUrl,
         create: root.dataset.createUrl,
         details: root.dataset.detailsUrl // vacío si el usuario no tiene permiso showSales
     };
@@ -21,6 +26,7 @@
     const el = {
         productSearch: document.getElementById('productSearch'),
         productResults: document.getElementById('productResults'),
+        scanMessage: document.getElementById('scanMessage'),
         cartBody: document.getElementById('cartBody'),
         cartEmpty: document.getElementById('cartEmpty'),
         cartTotal: document.getElementById('cartTotal'),
@@ -45,6 +51,7 @@
     let selectedClient = null; // { id, name }
     let lastProductResults = [];
     let charging = false;
+    let pendingKey = null; // código del cobro en curso; se borra al registrar la venta o vaciar el carrito
 
     // ---------- Formatos ----------
 
@@ -65,10 +72,41 @@
 
     function debounce(fn, ms) {
         let timer;
-        return (...args) => {
+        const debounced = (...args) => {
             clearTimeout(timer);
             timer = setTimeout(() => fn(...args), ms);
         };
+        debounced.cancel = () => clearTimeout(timer); // el Enter del lector no espera la búsqueda pendiente
+        return debounced;
+    }
+
+    // Pitido de error (Web Audio, sin archivos). El cajero no siempre mira la pantalla al escanear.
+    let audioContext = null;
+    function beep() {
+        try {
+            audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            oscillator.type = 'square';
+            oscillator.frequency.value = 330;
+            gain.gain.value = 0.08;
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.3);
+        } catch {
+            // Sin audio en este navegador: queda el mensaje en pantalla.
+        }
+    }
+
+    // Mensaje bajo el buscador. No se usa una ventana (Swal) porque le quitaría el foco al
+    // buscador y el siguiente escaneo se perdería.
+    let scanMessageTimer;
+    function showScanMessage(text, isError) {
+        clearTimeout(scanMessageTimer);
+        el.scanMessage.textContent = text;
+        el.scanMessage.className = 'small fw-bold mt-1 ' + (isError ? 'text-danger' : 'text-success');
+        scanMessageTimer = setTimeout(() => { el.scanMessage.textContent = ''; }, isError ? 6000 : 2500);
     }
 
     function notify(icon, title, text) {
@@ -102,6 +140,18 @@
             throw new Error('El servidor respondió con un error (' + response.status + ').');
         }
         return response.json();
+    }
+
+    /**
+     * Guid aleatorio (versión 4). No se usa crypto.randomUUID() porque solo existe con HTTPS
+     * o en localhost, y una caja puede abrir la app por la red local con http://.
+     */
+    function newGuid() {
+        const b = crypto.getRandomValues(new Uint8Array(16));
+        b[6] = (b[6] & 0x0f) | 0x40; // versión 4
+        b[8] = (b[8] & 0x3f) | 0x80; // variante RFC 4122
+        const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+        return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
     }
 
     function antiforgeryToken() {
@@ -169,11 +219,56 @@
         el.productSearch.focus();
     }
 
+    // Los escaneos se atienden en orden, uno tras otro, aunque el lector dispare varios seguidos.
+    let scanQueue = Promise.resolve();
+
+    async function handleEnter(term) {
+        try {
+            const lookup = await fetchJson(urls.findBarcode + '?code=' + encodeURIComponent(term));
+            if (!lookup.isSuccess) throw new Error(lookup.message);
+
+            if (lookup.status === 'Found') {
+                addToCart(lookup.item, { keepSearch: true });
+                showScanMessage('✓ ' + lookup.item.name, false);
+                return;
+            }
+            if (lookup.status !== 'NotFound') {
+                // El producto existe pero no se puede vender (sin stock o categoría desactivada).
+                beep();
+                showScanMessage(lookup.message, true);
+                return;
+            }
+
+            // No es un código: se busca por nombre (lo que se hacía antes con Enter) y se agrega el primero.
+            const data = await fetchJson(urls.searchProducts + '?term=' + encodeURIComponent(term));
+            const items = data.items || [];
+            if (items.length > 0) {
+                addToCart(items[0], { keepSearch: true });
+                showScanMessage('✓ ' + items[0].name, false);
+            } else {
+                beep();
+                showScanMessage('No hay ningún producto con el código o nombre "' + term + '" (o no tiene stock).', true);
+            }
+        } catch (err) {
+            beep();
+            showScanMessage(err.message, true);
+        }
+    }
+
     el.productSearch.addEventListener('input', () => searchProducts(el.productSearch.value));
     el.productSearch.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (lastProductResults.length > 0) addToCart(lastProductResults[0]);
+            const term = el.productSearch.value.trim();
+            if (!term) return;
+
+            // Se limpia de una vez: si el lector manda otro código enseguida, entra limpio.
+            searchProducts.cancel();
+            el.productSearch.value = '';
+            lastProductResults = [];
+            clearResults(el.productResults);
+
+            scanQueue = scanQueue.then(() => handleEnter(term));
         } else if (e.key === 'Escape') {
             resetProductSearch();
         }
@@ -181,7 +276,8 @@
 
     // ---------- Carrito ----------
 
-    function addToCart(product) {
+    /** keepSearch: no borrar el buscador (al escanear ya se limpió y puede estar llegando el siguiente código). */
+    function addToCart(product, { keepSearch = false } = {}) {
         const existing = cart.get(product.id);
         if (existing) {
             existing.quantity = round(existing.quantity + 1, 3);
@@ -196,7 +292,12 @@
                 quantity: 1
             });
         }
-        resetProductSearch();
+        if (keepSearch) {
+            lastProductResults = [];
+            clearResults(el.productResults);
+        } else {
+            resetProductSearch();
+        }
         renderCart();
 
         // En productos por peso se selecciona la cantidad para escribir el peso de una vez.
@@ -395,6 +496,7 @@
     // ---------- Cobro ----------
 
     function resetSale() {
+        pendingKey = null; // la próxima venta lleva un código nuevo
         cart.clear();
         selectClient(null);
         el.cashReceived.value = '';
@@ -413,11 +515,15 @@
             return;
         }
 
+        // El mismo código se reutiliza en los reintentos de este cobro (ver resetSale).
+        if (!pendingKey) pendingKey = newGuid();
+
         // Solo identificadores y cantidades. Nada de precios.
         const payload = {
             clientId: selectedClient ? selectedClient.id : null,
             paymentMethod: parseInt(el.paymentMethod.value, 10),
-            items: [...cart.values()].map(i => ({ productId: i.id, quantity: i.quantity }))
+            items: [...cart.values()].map(i => ({ productId: i.id, quantity: i.quantity })),
+            idempotencyKey: pendingKey
         };
 
         charging = true; // evita cobros dobles por doble clic
@@ -445,6 +551,11 @@
             if (isCash && Number.isFinite(received)) {
                 text += ' · Cambio: ' + money.format(round(received - result.total, 2));
             }
+            if (result.alreadyRegistered) {
+                // Reintento: la venta ya había quedado en el intento anterior. El total es el
+                // registrado, que puede no coincidir con el carrito si se cambió después del error.
+                text = 'La venta ya había quedado registrada en el intento anterior; no se cobró dos veces. ' + text;
+            }
 
             const saleId = result.saleId;
             resetSale();
@@ -452,7 +563,7 @@
             if (window.Swal) {
                 const answer = await Swal.fire({
                     icon: 'success',
-                    title: 'Venta #' + result.number + ' registrada',
+                    title: 'Venta #' + result.number + (result.alreadyRegistered ? ' ya estaba registrada' : ' registrada'),
                     text: text,
                     showCancelButton: !!urls.details,
                     confirmButtonText: 'Nueva venta',
@@ -465,7 +576,10 @@
                 alert('Venta #' + result.number + ' registrada. ' + text);
             }
         } catch (err) {
-            await notify('error', 'No se pudo registrar la venta', err.message);
+            // No se sabe si la venta quedó. Se conserva el código: al reintentar, el servidor
+            // devuelve la venta si ya estaba registrada, o la registra si no.
+            await notify('error', 'No se sabe si la venta quedó registrada',
+                err.message + ' Vuelve a cobrar: el sistema no registrará la venta dos veces.');
         } finally {
             charging = false;
             el.btnCharge.innerHTML = originalHtml;

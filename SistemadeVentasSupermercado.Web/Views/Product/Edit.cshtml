@@ -1,10 +1,10 @@
 ﻿@model ProductDTO
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Editar producto";
 }
 
 <div class="pagetitle">
-    <h1>Dashboard</h1>
+    <h1>Productos</h1>
     <nav>
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Home</a></li>
@@ -27,9 +27,13 @@
         <div class="card-body">
 
             @* <h5 class="card-title text-primary">Editar Producto</h5> *@
+            <partial name="_FormError" />
+
             <form asp-action="Edit" method="POST" class="row g-3">
                 <input type="hidden" asp-for="Id" />
-                
+                @* Stock que vio el administrador al abrir el formulario: el servidor guarda la DIFERENCIA como ajuste. *@
+                <input type="hidden" asp-for="StockOriginal" />
+
                 <div class="col-md-12">
                     <div class="form-floating">
                         <input asp-for="Name" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Name)">
@@ -37,6 +41,7 @@
                         <span asp-validation-for="Name" class="text-danger"></span>
                     </div>
                 </div>
+                <partial name="_BarcodeField" />
                 <div class="col-md-12">
                     <div class="form-floating">
                         <input asp-for="Description" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Description)">
@@ -45,16 +50,20 @@
                 </div>
                 <div class="col-md-12">
                     <div class="form-floating">
-                        <input asp-for="Price" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Price)">
+                        <input asp-for="Price" type="number" step="any" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Price)">
                         <label asp-for="Price"></label>
                         <span asp-validation-for="Price" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-md-12">
                     <div class="form-floating">
-                        <input asp-for="Stock" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Stock)">
+                        <input asp-for="Stock" type="number" step="any" class="form-control" placeholder="@Html.DisplayFor(dto => dto.Stock)">
                         <label asp-for="Stock"></label>
                         <span asp-validation-for="Stock" class="text-danger"></span>
+                    </div>
+                    <div class="form-text">
+                        Si cambias el stock, se guarda como un ajuste (+ o −) sobre el stock real, así no se pierden
+                        las ventas hechas mientras editas. Si solo cambias otros datos, el stock no se toca.
                     </div>
                 </div>
                 <div class="col-md-12">

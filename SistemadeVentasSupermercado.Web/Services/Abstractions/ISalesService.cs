@@ -11,6 +11,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         /// <summary>Productos vendibles: con stock y de una categoría activa (máximo 20).</summary>
         Task<Response<List<PosProductDTO>>> SearchProductsAsync(string? term);
 
+        /// <summary>Busca el código de barras exacto (lector del punto de venta). El mensaje explica si no se puede vender.</summary>
+        Task<Response<BarcodeLookupDTO>> FindByBarcodeAsync(string? code);
+
         /// <summary>Clientes por nombre o correo (máximo 10).</summary>
         Task<Response<List<PosClientDTO>>> SearchClientsAsync(string? term);
 

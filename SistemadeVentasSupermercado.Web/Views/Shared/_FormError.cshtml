@@ -1,0 +1,11 @@
+@* Muestra dentro del formulario los errores generales (ModelState con clave vacía), por ejemplo
+   "Solo un usuario con rol 'Admin'...". El toast desaparece solo; este aviso queda a la vista. *@
+@if (ViewData.ModelState.TryGetValue(string.Empty, out var entry) && entry.Errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        @foreach (var error in entry.Errors)
+        {
+            <div><i class="bi bi-exclamation-triangle"></i> @error.ErrorMessage</div>
+        }
+    </div>
+}

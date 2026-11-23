@@ -23,6 +23,12 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
 
         public string? Photo { get; set; }
 
+        /// <summary>
+        /// Verdadero si el usuario tiene una contraseña temporal (recién creado o restablecido por un
+        /// administrador): mientras lo sea, toda página lo lleva a "Cambiar contraseña".
+        /// </summary>
+        public bool MustChangePassword { get; set; }
+
         public string FullName => $"{FirstName} {LastName}";
     }
 }

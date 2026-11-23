@@ -17,7 +17,7 @@ namespace SistemadeVentasSupermercado.Web.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "8.0.34")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -312,6 +312,10 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uniqueidentifier");
 
@@ -335,6 +339,11 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Barcode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Products_Barcode")
+                        .HasFilter("[Barcode] IS NOT NULL");
 
                     b.HasIndex("CategoryId");
 
@@ -387,6 +396,9 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("IdempotencyKey")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Number")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
@@ -425,6 +437,11 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .IsUnique();
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("IdempotencyKey", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Sales_IdempotencyKey_UserId")
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
 
                     b.ToTable("Sales", t =>
                         {
@@ -634,6 +651,9 @@ namespace SistemadeVentasSupermercado.Web.Migrations
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)

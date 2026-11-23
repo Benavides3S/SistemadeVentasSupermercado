@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.Data;
@@ -9,22 +8,24 @@ using SistemadeVentasSupermercado.Web.DTOs;
 
 namespace SistemadeVentasSupermercado.Web.Services
 {
+    /// <summary>
+    /// Operaciones comunes (crear, editar, borrar, leer, paginar). Cada servicio indica cómo copiar
+    /// los datos entre entidad y DTO con los métodos de Core/Mappings (por ejemplo dto.ToEntity()).
+    /// </summary>
     public class CustomQueryableOperationsService
     {
         private readonly DataContext _context;
-        private readonly IMapper _mapper;
 
-        public CustomQueryableOperationsService(DataContext context, IMapper mapper)
+        public CustomQueryableOperationsService(DataContext context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
-        public async Task<Response<TDTO>> CreateAsync<TEntity, TDTO>(TDTO dto) where TEntity : IId
+        public async Task<Response<TDTO>> CreateAsync<TEntity, TDTO>(TDTO dto, Func<TDTO, TEntity> toEntity) where TEntity : IId
         {
             try
             {
-                TEntity entity = _mapper.Map<TEntity>(dto);
+                TEntity entity = toEntity(dto);
 
                 Guid id = Guid.NewGuid();
 
@@ -68,17 +69,24 @@ namespace SistemadeVentasSupermercado.Web.Services
                 return Response<object>.Failure(ex);
             }
         }
-        public async Task<Response<TDTO>> EditAsync<TEntity, TDTO>(TDTO dto, Guid id) where TEntity : IId
+        /// <summary>
+        /// Carga el registro de la base y le aplica SOLO los campos que copia <paramref name="applyChanges"/>.
+        /// Así EF guarda únicamente las columnas que cambiaron, y lo que no está en el formulario se conserva.
+        /// (Antes se armaba una entidad nueva con el formulario y se guardaba completa, pisando todo.)
+        /// </summary>
+        public async Task<Response<TDTO>> EditAsync<TEntity, TDTO>(TDTO dto, Guid id, Action<TDTO, TEntity> applyChanges)
+            where TEntity : class, IId
         {
             try
             {
-                
-                TEntity entity = _mapper.Map<TEntity>(dto);
+                TEntity? entity = await _context.Set<TEntity>().FirstOrDefaultAsync(e => e.Id == id);
 
-                entity.Id = id;
+                if (entity is null)
+                {
+                    return Response<TDTO>.Failure($"No existe registro con id: {id}");
+                }
 
-                
-                _context.Entry(entity).State = EntityState.Modified;
+                applyChanges(dto, entity);
 
                 await _context.SaveChangesAsync();
 
@@ -91,7 +99,7 @@ namespace SistemadeVentasSupermercado.Web.Services
             }
         }
 
-        public async Task<Response<TDTO>> GetOneAsync<TEntity, TDTO>(Guid id, IQueryable<TEntity>? query = null) where TEntity : class, IId
+        public async Task<Response<TDTO>> GetOneAsync<TEntity, TDTO>(Guid id, Func<TEntity, TDTO> toDto, IQueryable<TEntity>? query = null) where TEntity : class, IId
         {
             try
             {
@@ -111,10 +119,10 @@ namespace SistemadeVentasSupermercado.Web.Services
                 }
 
                 
-                TDTO dto = _mapper.Map<TDTO>(entity);
+                TDTO dto = toDto(entity);
 
                 
-                return Response<TDTO>.Success(dto, "Sección obtenida con éxito");
+                return Response<TDTO>.Success(dto, "Registro obtenido con éxito");
             }
             catch (Exception ex)
             {
@@ -123,7 +131,7 @@ namespace SistemadeVentasSupermercado.Web.Services
             }
         }
 
-        public async Task<Response<List<TDTO>>> GetCompleteListAsync<TEntity, TDTO>(IQueryable<TEntity>? query = null)
+        public async Task<Response<List<TDTO>>> GetCompleteListAsync<TEntity, TDTO>(Func<TEntity, TDTO> toDto, IQueryable<TEntity>? query = null)
      where TEntity : class, IId
         {
             try
@@ -138,7 +146,7 @@ namespace SistemadeVentasSupermercado.Web.Services
                 List<TEntity> list = await query.ToListAsync();
 
                 
-                List<TDTO> dtoList = _mapper.Map<List<TDTO>>(list);
+                List<TDTO> dtoList = list.Select(toDto).ToList();
 
                
                 return Response<List<TDTO>>.Success(dtoList);
@@ -152,7 +160,7 @@ namespace SistemadeVentasSupermercado.Web.Services
 
 
 
-        public async Task<Response<PaginationResponse<TDTO>>> GetPaginationAsync<TEntity, TDTO>(PaginationRequest request, IQueryable<TEntity> query = null)
+        public async Task<Response<PaginationResponse<TDTO>>> GetPaginationAsync<TEntity, TDTO>(PaginationRequest request, Func<TEntity, TDTO> toDto, IQueryable<TEntity>? query = null)
         where TEntity : class
         where TDTO : class
         {
@@ -167,7 +175,7 @@ namespace SistemadeVentasSupermercado.Web.Services
 
                 PaginationResponse<TDTO> response = new PaginationResponse<TDTO>
                 {
-                    List = _mapper.Map<PagedList<TDTO>>(list),
+                    List = new PagedList<TDTO>(list.Select(toDto).ToList(), list.TotalCount, list.CurrentPage, list.RecordsPerPage),
                     TotalCount = list.TotalCount,
                     RecordsPerPage = list.RecordsPerPage,
                     CurrentPage = list.CurrentPage,

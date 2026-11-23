@@ -58,7 +58,17 @@ Tecnología: ASP.NET Core 8 MVC (Razor), Entity Framework Core 8, SQL Server, AS
    dotnet run            # http://localhost:5234
    ```
 
-   Al arrancar se crean (si no existen) los permisos, el rol **Admin**, categorías y productos de ejemplo y los usuarios iniciales. En ambiente *Development* también se crean dos usuarios de prueba sin el rol Admin (`anad@yopmail.com` y `jhond@yopmail.com`), útiles para probar permisos.
+   Al arrancar se crean (si no existen) los permisos, los roles **Admin**, **Cajero** y **Supervisor**, categorías de ejemplo y los usuarios iniciales. En ambiente *Development* también se crean productos de ejemplo y dos usuarios de prueba: `anad@yopmail.com` (Cajero) y `jhond@yopmail.com` (Supervisor), útiles para probar permisos.
+
+   El Admin inicial entra con `Seed:PasswordInicial` y el sistema le pide cambiarla en el primer inicio de sesión.
+
+## Usuarios y contraseñas
+
+- **Crear usuario:** el sistema genera una **contraseña temporal** y la muestra **una sola vez**. Entrégala en privado; al entrar, el usuario debe cambiarla por una propia.
+- **Olvidó su contraseña:** en **Usuarios**, el botón 🔑 (permiso `resetPasswords`) genera una temporal nueva y desbloquea la cuenta.
+- **Bloqueo:** 5 intentos fallidos bloquean la cuenta 15 minutos (o hasta que se restablezca).
+- **Cambiar contraseña:** cualquiera, desde el menú de su nombre (arriba a la derecha).
+- **Protección del rol Admin:** solo un Admin puede crear o editar usuarios Admin, asignar ese rol o restablecer la contraseña de un Admin. Nadie puede cambiar su propio rol y siempre queda al menos un Admin.
 
 ## Instalación con Docker (para un negocio)
 
@@ -76,7 +86,7 @@ dotnet test           # desde la carpeta del .sln
 
 - Usan una base **separada**, `SistemaVentasTests` (cadena en `SistemadeVentasSupermercado.Tests/appsettings.Tests.json`, o la variable de entorno `ConnectionStrings__TestsConnection`).
 - **Esa base se borra y se recrea** con las migraciones en cada ejecución. Por seguridad, las pruebas se niegan a correr si la cadena apunta a una base con otro nombre.
-- Cubren ventas (incluidos varios cajeros a la vez), caja, anulaciones, devoluciones, reportes y formatos.
+- Cubren ventas (incluidos varios cajeros a la vez), caja, anulaciones, devoluciones, reportes, formatos, edición de productos y contraseñas y roles de usuarios.
 
 ## Permisos
 
@@ -92,13 +102,14 @@ El rol **Admin** tiene acceso a todo. Para los demás roles, asigna permisos en 
 | Caja | `showCashSessions` | Ver todos los turnos y cerrar cajas olvidadas |
 | Reportes | `showReports` | Ver y exportar reportes |
 | Productos, Categorías, Clientes, Usuarios, Roles | `show*`, `create*`, `update*`, `delete*` | Administración |
+| Usuarios | `resetPasswords` | Restablecer la contraseña de un usuario (genera una temporal) |
 
-Un cajero típico necesita `createSales` y `manageCashSessions`. Un supervisor, además, `showSales`, `cancelSales`, `createReturns`, `showCashSessions` y `showReports`.
+El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **Supervisor** (lo del cajero, más `showSales`, `cancelSales`, `createReturns`, `showCashSessions` y `showReports`). Puedes cambiarles los permisos en **Roles**; el sistema no los vuelve a poner.
 
 ## Flujo diario
 
 1. El cajero entra a **Mi caja** y la abre con la base en efectivo.
-2. Vende en el **Punto de venta**. Sin caja abierta no se puede vender.
+2. Vende en el **Punto de venta**. Sin caja abierta no se puede vender. Con un **lector de código de barras** USB (cualquiera que funcione como teclado) basta con escanear: el producto se agrega al carrito; si el código no existe o el producto no tiene stock, suena un pitido y aparece el motivo bajo el buscador. El código de cada producto se registra en **Productos** (se puede escanear sobre el campo).
 3. Si hay un error, un supervisor **anula** la venta desde su comprobante (solo con el turno abierto). Si el cliente vuelve después, se hace una **devolución**.
 4. Al final del turno, el cajero cuenta el efectivo y **cierra la caja**. El reporte de cierre muestra sobrante o faltante.
 
@@ -120,6 +131,6 @@ El código de terceros y sus licencias están en [THIRD-PARTY-NOTICES.md](THIRD-
 
 ## Problemas conocidos
 
-- **AutoMapper 12.0.1** tiene vulnerabilidades conocidas y sus versiones corregidas son comerciales. Pendiente: reemplazarlo (por ejemplo, con mapeo manual o Mapperly).
-- **EF Core / Identity 8.0.0** traen dependencias con vulnerabilidades conocidas (`Microsoft.Data.SqlClient`, `System.Text.Json`, `Microsoft.Extensions.Caching.Memory`, `Azure.Identity`). Se corrigen actualizando a la última versión 8.0.x.
-- Si la red se corta justo después de registrar una venta, el cajero puede ver un error aunque la venta sí quedó: revisar el historial antes de cobrar otra vez.
+- Si la red se corta justo después de cobrar, el cajero puede volver a cobrar el mismo carrito sin riesgo: el sistema reconoce el reintento y no registra la venta dos veces. Pero si **recarga la página (F5)** después del error, el carrito se pierde; en ese caso revisar el historial antes de armar la venta de nuevo.
+- Al editar un producto, el stock se guarda como **ajuste** (la diferencia con lo que se veía al abrir el formulario), así no se pierden las ventas hechas mientras tanto. Todavía no hay historial de ajustes.
+- La unidad de medida de un producto no se puede cambiar después de crearlo.

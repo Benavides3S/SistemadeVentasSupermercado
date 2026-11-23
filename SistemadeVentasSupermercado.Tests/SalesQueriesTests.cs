@@ -52,7 +52,8 @@ namespace SistemadeVentasSupermercado.Tests
             {
                 ClientId = clienteId,
                 PaymentMethod = PaymentMethod.Card,
-                Items = { new SaleLineDTO { ProductId = productoId, Quantity = cantidad } }
+                Items = { new SaleLineDTO { ProductId = productoId, Quantity = cantidad } },
+                IdempotencyKey = Guid.NewGuid()
             }, _fixture.CajeroId));
 
         // ---------- Buscador de productos ----------

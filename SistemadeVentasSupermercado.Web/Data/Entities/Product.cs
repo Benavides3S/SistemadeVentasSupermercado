@@ -1,5 +1,4 @@
-﻿using CsvHelper.Configuration.Attributes;
-using SistemadeVentasSupermercado.Web.Data.Abstractions;
+﻿using SistemadeVentasSupermercado.Web.Data.Abstractions;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemadeVentasSupermercado.Web.Data.Entities
@@ -13,6 +12,14 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         [StringLength(100)]
         [Display(Name = "Nombre")]
         public string Name { get; set; } = String.Empty;
+
+        /// <summary>
+        /// Código de barras (EAN/UPC) o código interno del negocio. Opcional (frutas y verduras por peso
+        /// pueden no tenerlo) y único cuando existe. Se guarda sin espacios; vacío = sin código.
+        /// </summary>
+        [StringLength(50)]
+        [Display(Name = "Código de barras")]
+        public string? Barcode { get; set; }
 
         [Display(Name = "Descripcion")]
         public string? Description { get; set; }

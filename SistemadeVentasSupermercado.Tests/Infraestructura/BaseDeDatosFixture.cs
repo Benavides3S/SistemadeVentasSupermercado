@@ -125,7 +125,8 @@ namespace SistemadeVentasSupermercado.Tests.Infraestructura
         /// Si no se indica categoría, usa la categoría activa.
         /// </summary>
         public async Task<Product> CrearProductoAsync(string nombre, decimal precio, decimal stock,
-            UnitOfMeasure unidad = UnitOfMeasure.Unit, Guid? id = null, Guid? categoriaId = null)
+            UnitOfMeasure unidad = UnitOfMeasure.Unit, Guid? id = null, Guid? categoriaId = null,
+            string? codigo = null)
         {
             await using DataContext context = CrearContexto();
 
@@ -133,6 +134,7 @@ namespace SistemadeVentasSupermercado.Tests.Infraestructura
             {
                 Id = id ?? Guid.NewGuid(),
                 Name = $"{nombre} {Guid.NewGuid().ToString("N")[..8]}",
+                Barcode = codigo,
                 Price = precio,
                 Stock = stock,
                 Unit = unidad,

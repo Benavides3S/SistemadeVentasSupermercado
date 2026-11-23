@@ -7,7 +7,7 @@
 }
 
 <div class="pagetitle">
-    <h1>Dashboard</h1>
+    <h1>Productos</h1>
     <nav>
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
@@ -66,7 +66,7 @@
             <table class="table table-bordered">
                 <thead>
                     <tr>
-                        <th>Id</th>
+                        <th>Código</th>
                         <th>Nombre</th>
                         <th>Descripción</th>
                         <th>Precio</th>
@@ -82,7 +82,7 @@
                         foreach (ProductDTO item in Model.List)
                         {
                             <tr>
-                                <td>@item.Id</td>
+                                <td class="font-monospace">@item.Barcode</td>
                                 <td>@item.Name</td>
                                 <td>@item.Description</td>
                                 <td>@item.Price</td>

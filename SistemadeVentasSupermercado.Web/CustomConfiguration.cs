@@ -30,9 +30,6 @@ namespace SistemadeVentasSupermercado.Web
                 options.UseSqlServer(builder.Configuration.GetConnectionString("MyConnection"));
             });
 
-            // AutoMapper
-            builder.Services.AddAutoMapper(typeof(Program));
-
             // Toast Notification Setup
             builder.Services.AddNotyf(config =>
             {
@@ -62,17 +59,28 @@ namespace SistemadeVentasSupermercado.Web
             return builder;
         }
 
+        /// <summary>
+        /// Política de contraseñas y bloqueo. Pública para que las pruebas usen exactamente la misma.
+        /// </summary>
+        public static void ConfigureIdentityOptions(IdentityOptions conf)
+        {
+            conf.Password.RequireDigit = true;
+            conf.Password.RequiredUniqueChars = 4;
+            conf.Password.RequireLowercase = true;
+            conf.Password.RequireUppercase = true;
+            conf.Password.RequireNonAlphanumeric = false;
+            conf.Password.RequiredLength = 8;
+
+            // 5 intentos fallidos seguidos bloquean la cuenta 15 minutos (contra quien prueba contraseñas).
+            conf.Lockout.AllowedForNewUsers = true;
+            conf.Lockout.MaxFailedAccessAttempts = 5;
+            conf.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        }
+
         private static void AddIAM(WebApplicationBuilder builder)
         {
-            builder.Services.AddIdentity<User, IdentityRole>(conf =>
-            {
-                conf.Password.RequireDigit = true;
-                conf.Password.RequiredUniqueChars = 4;
-                conf.Password.RequireLowercase = true;
-                conf.Password.RequireUppercase = true;
-                conf.Password.RequireNonAlphanumeric = false;
-                conf.Password.RequiredLength = 8;
-            }).AddEntityFrameworkStores<DataContext>()
+            builder.Services.AddIdentity<User, IdentityRole>(ConfigureIdentityOptions)
+              .AddEntityFrameworkStores<DataContext>()
               .AddDefaultTokenProviders();
 
             builder.Services.ConfigureApplicationCookie(conf =>

@@ -165,6 +165,13 @@ namespace SistemadeVentasSupermercado.Web.Data
                    .HasIndex(p => p.Name)
                    .IsUnique();
 
+            // Dos productos no pueden tener el mismo código de barras. Los productos sin código quedan fuera del índice.
+            builder.Entity<Product>()
+                   .HasIndex(p => p.Barcode)
+                   .IsUnique()
+                   .HasFilter("[Barcode] IS NOT NULL")
+                   .HasDatabaseName("IX_Products_Barcode");
+
             builder.Entity<Client>()
                    .HasIndex(c => c.Email)
                    .IsUnique();
@@ -178,6 +185,15 @@ namespace SistemadeVentasSupermercado.Web.Data
                    .IsUnique();
             builder.Entity<Sale>().HasIndex(s => s.Number).IsUnique();
             builder.Entity<Sale>().HasIndex(s => s.CreatedAtUtc);
+
+            // Un mismo cobro (mismo código del punto de venta y mismo cajero) solo se registra una vez.
+            // El código va primero para no reemplazar el índice de la relación con el usuario (IX_Sales_UserId).
+            // Las ventas anteriores a este cambio no tienen código y quedan fuera del índice.
+            builder.Entity<Sale>()
+                   .HasIndex(s => new { s.IdempotencyKey, s.UserId })
+                   .IsUnique()
+                   .HasFilter("[IdempotencyKey] IS NOT NULL")
+                   .HasDatabaseName("IX_Sales_IdempotencyKey_UserId");
             builder.Entity<Category>().HasIndex(c => c.Name).IsUnique();
 
             builder.Entity<CashSession>().HasIndex(c => c.Number).IsUnique();

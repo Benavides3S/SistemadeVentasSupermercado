@@ -3,12 +3,13 @@
 
 @{
     ViewData["Title"] = "Usuarios";
+    bool canResetPasswords = await _usersService.CurrentUserIsAuthorizedAsync("resetPasswords", "Usuarios");
 }
 
 
 
 <div class="pagetitle">
-    <h1>Dashboard</h1>
+    <h1>Usuarios</h1>
     <nav>
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
@@ -100,6 +101,16 @@
                                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning"><i class="bi bi-pencil-fill"></i></a>
                                 }
 
+                                @if (canResetPasswords)
+                                {
+                                    <form asp-action="ResetPassword" asp-route-id="@item.Id" method="POST" style="display: contents;">
+                                        <button type="submit" class="btn btn-sm btn-secondary btnResetPassword"
+                                                title="Restablecer contraseña" data-name="@item.FullName">
+                                            <i class="bi bi-key-fill"></i>
+                                        </button>
+                                    </form>
+                                }
+
                                 @* @if (await _usersService.CurrentUserIsAuthorizedAsync("deleteUsers", "Usuarios"))
                                     {
                                         <form asp-action="Delete" asp-route-id="@item.Id" style="display: contents;">
@@ -120,6 +131,27 @@
 </section>
 
 @section Scripts {
+
+    <script>
+        // Confirmación antes de restablecer: la contraseña actual del usuario deja de servir.
+        document.querySelectorAll('.btnResetPassword').forEach(button => {
+            button.addEventListener('click', event => {
+                event.preventDefault();
+                const form = button.closest('form');
+                Swal.fire({
+                    title: '¿Restablecer la contraseña?',
+                    text: 'Se generará una contraseña temporal para ' + button.dataset.name +
+                          '. Su contraseña actual dejará de funcionar y deberá cambiarla al entrar.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Restablecer',
+                    cancelButtonText: 'Cancelar'
+                }).then(result => {
+                    if (result.isConfirmed) form.submit();
+                });
+            });
+        });
+    </script>
 
     @* <script>
 
