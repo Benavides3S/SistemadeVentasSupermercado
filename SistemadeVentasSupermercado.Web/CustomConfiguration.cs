@@ -109,6 +109,7 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddScoped<IPurchasesService, PurchasesService>();
             builder.Services.AddScoped<IInventoryService, InventoryService>();
             builder.Services.AddScoped<IReportsService, ReportsService>();
+            builder.Services.AddScoped<IHomeService, HomeService>();
             builder.Services.AddTransient<ICombosHelper, CombosHelper>();
 
             // Datos del negocio para el comprobante (sección "Negocio" de appsettings.json).

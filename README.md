@@ -132,6 +132,10 @@ El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **
 - Para corregir el stock (merma, pérdida, conteo físico, consumo interno) usa **Ajustar stock**: eliges entrada o salida, cantidad y motivo (con notas si es "Otro"). El stock ya no se edita en el formulario de Editar producto.
 - Al instalar esta versión, cada producto con stock recibe un movimiento "Saldo inicial del historial": el historial empieza ahí, no reconstruye lo anterior.
 
+## Pantalla de Inicio
+
+Al entrar sin sesión se pide iniciar sesión. El Inicio muestra, según tus permisos: accesos rápidos, las ventas de hoy, un aviso si no tienes la caja abierta y los productos con **5 unidades o menos** de stock (con enlace a su historial y a ajustar).
+
 ## Reglas importantes del diseño
 
 - Los precios de una venta **siempre** salen de la base de datos; el navegador solo envía producto y cantidad.
