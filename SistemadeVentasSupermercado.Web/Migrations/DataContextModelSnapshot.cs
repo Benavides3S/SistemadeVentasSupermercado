@@ -277,6 +277,79 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.ToTable("Clients");
                 });
 
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.InventoryMovement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("IdempotencyKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Number")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Number"));
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<int?>("Reason")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("ReferenceNumber")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("StockAfter")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("IdempotencyKey", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_InventoryMovements_IdempotencyKey_UserId")
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
+
+                    b.HasIndex("ProductId", "Number")
+                        .HasDatabaseName("IX_InventoryMovements_ProductId_Number");
+
+                    b.ToTable("InventoryMovements", t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryMovements_Quantity_NonZero", "[Quantity] <> 0");
+
+                            t.HasCheckConstraint("CK_InventoryMovements_StockAfter_NonNegative", "[StockAfter] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Permission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -940,6 +1013,24 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .IsRequired();
 
                     b.Navigation("ClosedByUser");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.InventoryMovement", b =>
+                {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Product");
 
                     b.Navigation("User");
                 });
