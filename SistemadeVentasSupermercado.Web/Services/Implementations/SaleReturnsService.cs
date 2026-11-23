@@ -253,8 +253,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 _context.SaleReturns.Add(saleReturn);
                 await _context.SaveChangesAsync();
 
-                InventoryRecorder.Add(_context, movements, saleReturn.Number);
-                await _context.SaveChangesAsync();
+                await InventoryRecorder.SaveAsync(_context, movements, saleReturn.Number);
                 await transaction.CommitAsync();
 
                 Response<SaleReturnDetailDTO> result = await GetOneAsync(saleReturn.Id);

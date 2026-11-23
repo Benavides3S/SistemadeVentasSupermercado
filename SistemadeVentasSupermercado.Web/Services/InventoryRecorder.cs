@@ -72,15 +72,18 @@ namespace SistemadeVentasSupermercado.Web.Services
         }
 
         /// <summary>
-        /// Agrega al contexto movimientos armados antes de conocer el número de la operación. Se guardan
-        /// con el próximo SaveChanges de la transacción.
+        /// Guarda movimientos armados antes de conocer el número de la operación, UNO POR UNO y en el
+        /// orden recibido. No se guardan en lote porque EF ordena los lotes por la clave (un Guid al azar):
+        /// el Number saldría en otro orden y, si un producto tiene dos movimientos en la misma operación,
+        /// el historial ya no coincidiría con el orden real de los cambios.
         /// </summary>
-        public static void Add(DataContext context, IEnumerable<InventoryMovement> movements, int referenceNumber)
+        public static async Task SaveAsync(DataContext context, IEnumerable<InventoryMovement> movements, int referenceNumber)
         {
             foreach (InventoryMovement movement in movements)
             {
                 movement.ReferenceNumber = referenceNumber;
                 context.InventoryMovements.Add(movement);
+                await context.SaveChangesAsync();
             }
         }
     }

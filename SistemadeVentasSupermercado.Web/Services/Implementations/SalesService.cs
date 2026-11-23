@@ -184,8 +184,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 await _context.SaveChangesAsync();
 
                 // Ya existe el número de la venta: se guardan los movimientos del historial (misma transacción).
-                InventoryRecorder.Add(_context, movements, sale.Number);
-                await _context.SaveChangesAsync();
+                await InventoryRecorder.SaveAsync(_context, movements, sale.Number);
                 await transaction.CommitAsync();
 
                 return Response<SaleResultDTO>.Success(
