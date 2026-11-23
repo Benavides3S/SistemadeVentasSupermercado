@@ -366,50 +366,6 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.Equal(movimientosAntes, await verificacion.InventoryMovements.CountAsync()); // el rechazado no dejó nada
         }
 
-        [Fact]
-        public async Task Editar_el_stock_de_un_producto_queda_como_ajuste_y_sin_cambio_de_stock_no_deja_nada()
-        {
-            Product producto = await _fixture.CrearProductoAsync("Editable", 1000m, 10m);
-
-            ProductDTO SoloPrecio(decimal stock) => new ProductDTO
-            {
-                Id = producto.Id, Name = producto.Name, Price = 1100m, Stock = stock, StockOriginal = 10m,
-                Unit = UnitOfMeasure.Unit, CategoryId = _fixture.CategoriaId
-            };
-
-            await using (DataContext context = _fixture.CrearContexto())
-                Assert.True((await new ProductsService(context).EditAsync(SoloPrecio(10m), _fixture.CajeroId)).IsSuccess);
-            Assert.Empty(await MovimientosAsync(producto.Id)); // solo cambió el precio
-
-            await using (DataContext context = _fixture.CrearContexto())
-                Assert.True((await new ProductsService(context).EditAsync(SoloPrecio(7m), _fixture.CajeroId)).IsSuccess);
-
-            InventoryMovement ajuste = Assert.Single(await MovimientosAsync(producto.Id));
-            Assert.Equal(InventoryMovementType.Adjustment, ajuste.Type);
-            Assert.Equal(-3m, ajuste.Quantity);
-            Assert.Equal(7m, ajuste.StockAfter);
-            Assert.Equal(_fixture.CajeroId, ajuste.UserId);
-            Assert.Equal(AdjustmentReason.Other, ajuste.Reason);
-        }
-
-        [Fact]
-        public async Task Un_ajuste_que_dejaria_el_stock_negativo_se_rechaza_y_no_deja_movimiento()
-        {
-            Product producto = await _fixture.CrearProductoAsync("Poco", 1000m, 2m);
-            ProductDTO dto = new ProductDTO
-            {
-                Id = producto.Id, Name = producto.Name, Price = 1000m, Stock = 0m, StockOriginal = 5m, // vio 5, pero hay 2
-                Unit = UnitOfMeasure.Unit, CategoryId = _fixture.CategoriaId
-            };
-
-            await using DataContext context = _fixture.CrearContexto();
-            Response<ProductDTO> respuesta = await new ProductsService(context).EditAsync(dto, _fixture.CajeroId);
-
-            Assert.False(respuesta.IsSuccess);
-            Assert.Empty(await MovimientosAsync(producto.Id));
-            Assert.Equal(2m, await StockAsync(producto.Id));
-        }
-
         // ---------- Saldo inicial del historial ----------
 
         [Fact]

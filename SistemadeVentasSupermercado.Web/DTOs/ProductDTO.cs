@@ -28,12 +28,6 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public decimal Stock { get; set; }
 
         /// <summary>
-        /// Al editar: el stock que había cuando se abrió el formulario (campo oculto).
-        /// El servidor guarda Stock − StockOriginal como ajuste, sin pisar las ventas hechas mientras tanto.
-        /// </summary>
-        public decimal StockOriginal { get; set; }
-
-        /// <summary>
         /// Último costo de compra. Solo se muestra: lo cambia el módulo de compras, así que
         /// ni ToEntity ni ApplyTo lo copian (un formulario manipulado no puede fijarlo).
         /// </summary>

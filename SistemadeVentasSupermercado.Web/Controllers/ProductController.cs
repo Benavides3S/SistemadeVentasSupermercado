@@ -25,6 +25,20 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             _combosHelper = combosHelper;
         }
 
+        /// <summary>
+        /// El formulario de edición muestra el stock y la unidad solo para leer (no se envían): si hay que
+        /// volver a mostrarlo por un error, se vuelven a leer de la base.
+        /// </summary>
+        private async Task FillReadOnlyFieldsAsync(ProductDTO dto)
+        {
+            Response<ProductDTO> current = await _productService.GetOneAsync(dto.Id);
+            if (!current.IsSuccess) return;
+
+            dto.Stock = current.Result!.Stock;
+            dto.Unit = current.Result.Unit;
+            dto.Cost = current.Result.Cost;
+        }
+
         private async Task LoadCategoriesAsync(Guid? selectedId = null)
         {
             ViewBag.Categories = await _combosHelper.GetComboCategories(selectedId);
@@ -103,10 +117,11 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             {
                 _notyfService.Error("Debe ajustar los errores de validación");
                 await LoadCategoriesAsync(dto.CategoryId);
+                await FillReadOnlyFieldsAsync(dto);
                 return View(dto);
             }
 
-            Response<ProductDTO> response = await _productService.EditAsync(dto, User.FindFirstValue(ClaimTypes.NameIdentifier));
+            Response<ProductDTO> response = await _productService.EditAsync(dto);
 
             if (!response.IsSuccess)
             {
@@ -114,6 +129,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 _notyfService.Error($"{response.Message} {detalle}");
                 ModelState.AddModelError(string.Empty, $"{response.Message} {detalle}".Trim());
                 await LoadCategoriesAsync(dto.CategoryId);
+                await FillReadOnlyFieldsAsync(dto);
                 return View(dto);
             }
 

@@ -1,0 +1,240 @@
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
+@model PaginationResponse<InventoryMovementDTO>
+
+@{
+    ViewData["Title"] = "Inventario";
+    InventoryQueryDTO query = ViewBag.Query as InventoryQueryDTO ?? new InventoryQueryDTO();
+    InventoryProductDTO? product = ViewBag.Product as InventoryProductDTO;
+
+    bool canAdjust = await _usersService.CurrentUserIsAuthorizedAsync("adjustInventory", "Inventario");
+    bool canSeeSales = await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas");
+    bool canSeeReturns = canSeeSales || await _usersService.CurrentUserIsAuthorizedAsync("createReturns", "Ventas");
+    bool canSeePurchases = await _usersService.CurrentUserIsAuthorizedAsync("showPurchases", "Compras");
+
+    // Los enlaces de paginación conservan todos los filtros, no solo el texto.
+    Dictionary<string, string?> RouteFor(int page) => new()
+    {
+        ["Page"] = page.ToString(),
+        ["RecordsPerPage"] = Model.RecordsPerPage.ToString(),
+        ["Filter"] = Model.Filter,
+        ["ProductId"] = query.ProductId?.ToString(),
+        ["Type"] = query.Type.HasValue ? ((int)query.Type.Value).ToString() : null,
+        ["From"] = query.From?.ToString("yyyy-MM-dd"),
+        ["To"] = query.To?.ToString("yyyy-MM-dd")
+    };
+}
+
+<div class="pagetitle">
+    <h1>Inventario</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item active">Inventario</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    @if (product != null)
+    {
+        <div class="card">
+            <div class="card-body pt-3 d-flex flex-wrap align-items-center gap-3">
+                <div>
+                    <div class="text-muted small">Historial del producto</div>
+                    <div class="fs-5 fw-semibold">@product.Name</div>
+                    @if (!string.IsNullOrEmpty(product.Barcode))
+                    {
+                        <div class="small font-monospace">@product.Barcode</div>
+                    }
+                </div>
+                <div>
+                    <div class="text-muted small">Stock actual</div>
+                    <div class="fs-5 fw-semibold">@DisplayFormat.Quantity(product.Stock) @product.Unit.Abbreviation()</div>
+                </div>
+                <div class="ms-auto d-flex gap-2">
+                    @if (canAdjust)
+                    {
+                        <a asp-action="Adjust" asp-route-productId="@product.Id" class="btn btn-primary">
+                            <i class="bi bi-sliders"></i> Ajustar stock
+                        </a>
+                    }
+                    <a asp-action="Index" class="btn btn-outline-secondary">Ver todos los productos</a>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary">Movimientos de inventario</h3>
+        </div>
+
+        <div class="card-body mt-3">
+            <form asp-action="Index" method="GET" class="row g-2 mb-3">
+                <input type="hidden" name="Page" value="1" />
+                @if (query.ProductId.HasValue)
+                {
+                    <input type="hidden" name="ProductId" value="@query.ProductId" />
+                }
+                <div class="col-md-auto">
+                    <select name="RecordsPerPage" class="form-select bg-light border-0 small" aria-label="Registros por página">
+                        <option value="10" selected="@(Model.RecordsPerPage == 10)">10</option>
+                        <option value="15" selected="@(Model.RecordsPerPage == 15)">15</option>
+                        <option value="30" selected="@(Model.RecordsPerPage == 30)">30</option>
+                        <option value="50" selected="@(Model.RecordsPerPage == 50)">50</option>
+                    </select>
+                </div>
+                @if (product == null)
+                {
+                    <div class="col-md">
+                        <input type="text" name="Filter" value="@Model.Filter" class="form-control bg-light border-0 small"
+                               placeholder="Producto o código de barras..." />
+                    </div>
+                }
+                <div class="col-md-auto">
+                    <select name="Type" class="form-select bg-light border-0 small" aria-label="Tipo de movimiento">
+                        <option value="">Todos los tipos</option>
+                        @foreach (InventoryMovementType type in Enum.GetValues<InventoryMovementType>())
+                        {
+                            <option value="@((int)type)" selected="@(query.Type == type)">@type.Label()</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-auto">
+                    <input type="date" name="From" value="@query.From?.ToString("yyyy-MM-dd")" class="form-control bg-light border-0 small" aria-label="Desde" title="Desde" />
+                </div>
+                <div class="col-md-auto">
+                    <input type="date" name="To" value="@query.To?.ToString("yyyy-MM-dd")" class="form-control bg-light border-0 small" aria-label="Hasta" title="Hasta" />
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-primary" title="Buscar"><i class="bi bi-search"></i></button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th>N.º</th>
+                            <th>Fecha</th>
+                            <th>Producto</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Cantidad</th>
+                            <th class="text-end">Stock después</th>
+                            <th>Usuario</th>
+                            <th>Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.List != null && Model.List.Any())
+                        {
+                            foreach (InventoryMovementDTO item in Model.List)
+                            {
+                                <tr>
+                                    <td>@item.Number</td>
+                                    <td>@DisplayFormat.DateTimeColombia(item.CreatedAtUtc)</td>
+                                    <td>
+                                        @if (product == null)
+                                        {
+                                            <a asp-action="Index" asp-route-ProductId="@item.ProductId">@item.ProductName</a>
+                                        }
+                                        else
+                                        {
+                                            @item.ProductName
+                                        }
+                                    </td>
+                                    <td>@item.Type.Label()</td>
+                                    <td class="text-end @(item.Quantity > 0 ? "text-success" : "text-danger")">
+                                        @(item.Quantity > 0 ? "+" : "")@DisplayFormat.Quantity(item.Quantity) @item.Unit.Abbreviation()
+                                    </td>
+                                    <td class="text-end">@DisplayFormat.Quantity(item.StockAfter) @item.Unit.Abbreviation()</td>
+                                    <td>@(item.UserName ?? "Sistema")</td>
+                                    <td>
+                                        @switch (item.Type)
+                                        {
+                                            case InventoryMovementType.Sale:
+                                            case InventoryMovementType.SaleCancellation:
+                                                if (canSeeSales && item.ReferenceId.HasValue)
+                                                {
+                                                    <a asp-controller="Sales" asp-action="Details" asp-route-id="@item.ReferenceId">Venta #@item.ReferenceNumber</a>
+                                                }
+                                                else
+                                                {
+                                                    @($"Venta #{item.ReferenceNumber}")
+                                                }
+                                                break;
+                                            case InventoryMovementType.SaleReturn:
+                                                if (canSeeReturns && item.ReferenceId.HasValue)
+                                                {
+                                                    <a asp-controller="SaleReturns" asp-action="Details" asp-route-id="@item.ReferenceId">Devolución #@item.ReferenceNumber</a>
+                                                }
+                                                else
+                                                {
+                                                    @($"Devolución #{item.ReferenceNumber}")
+                                                }
+                                                break;
+                                            case InventoryMovementType.Purchase:
+                                            case InventoryMovementType.PurchaseCancellation:
+                                                if (canSeePurchases && item.ReferenceId.HasValue)
+                                                {
+                                                    <a asp-controller="Purchases" asp-action="Details" asp-route-id="@item.ReferenceId">Compra #@item.ReferenceNumber</a>
+                                                }
+                                                else
+                                                {
+                                                    @($"Compra #{item.ReferenceNumber}")
+                                                }
+                                                break;
+                                            case InventoryMovementType.Adjustment:
+                                                @(item.Reason?.Label() ?? "Ajuste")
+                                                if (!string.IsNullOrEmpty(item.Notes))
+                                                {
+                                                    <div class="small text-muted">@item.Notes</div>
+                                                }
+                                                break;
+                                            default:
+                                                <span class="text-muted">—</span>
+                                                break;
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center">No hay movimientos con esos filtros.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Páginas">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item @(Model.HasPrevious ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(1)"><i class="bi bi-chevron-double-left"></i></a>
+                        </li>
+                        <li class="page-item @(Model.HasPrevious ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(Model.CurrentPage - 1)"><i class="bi bi-chevron-left"></i></a>
+                        </li>
+                        @foreach (int pageNumber in Model.Pages)
+                        {
+                            <li class="page-item @(pageNumber == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(pageNumber)">@pageNumber</a>
+                            </li>
+                        }
+                        <li class="page-item @(Model.HasNext ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(Model.CurrentPage + 1)"><i class="bi bi-chevron-right"></i></a>
+                        </li>
+                        <li class="page-item @(Model.HasNext ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(Model.TotalPages)"><i class="bi bi-chevron-double-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+            <div class="text-muted small text-end">@Model.TotalCount movimiento(s)</div>
+        </div>
+    </div>
+</section>

@@ -15,7 +15,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         public Task<Response<object>> DeleteAsync(Guid id);
 
         // U - Update (Actualizar/Editar)
-        public Task<Response<ProductDTO>> EditAsync(ProductDTO dto, string? userId = null);
+        /// <summary>Edita los datos del producto. El stock NO cambia aquí: se ajusta en el módulo Inventario.</summary>
+        public Task<Response<ProductDTO>> EditAsync(ProductDTO dto);
 
         // R - Read (Leer lista)
         public Task<Response<List<ProductDTO>>> GetListAsync();

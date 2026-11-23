@@ -111,7 +111,6 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
             Description = product.Description,
             Price = product.Price,
             Stock = product.Stock,
-            StockOriginal = product.Stock,
             Cost = product.Cost,
             Unit = product.Unit,
             CategoryId = product.CategoryId,
@@ -132,7 +131,8 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
 
         /// <summary>
         /// NO copia:
-        ///  - Stock: lo maneja ProductsService.EditAsync aparte, para no pisar las ventas de los cajeros.
+        ///  - Stock: el formulario de edición ya no lo tiene; se ajusta en el módulo Inventario
+        ///    (InventoryService.AdjustAsync), que lo deja en el historial y no pisa las ventas de los cajeros.
         ///  - Unit: el formulario de edición no tiene ese campo; copiarlo convertía en "Unidad"
         ///    los productos por peso cada vez que se editaban.
         ///  - Cost: el último costo lo fija solo el módulo de compras.
