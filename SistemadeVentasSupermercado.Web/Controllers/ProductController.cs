@@ -7,6 +7,7 @@ using SistemadeVentasSupermercado.Web.Core.Pagination;
 using SistemadeVentasSupermercado.Web.DTOs;
 using SistemadeVentasSupermercado.Web.Helpers.Abstractions;
 using SistemadeVentasSupermercado.Web.Services.Abstractions;
+using System.Security.Claims;
 
 namespace SistemadeVentasSupermercado.Web.Controllers
 {
@@ -63,7 +64,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 return View(dto);
             }
 
-            Response<ProductDTO> response = await _productService.CreateAsync(dto);
+            Response<ProductDTO> response = await _productService.CreateAsync(dto, User.FindFirstValue(ClaimTypes.NameIdentifier));
 
             if (!response.IsSuccess)
             {
@@ -105,7 +106,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 return View(dto);
             }
 
-            Response<ProductDTO> response = await _productService.EditAsync(dto);
+            Response<ProductDTO> response = await _productService.EditAsync(dto, User.FindFirstValue(ClaimTypes.NameIdentifier));
 
             if (!response.IsSuccess)
             {

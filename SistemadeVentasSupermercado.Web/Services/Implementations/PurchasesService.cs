@@ -167,6 +167,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     IdempotencyKey = dto.IdempotencyKey
                 };
 
+                // Historial de inventario: un movimiento por línea, armado justo después de sumar el stock
+                // (así cada uno guarda su "stock después" exacto) y guardado junto con la compra.
+                List<InventoryMovement> movements = new();
+
                 foreach (var line in lines)
                 {
                     Product product = products[line.ProductId];
@@ -186,6 +190,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     if (updated == 0)
                         return Fail($"El producto \"{product.Name}\" ya no existe");
 
+                    movements.Add(await InventoryRecorder.BuildAsync(
+                        _context, product.Id, InventoryMovementType.Purchase, quantity, userId, referenceId: purchase.Id));
+
                     purchase.Items.Add(new PurchaseItem
                     {
                         Id = Guid.NewGuid(),
@@ -201,6 +208,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 purchase.Total = purchase.Items.Sum(i => i.Total);
 
                 _context.Purchases.Add(purchase);
+                await _context.SaveChangesAsync();
+
+                // Ya existe el número de la compra: se guardan los movimientos del historial (misma transacción).
+                InventoryRecorder.Add(_context, movements, purchase.Number);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -297,8 +308,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                               $"y en el inventario solo quedan {DisplayFormat.Quantity(product.Stock)} " +
                               "(el resto ya se vendió o se ajustó). La compra sigue vigente.");
                     }
+
+                    await InventoryRecorder.RecordAsync(_context, line.ProductId, InventoryMovementType.PurchaseCancellation,
+                        -quantity, userId, referenceId: purchaseId, referenceNumber: purchase.Number);
                 }
 
+                await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return Response<PurchaseResultDTO>.Success(

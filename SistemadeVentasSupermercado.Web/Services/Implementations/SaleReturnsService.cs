@@ -236,14 +236,24 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     .Select(g => new { ProductId = g.Key, Quantity = g.Sum(i => i.Quantity) })
                     .OrderBy(x => x.ProductId);
 
+                // Historial de inventario: un movimiento por producto que vuelve al inventario. El número
+                // de la devolución se conoce al guardar, así que se agregan después.
+                List<InventoryMovement> movements = new();
+
                 foreach (var r in restock)
                 {
                     await _context.Products
                         .Where(p => p.Id == r.ProductId)
                         .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + r.Quantity));
+
+                    movements.Add(await InventoryRecorder.BuildAsync(
+                        _context, r.ProductId, InventoryMovementType.SaleReturn, r.Quantity, userId, referenceId: saleReturn.Id));
                 }
 
                 _context.SaleReturns.Add(saleReturn);
+                await _context.SaveChangesAsync();
+
+                InventoryRecorder.Add(_context, movements, saleReturn.Number);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
