@@ -86,6 +86,23 @@
             </li>
         }
 
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showPurchases", "Compras"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Purchases" asp-action="Index">
+                    <i class="bi bi-bag-plus"></i><span>Compras</span>
+                </a>
+            </li>
+        }
+        else if (await _usersService.CurrentUserIsAuthorizedAsync("createPurchases", "Compras"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Purchases" asp-action="Create">
+                    <i class="bi bi-bag-plus"></i><span>Registrar compra</span>
+                </a>
+            </li>
+        }
+
         @if (await _usersService.CurrentUserIsAuthorizedAsync("showClients", "Clientes"))
         {
             <li class="nav">

@@ -1,0 +1,125 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
+
+@{
+    ViewData["Title"] = "Registrar compra";
+    bool canShowPurchases = await _usersService.CurrentUserIsAuthorizedAsync("showPurchases", "Compras");
+    List<SelectListItem> suppliers = ((IEnumerable<SelectListItem>)ViewBag.Suppliers).ToList();
+}
+
+<div class="pagetitle">
+    <h1>Registrar compra</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            @if (canShowPurchases)
+            {
+                <li class="breadcrumb-item"><a asp-action="Index">Compras</a></li>
+            }
+            <li class="breadcrumb-item active">Registrar</li>
+        </ol>
+    </nav>
+</div>
+
+@if (suppliers.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="bi bi-exclamation-triangle"></i>
+        No hay proveedores activos. Crea (o activa) un proveedor en
+        <a asp-controller="Suppliers" asp-action="Index">Proveedores</a> antes de registrar una compra.
+    </div>
+}
+else
+{
+    @* Token antiforgery: el JavaScript lo lee de aquí y lo envía en el encabezado del registro. *@
+    @Html.AntiForgeryToken()
+
+    <section class="section"
+             id="purchase"
+             data-search-products-url="@Url.Action("SearchProducts", "Purchases")"
+             data-find-barcode-url="@Url.Action("FindByBarcode", "Purchases")"
+             data-create-url="@Url.Action("Create", "Purchases")"
+             data-details-url="@(canShowPurchases ? Url.Action("Details", "Purchases") : "")">
+        <div class="row">
+
+            @* ---------- Columna izquierda: buscador y productos ---------- *@
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body pt-3">
+                        <label for="productSearch" class="form-label fw-bold">Escanear o buscar producto</label>
+                        <div class="position-relative">
+                            <input type="text" id="productSearch" class="form-control form-control-lg"
+                                   placeholder="Escanea el código o escribe el nombre..." autocomplete="off" autofocus />
+                            <div id="productResults" class="list-group position-absolute w-100 shadow" style="z-index: 1000;"></div>
+                        </div>
+                        <div id="scanMessage" class="small fw-bold mt-1" role="status" aria-live="assertive"></div>
+                        <div class="form-text">Enter agrega el producto con ese código o, si no es un código, el primer resultado. Esc limpia la búsqueda. Aquí aparecen también los productos sin stock.</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body pt-3">
+                        <h5 class="card-title py-0">Productos de la compra</h5>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th style="width: 170px;">Cantidad</th>
+                                        <th style="width: 190px;">Costo por unidad</th>
+                                        <th class="text-end">Subtotal</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cartBody"></tbody>
+                            </table>
+                        </div>
+                        <p id="cartEmpty" class="text-center text-muted my-3">Aún no hay productos en la compra.</p>
+                    </div>
+                </div>
+            </div>
+
+            @* ---------- Columna derecha: proveedor y registro ---------- *@
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-body pt-3">
+                        <label for="supplier" class="form-label fw-bold">Proveedor</label>
+                        <select id="supplier" class="form-select">
+                            <option value="">Seleccione un proveedor...</option>
+                            @foreach (SelectListItem supplier in suppliers)
+                            {
+                                <option value="@supplier.Value">@supplier.Text</option>
+                            }
+                        </select>
+
+                        <label for="invoice" class="form-label fw-bold mt-3">Factura del proveedor (opcional)</label>
+                        <input type="text" id="invoice" class="form-control" maxlength="50" autocomplete="off" />
+
+                        <label for="notes" class="form-label fw-bold mt-3">Notas (opcional)</label>
+                        <textarea id="notes" class="form-control" rows="2" maxlength="200"></textarea>
+
+                        <hr />
+
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <span class="fs-5">Total</span>
+                            <span id="cartTotal" class="fs-3 fw-bold">$ 0</span>
+                        </div>
+                        <div class="form-text mb-3">El stock de cada producto sube con la cantidad y su último costo pasa a ser el costo de esta compra.</div>
+
+                        <button type="button" id="btnSave" class="btn btn-success btn-lg w-100" disabled>
+                            <i class="bi bi-bag-check"></i> Registrar compra
+                        </button>
+                        <button type="button" id="btnClear" class="btn btn-outline-danger w-100 mt-2" disabled>
+                            <i class="bi bi-trash"></i> Vaciar compra
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+}
+
+@section Scripts {
+    <script src="~/js/purchases.js" asp-append-version="true"></script>
+}

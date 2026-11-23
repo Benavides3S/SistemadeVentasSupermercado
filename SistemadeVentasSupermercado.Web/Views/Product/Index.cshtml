@@ -70,6 +70,7 @@
                         <th>Nombre</th>
                         <th>Descripción</th>
                         <th>Precio</th>
+                        <th>Último costo</th>
                         <th>Stock</th>
                         <th>Categoría</th>
                         <th></th>
@@ -86,6 +87,16 @@
                                 <td>@item.Name</td>
                                 <td>@item.Description</td>
                                 <td>@item.Price</td>
+                                <td>
+                                    @if (item.Cost.HasValue)
+                                    {
+                                        @($"{DisplayFormat.Money(item.Cost.Value)} / {item.Unit.Abbreviation()}")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" title="Aún no se ha comprado">—</span>
+                                    }
+                                </td>
                                 <td>@item.Stock.ToString("0.###") @item.Unit.Abbreviation()</td>
                                 <td>@item.CategoryName</td>
                                 <td>
@@ -111,7 +122,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center">No hay productos registrados.</td>
+                            <td colspan="8" class="text-center">No hay productos registrados.</td>
                         </tr>
                     }
                 </tbody>

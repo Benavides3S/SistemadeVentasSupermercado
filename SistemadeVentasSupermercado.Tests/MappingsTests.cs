@@ -220,6 +220,23 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.Equal(UnitOfMeasure.Kilogram, producto.Unit);    // el formulario de edición no trae unidad
         }
 
+        [Fact]
+        public void Producto_muestra_el_ultimo_costo_pero_ni_crear_ni_editar_lo_copian()
+        {
+            // Solo el módulo de compras fija el costo: un formulario manipulado no puede cambiarlo.
+            Product conCosto = new Product { Id = Guid.NewGuid(), Name = "Arroz", Price = 2500m, Cost = 1800m };
+            Assert.Equal(1800m, conCosto.ToDTO().Cost);
+            Assert.Null(new Product { Id = Guid.NewGuid(), Name = "Nuevo" }.ToDTO().Cost);
+
+            ProductDTO manipulado = new ProductDTO { Id = conCosto.Id, Name = "Arroz", Price = 2600m, Cost = 1m, CategoryId = Guid.NewGuid() };
+
+            Assert.Null(manipulado.ToEntity().Cost);
+
+            manipulado.ApplyTo(conCosto);
+            Assert.Equal(1800m, conCosto.Cost);
+            Assert.Equal(2600m, conCosto.Price);
+        }
+
         // ---------- Usuarios ----------
 
         [Fact]

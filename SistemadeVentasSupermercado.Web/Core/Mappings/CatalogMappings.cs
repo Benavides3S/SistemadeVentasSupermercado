@@ -112,6 +112,7 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
             Price = product.Price,
             Stock = product.Stock,
             StockOriginal = product.Stock,
+            Cost = product.Cost,
             Unit = product.Unit,
             CategoryId = product.CategoryId,
             CategoryName = product.Category?.Name
@@ -134,6 +135,7 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
         ///  - Stock: lo maneja ProductsService.EditAsync aparte, para no pisar las ventas de los cajeros.
         ///  - Unit: el formulario de edición no tiene ese campo; copiarlo convertía en "Unidad"
         ///    los productos por peso cada vez que se editaban.
+        ///  - Cost: el último costo lo fija solo el módulo de compras.
         /// </summary>
         public static void ApplyTo(this ProductDTO dto, Product product)
         {

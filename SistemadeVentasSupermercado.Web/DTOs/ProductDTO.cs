@@ -33,6 +33,13 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         /// </summary>
         public decimal StockOriginal { get; set; }
 
+        /// <summary>
+        /// Último costo de compra. Solo se muestra: lo cambia el módulo de compras, así que
+        /// ni ToEntity ni ApplyTo lo copian (un formulario manipulado no puede fijarlo).
+        /// </summary>
+        [Display(Name = "Último costo")]
+        public decimal? Cost { get; set; }
+
         [Display(Name = "Unidad de medida")]
         public UnitOfMeasure Unit { get; set; }
         [Display(Name = "Categoría")]
