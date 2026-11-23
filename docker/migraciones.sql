@@ -1191,3 +1191,56 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123022728_Proveedores'
+)
+BEGIN
+    CREATE TABLE [Suppliers] (
+        [Id] uniqueidentifier NOT NULL,
+        [Name] nvarchar(100) NOT NULL,
+        [TaxId] nvarchar(30) NULL,
+        [Phone] nvarchar(20) NULL,
+        [Email] nvarchar(100) NULL,
+        [Address] nvarchar(200) NULL,
+        [Notes] nvarchar(500) NULL,
+        [IsActive] bit NOT NULL,
+        CONSTRAINT [PK_Suppliers] PRIMARY KEY ([Id])
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123022728_Proveedores'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Suppliers_Name] ON [Suppliers] ([Name]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123022728_Proveedores'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_Suppliers_TaxId] ON [Suppliers] ([TaxId]) WHERE [TaxId] IS NOT NULL');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123022728_Proveedores'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261123022728_Proveedores', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+
