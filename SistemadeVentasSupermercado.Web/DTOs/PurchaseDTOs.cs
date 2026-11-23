@@ -28,6 +28,13 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public Guid IdempotencyKey { get; set; }
     }
 
+    public class CancelPurchaseDTO
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El motivo es obligatorio")]
+        [System.ComponentModel.DataAnnotations.StringLength(200, ErrorMessage = "El motivo puede tener máximo {1} caracteres")]
+        public string Reason { get; set; } = string.Empty;
+    }
+
     public class PurchaseResultDTO
     {
         public Guid Id { get; set; }

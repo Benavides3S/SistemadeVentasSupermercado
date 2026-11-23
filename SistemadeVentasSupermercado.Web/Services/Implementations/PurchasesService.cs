@@ -219,5 +219,95 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 return Response<PurchaseResultDTO>.Failure(ex);
             }
         }
+
+        // ---------- Anulación ----------
+
+        public async Task<Response<PurchaseResultDTO>> CancelAsync(Guid purchaseId, CancelPurchaseDTO dto, string userId)
+        {
+            string reason = dto.Reason?.Trim() ?? string.Empty;
+
+            if (reason.Length == 0)
+                return Fail("El motivo de la anulación es obligatorio");
+
+            if (reason.Length > 200)
+                return Fail("El motivo puede tener máximo 200 caracteres");
+
+            const string alreadyCancelled = "Esta compra ya está anulada";
+
+            try
+            {
+                // Si salimos sin llegar a CommitAsync, la transacción se deshace sola
+                // (también el cambio de estado si algún producto no alcanza).
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
+                var purchase = await _context.Purchases
+                    .AsNoTracking()
+                    .Where(p => p.Id == purchaseId)
+                    .Select(p => new { p.Status, p.Number, p.Total })
+                    .FirstOrDefaultAsync();
+
+                if (purchase is null)
+                    return Fail("La compra no existe");
+
+                if (purchase.Status != PurchaseStatus.Completed)
+                    return Fail(alreadyCancelled);
+
+                // 1. Cambio de estado atómico: solo si sigue "Completada". Si dos personas anulan a la vez,
+                //    una sola actualiza la fila (y la otra espera aquí), así el stock no se resta dos veces.
+                //    Orden de bloqueo: compra → productos por ProductId.
+                DateTime now = DateTime.UtcNow;
+                int cancelled = await _context.Purchases
+                    .Where(p => p.Id == purchaseId && p.Status == PurchaseStatus.Completed)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.Status, PurchaseStatus.Cancelled)
+                        .SetProperty(x => x.CancelledAtUtc, now)
+                        .SetProperty(x => x.CancelReason, reason)
+                        .SetProperty(x => x.CancelledByUserId, userId));
+
+                if (cancelled == 0)
+                    return Fail(alreadyCancelled);
+
+                // 2. Resta el stock de forma atómica, ordenado por ProductId, solo si todavía alcanza.
+                var lines = await _context.PurchaseItems
+                    .Where(i => i.PurchaseId == purchaseId)
+                    .GroupBy(i => i.ProductId)
+                    .Select(g => new { ProductId = g.Key, Quantity = g.Sum(i => i.Quantity) })
+                    .ToListAsync();
+
+                foreach (var line in lines.OrderBy(l => l.ProductId))
+                {
+                    decimal quantity = line.Quantity;
+
+                    int updated = await _context.Products
+                        .Where(p => p.Id == line.ProductId && p.Stock >= quantity)
+                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock - quantity));
+
+                    if (updated == 0)
+                    {
+                        var product = await _context.Products
+                            .AsNoTracking()
+                            .Where(p => p.Id == line.ProductId)
+                            .Select(p => new { p.Name, p.Stock })
+                            .FirstOrDefaultAsync();
+
+                        return Fail(product is null
+                            ? "Uno de los productos de esta compra ya no existe"
+                            : $"No se puede anular: de \"{product.Name}\" se compraron {DisplayFormat.Quantity(quantity)} " +
+                              $"y en el inventario solo quedan {DisplayFormat.Quantity(product.Stock)} " +
+                              "(el resto ya se vendió o se ajustó). La compra sigue vigente.");
+                    }
+                }
+
+                await transaction.CommitAsync();
+
+                return Response<PurchaseResultDTO>.Success(
+                    new PurchaseResultDTO { Id = purchaseId, Number = purchase.Number, Total = purchase.Total },
+                    "Compra anulada con éxito");
+            }
+            catch (Exception ex)
+            {
+                return Response<PurchaseResultDTO>.Failure(ex);
+            }
+        }
     }
 }

@@ -64,8 +64,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         public async Task<Response<object>> DeleteAsync(Guid id)
         {
-            // Cuando existan las compras (Etapa B), aquí se rechazará borrar un proveedor con compras
-            // y se indicará desactivarlo.
+            // Las compras guardan el proveedor (FK Restrict): con compras no se borra, se desactiva.
+            if (await _context.Purchases.AnyAsync(p => p.SupplierId == id))
+                return Response<object>.Failure("Este proveedor tiene compras registradas y no se puede borrar. Desactívalo para que no aparezca en compras nuevas.");
+
             return await DeleteAsync<Supplier>(id);
         }
 
