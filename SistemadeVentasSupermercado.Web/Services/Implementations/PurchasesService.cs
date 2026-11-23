@@ -310,6 +310,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
                     await InventoryRecorder.RecordAsync(_context, line.ProductId, InventoryMovementType.PurchaseCancellation,
                         -quantity, userId, referenceId: purchaseId, referenceNumber: purchase.Number);
+
+                    await RestoreLastCostAsync(line.ProductId, purchaseId);
                 }
 
                 await _context.SaveChangesAsync();
@@ -323,6 +325,34 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             {
                 return Response<PurchaseResultDTO>.Failure(ex);
             }
+        }
+
+        /// <summary>
+        /// Al anular una compra, el "último costo" del producto vuelve al de la compra completada más reciente
+        /// que queda (o a vacío si no hay otra). Solo se toca si el costo actual es uno de los de esta compra:
+        /// si después hubo otra compra con otro costo, ese costo se respeta. Corre dentro de la transacción de la anulación.
+        /// </summary>
+        private async Task RestoreLastCostAsync(Guid productId, Guid cancelledPurchaseId)
+        {
+            List<decimal> cancelledCosts = await _context.PurchaseItems
+                .Where(i => i.PurchaseId == cancelledPurchaseId && i.ProductId == productId)
+                .Select(i => i.UnitCost)
+                .ToListAsync();
+
+            // Compra completada más reciente (por número) de este producto, sin contar la que se anula.
+            // Si esa compra tuvo varios costos para el producto, se toma el mayor (el orden de las líneas no se guarda).
+            decimal? previousCost = await _context.PurchaseItems
+                .Where(i => i.ProductId == productId
+                            && i.PurchaseId != cancelledPurchaseId
+                            && i.Purchase!.Status == PurchaseStatus.Completed)
+                .OrderByDescending(i => i.Purchase!.Number)
+                .ThenByDescending(i => i.UnitCost)
+                .Select(i => (decimal?)i.UnitCost)
+                .FirstOrDefaultAsync();
+
+            await _context.Products
+                .Where(p => p.Id == productId && p.Cost != null && cancelledCosts.Contains(p.Cost.Value))
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.Cost, previousCost));
         }
 
         // ---------- Consultas ----------

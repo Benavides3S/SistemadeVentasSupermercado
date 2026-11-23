@@ -110,7 +110,7 @@ namespace SistemadeVentasSupermercado.Tests
 
             (decimal stock, decimal? costo) = await EstadoAsync(arroz.Id);
             Assert.Equal(4m, stock);      // volvió al stock de antes de la compra
-            Assert.Equal(1800m, costo);   // el último costo NO se restaura (limitación conocida)
+            Assert.Null(costo);           // era la única compra: el último costo vuelve a quedar vacío
         }
 
         [Fact]
@@ -275,6 +275,93 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.True(anulo ^ vendio, $"anuló={anulo}, vendió={vendio}: debía ganar exactamente una");
             Assert.Equal(0m, (await EstadoAsync(harina.Id)).stock);
             Assert.Equal(anulo ? PurchaseStatus.Cancelled : PurchaseStatus.Completed, (await LeerCompraAsync(compra)).Status);
+        }
+
+        // ---------- Último costo ----------
+
+        [Fact]
+        public async Task Anular_la_unica_compra_deja_el_costo_vacio()
+        {
+            Guid proveedor = await CrearProveedorAsync();
+            Product sal = await _fixture.CrearProductoAsync("Sal", 1000m, 0m);
+            Guid compra = await ComprarAsync(proveedor, null, Linea(sal, 5m, 700m));
+
+            Assert.True((await AnularAsync(compra)).IsSuccess);
+
+            Assert.Null((await EstadoAsync(sal.Id)).costo);
+        }
+
+        [Fact]
+        public async Task Anular_la_ultima_compra_devuelve_el_costo_de_la_anterior()
+        {
+            Guid proveedor = await CrearProveedorAsync();
+            Product aceite = await _fixture.CrearProductoAsync("Aceite", 9000m, 0m);
+            await ComprarAsync(proveedor, null, Linea(aceite, 5m, 6000m));
+            Guid segunda = await ComprarAsync(proveedor, null, Linea(aceite, 5m, 6500m));
+
+            Assert.Equal(6500m, (await EstadoAsync(aceite.Id)).costo);
+            Assert.True((await AnularAsync(segunda)).IsSuccess);
+
+            Assert.Equal(6000m, (await EstadoAsync(aceite.Id)).costo);
+        }
+
+        [Fact]
+        public async Task Anular_una_compra_vieja_no_pisa_el_costo_de_una_compra_posterior()
+        {
+            Guid proveedor = await CrearProveedorAsync();
+            Product harina = await _fixture.CrearProductoAsync("Harina", 3000m, 0m);
+            Guid primera = await ComprarAsync(proveedor, null, Linea(harina, 5m, 2000m));
+            await ComprarAsync(proveedor, null, Linea(harina, 5m, 2200m));
+
+            Assert.True((await AnularAsync(primera)).IsSuccess);
+
+            Assert.Equal(2200m, (await EstadoAsync(harina.Id)).costo);
+        }
+
+        [Fact]
+        public async Task Las_compras_anuladas_no_cuentan_como_costo_anterior()
+        {
+            Guid proveedor = await CrearProveedorAsync();
+            Product pasta = await _fixture.CrearProductoAsync("Pasta", 3000m, 0m);
+            await ComprarAsync(proveedor, null, Linea(pasta, 5m, 1000m));
+            Guid segunda = await ComprarAsync(proveedor, null, Linea(pasta, 5m, 1100m));
+            Guid tercera = await ComprarAsync(proveedor, null, Linea(pasta, 5m, 1200m));
+
+            Assert.True((await AnularAsync(segunda)).IsSuccess);
+            Assert.Equal(1200m, (await EstadoAsync(pasta.Id)).costo); // la tercera sigue siendo la última
+
+            Assert.True((await AnularAsync(tercera)).IsSuccess);
+            Assert.Equal(1000m, (await EstadoAsync(pasta.Id)).costo); // salta la anulada y vuelve a la primera
+        }
+
+        [Fact]
+        public async Task Anular_no_toca_el_costo_de_un_producto_cuyo_costo_ya_no_es_el_de_esa_compra()
+        {
+            Guid proveedor = await CrearProveedorAsync();
+            Product atun = await _fixture.CrearProductoAsync("Atún", 5000m, 0m);
+            Guid compra = await ComprarAsync(proveedor, null, Linea(atun, 5m, 3000m));
+
+            await using (DataContext context = _fixture.CrearContexto())
+                await context.Products.Where(p => p.Id == atun.Id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.Cost, (decimal?)3500m));
+
+            Assert.True((await AnularAsync(compra)).IsSuccess);
+
+            Assert.Equal(3500m, (await EstadoAsync(atun.Id)).costo);
+        }
+
+        [Fact]
+        public async Task Una_anulacion_rechazada_no_cambia_el_costo()
+        {
+            Guid proveedor = await CrearProveedorAsync();
+            Product jugo = await _fixture.CrearProductoAsync("Jugo", 4000m, 0m);
+            await ComprarAsync(proveedor, null, Linea(jugo, 5m, 2000m));
+            Guid segunda = await ComprarAsync(proveedor, null, Linea(jugo, 5m, 2500m));
+            await VenderAsync(jugo, 8m); // quedan 2: no alcanza para restar 5
+
+            Assert.False((await AnularAsync(segunda)).IsSuccess);
+
+            Assert.Equal(2500m, (await EstadoAsync(jugo.Id)).costo);
         }
 
         // ---------- Otras reglas ----------
