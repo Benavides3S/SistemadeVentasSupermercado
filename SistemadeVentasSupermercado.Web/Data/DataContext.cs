@@ -23,6 +23,8 @@ namespace SistemadeVentasSupermercado.Web.Data
         public DbSet<CashSession> CashSessions { get; set; }
         public DbSet<SaleReturn> SaleReturns { get; set; }
         public DbSet<SaleReturnItem> SaleReturnItems { get; set; }
+        public DbSet<Purchase> Purchases { get; set; }
+        public DbSet<PurchaseItem> PurchaseItems { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -152,6 +154,43 @@ namespace SistemadeVentasSupermercado.Web.Data
             builder.Entity<Sale>().Property(s => s.ReturnedTotal).HasPrecision(18, 2);
             builder.Entity<Sale>().ToTable(t =>
                 t.HasCheckConstraint("CK_Sales_ReturnedTotal_Range", "[ReturnedTotal] >= 0 AND [ReturnedTotal] <= [Total]"));
+
+            // ---------- Compras ----------
+            builder.Entity<Purchase>()
+                   .HasOne(p => p.User).WithMany()
+                   .HasForeignKey(p => p.UserId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Purchase>()
+                   .HasOne(p => p.Supplier).WithMany()
+                   .HasForeignKey(p => p.SupplierId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Purchase>()
+                   .HasOne(p => p.CancelledByUser).WithMany()
+                   .HasForeignKey(p => p.CancelledByUserId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<PurchaseItem>()
+                   .HasOne(i => i.Purchase).WithMany(p => p.Items)
+                   .HasForeignKey(i => i.PurchaseId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PurchaseItem>()
+                   .HasOne(i => i.Product).WithMany()
+                   .HasForeignKey(i => i.ProductId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Product>().Property(p => p.Cost).HasPrecision(18, 2);
+            builder.Entity<Purchase>().Property(p => p.Total).HasPrecision(18, 2);
+            builder.Entity<PurchaseItem>().Property(i => i.UnitCost).HasPrecision(18, 2);
+            builder.Entity<PurchaseItem>().Property(i => i.Total).HasPrecision(18, 2);
+            builder.Entity<PurchaseItem>().Property(i => i.Quantity).HasPrecision(18, 3);
+            builder.Entity<PurchaseItem>().ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_PurchaseItems_Quantity_Positive", "[Quantity] > 0");
+                t.HasCheckConstraint("CK_PurchaseItems_UnitCost_Positive", "[UnitCost] > 0");
+            });
         }
 
         private void ConfigureIndexes(ModelBuilder builder)
@@ -207,6 +246,22 @@ namespace SistemadeVentasSupermercado.Web.Data
 
             builder.Entity<CashSession>().HasIndex(c => c.Number).IsUnique();
             builder.Entity<SaleReturn>().HasIndex(r => r.Number).IsUnique();
+
+            builder.Entity<Purchase>().HasIndex(p => p.Number).IsUnique();
+            builder.Entity<Purchase>().HasIndex(p => p.CreatedAtUtc);
+
+            // Una misma compra (mismo código de la pantalla y mismo usuario) solo se registra una vez.
+            // El código va primero para no reemplazar el índice de la relación con el usuario (IX_Purchases_UserId).
+            builder.Entity<Purchase>()
+                   .HasIndex(p => new { p.IdempotencyKey, p.UserId })
+                   .IsUnique()
+                   .HasFilter("[IdempotencyKey] IS NOT NULL")
+                   .HasDatabaseName("IX_Purchases_IdempotencyKey_UserId");
+
+            // No es único: la factura repetida de un proveedor solo se avisa. El índice acelera esa búsqueda.
+            builder.Entity<Purchase>()
+                   .HasIndex(p => new { p.SupplierId, p.SupplierInvoiceNumber })
+                   .HasDatabaseName("IX_Purchases_SupplierId_SupplierInvoiceNumber");
 
             // Un cajero solo puede tener UN turno abierto (Status = 1 = Open).
             // Lo garantiza la base de datos, aunque dos pestañas intenten abrir caja a la vez.
