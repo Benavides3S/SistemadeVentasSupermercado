@@ -100,6 +100,7 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddScoped<IRolesService, RolesService>();
             builder.Services.AddScoped<IUsersService, UsersService>();
             builder.Services.AddScoped<ICategoryService, CategoriesService>();
+            builder.Services.AddScoped<ISupplierService, SuppliersService>();
 
             builder.Services.AddTransient<SeedDb>();
             builder.Services.AddScoped<ISalesService, SalesService>();

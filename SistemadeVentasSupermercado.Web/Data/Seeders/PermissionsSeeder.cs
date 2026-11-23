@@ -20,6 +20,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 ..Productos(),
                 ..Clientes(),
                 ..Categorias(),
+                ..Proveedores(),
                 ..Ventas(),
                 ..Caja(),
                 ..Reportes(),
@@ -121,6 +122,17 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
         new Permission { Id = Guid.NewGuid(), Name = "updateCategories", Description = "Editar categorías", Module = "Categorias" },
         new Permission { Id = Guid.NewGuid(), Name = "deleteCategories", Description = "Eliminar categorías", Module = "Categorias" }
     };
+        }
+
+        private List<Permission> Proveedores()
+        {
+            return new List<Permission>
+            {
+                new Permission { Id = Guid.NewGuid(), Name = "showSuppliers", Description = "Ver proveedores", Module = "Proveedores" },
+                new Permission { Id = Guid.NewGuid(), Name = "createSuppliers", Description = "Crear proveedores", Module = "Proveedores" },
+                new Permission { Id = Guid.NewGuid(), Name = "updateSuppliers", Description = "Editar proveedores", Module = "Proveedores" },
+                new Permission { Id = Guid.NewGuid(), Name = "deleteSuppliers", Description = "Eliminar proveedores", Module = "Proveedores" }
+            };
         }
 
         private List<Permission> Roles()

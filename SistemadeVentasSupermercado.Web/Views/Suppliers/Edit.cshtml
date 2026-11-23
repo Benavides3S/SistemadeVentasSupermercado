@@ -1,0 +1,39 @@
+@model SistemadeVentasSupermercado.Web.DTOs.SupplierDTO
+
+@{
+    ViewData["Title"] = "Editar Proveedor";
+}
+
+<div class="pagetitle">
+    <h1>Editar Proveedor</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Suppliers" asp-action="Index">Proveedores</a></li>
+            <li class="breadcrumb-item active">Editar</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Modificar proveedor</h5>
+
+            <form asp-action="Edit" method="post" class="row g-3">
+                <input type="hidden" asp-for="Id" />
+
+                <partial name="_Form" model="Model" />
+
+                <div class="col-12 text-end mt-3">
+                    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

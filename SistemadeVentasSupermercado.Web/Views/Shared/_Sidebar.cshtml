@@ -77,6 +77,15 @@
             </li>
         }
 
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showSuppliers", "Proveedores"))
+        {
+            <li class="nav">
+                <a class="nav-link collapsed" asp-controller="Suppliers" asp-action="Index">
+                    <i class="bi bi-truck"></i><span>Proveedores</span>
+                </a>
+            </li>
+        }
+
         @if (await _usersService.CurrentUserIsAuthorizedAsync("showClients", "Clientes"))
         {
             <li class="nav">

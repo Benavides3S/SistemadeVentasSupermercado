@@ -612,6 +612,53 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.ToTable("SistemaVentasRoles");
                 });
 
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Supplier", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TaxId")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("TaxId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Suppliers_TaxId")
+                        .HasFilter("[TaxId] IS NOT NULL");
+
+                    b.ToTable("Suppliers");
+                });
+
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.User", b =>
                 {
                     b.Property<string>("Id")

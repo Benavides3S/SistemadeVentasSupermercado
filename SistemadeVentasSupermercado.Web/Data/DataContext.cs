@@ -19,6 +19,7 @@ namespace SistemadeVentasSupermercado.Web.Data
         public DbSet<Sale> Sales { get; set; }
         public DbSet<SaleItem> SaleItems { get; set; }
         public DbSet<Category> Categories { get; set; }
+        public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<CashSession> CashSessions { get; set; }
         public DbSet<SaleReturn> SaleReturns { get; set; }
         public DbSet<SaleReturnItem> SaleReturnItems { get; set; }
@@ -195,6 +196,14 @@ namespace SistemadeVentasSupermercado.Web.Data
                    .HasFilter("[IdempotencyKey] IS NOT NULL")
                    .HasDatabaseName("IX_Sales_IdempotencyKey_UserId");
             builder.Entity<Category>().HasIndex(c => c.Name).IsUnique();
+
+            builder.Entity<Supplier>().HasIndex(s => s.Name).IsUnique();
+            // El NIT/documento es opcional: solo es único cuando existe.
+            builder.Entity<Supplier>()
+                   .HasIndex(s => s.TaxId)
+                   .IsUnique()
+                   .HasFilter("[TaxId] IS NOT NULL")
+                   .HasDatabaseName("IX_Suppliers_TaxId");
 
             builder.Entity<CashSession>().HasIndex(c => c.Number).IsUnique();
             builder.Entity<SaleReturn>().HasIndex(r => r.Number).IsUnique();
