@@ -20,7 +20,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
         public static readonly string[] CashierPermissions = ["createSales", "manageCashSessions"];
         public static readonly string[] SupervisorPermissions =
             [.. CashierPermissions, "showSales", "cancelSales", "createReturns", "showCashSessions", "showReports",
-             "showPurchases", "createPurchases", "cancelPurchases"];
+             "showPurchases", "createPurchases", "cancelPurchases", "showInventory"];
 
         public UserRolesSeeder(DataContext context, IUsersService usersService)
         {

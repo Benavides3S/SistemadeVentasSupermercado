@@ -107,6 +107,7 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddScoped<ICashSessionService, CashSessionService>();
             builder.Services.AddScoped<ISaleReturnsService, SaleReturnsService>();
             builder.Services.AddScoped<IPurchasesService, PurchasesService>();
+            builder.Services.AddScoped<IInventoryService, InventoryService>();
             builder.Services.AddScoped<IReportsService, ReportsService>();
             builder.Services.AddTransient<ICombosHelper, CombosHelper>();
 
