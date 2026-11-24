@@ -64,7 +64,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
             if (!response.IsSuccess)
             {
-                string detalle = response.Errors is null ? "" : " " + string.Join(" ", response.Errors);
+                string detalle = response.Errors.Count == 0 ? "" : " " + string.Join(" ", response.Errors);
                 _notifyService.Error(response.Message + detalle);
                 ModelState.AddModelError(string.Empty, response.Message + detalle);
 
