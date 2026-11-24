@@ -22,6 +22,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [SkipMustChangePassword]
         public IActionResult Login()
         {
@@ -29,6 +30,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [SkipMustChangePassword]
         public async Task<IActionResult> Login(LoginDTO dto)
         {

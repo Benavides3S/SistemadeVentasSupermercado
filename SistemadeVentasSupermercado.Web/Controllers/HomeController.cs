@@ -40,6 +40,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             return View(response.IsSuccess ? response.Result! : new HomeSummaryDTO());
         }
 
+        [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
