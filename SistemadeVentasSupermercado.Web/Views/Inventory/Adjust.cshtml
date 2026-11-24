@@ -1,0 +1,117 @@
+@model AdjustInventoryDTO
+
+@{
+    ViewData["Title"] = "Ajustar stock";
+    InventoryProductDTO product = (InventoryProductDTO)ViewBag.Product;
+    bool byUnit = product.Unit == UnitOfMeasure.Unit;
+}
+
+<div class="pagetitle">
+    <h1>Ajustar stock</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index">Inventario</a></li>
+            <li class="breadcrumb-item active">Ajustar stock</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="m-0 font-weight-bold text-primary">@product.Name</h3>
+        </div>
+        <div class="card-body pt-3">
+            <div class="alert alert-light border" role="alert">
+                Stock actual: <strong>@DisplayFormat.Quantity(product.Stock) @product.Unit.Abbreviation()</strong>.
+                El ajuste queda en el historial con tu nombre y el motivo. Para registrar mercancía que llegó
+                de un proveedor usa <a asp-controller="Purchases" asp-action="Create">Compras</a>; para lo vendido, el punto de venta.
+            </div>
+
+            <partial name="_FormError" />
+
+            <form asp-action="Adjust" method="POST" class="row g-3" id="adjustForm">
+                <input type="hidden" asp-for="ProductId" />
+                <input type="hidden" asp-for="IdempotencyKey" />
+
+                <div class="col-12">
+                    <label class="form-label d-block">Tipo de ajuste</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" asp-for="Direction" value="@((int)AdjustmentDirection.Decrease)" id="dirDecrease"
+                               checked="@(Model.Direction == AdjustmentDirection.Decrease)" />
+                        <label class="form-check-label" for="dirDecrease">Salida (resta del stock)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" asp-for="Direction" value="@((int)AdjustmentDirection.Increase)" id="dirIncrease"
+                               checked="@(Model.Direction == AdjustmentDirection.Increase)" />
+                        <label class="form-check-label" for="dirIncrease">Entrada (suma al stock)</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input name="Quantity" id="Quantity" type="number" step="@(byUnit ? "1" : "any")" min="@(byUnit ? "1" : "0")"
+                               value="@(Model.Quantity > 0 ? Model.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")"
+                               class="form-control" placeholder="Cantidad" required />
+                        <label for="Quantity">Cantidad (@product.Unit.Abbreviation())</label>
+                    </div>
+                    @if (byUnit)
+                    {
+                        <div class="form-text">Este producto se maneja por unidad: solo números enteros.</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <select asp-for="Reason" class="form-select" id="Reason">
+                            @foreach (AdjustmentReason reason in Enum.GetValues<AdjustmentReason>())
+                            {
+                                <option value="@((int)reason)" selected="@(Model.Reason == reason)">@reason.Label()</option>
+                            }
+                        </select>
+                        <label asp-for="Reason">Motivo</label>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-floating">
+                        <textarea asp-for="Notes" class="form-control" maxlength="200" style="height: 90px" placeholder="Notas" id="Notes"></textarea>
+                        <label asp-for="Notes">Notas (<span id="notesHint">opcional</span>, máximo 200 caracteres)</label>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <button class="btn btn-primary" type="submit" id="submitButton">Guardar ajuste</button>
+                    <a asp-action="Index" asp-route-ProductId="@product.Id" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(function () {
+            const other = @((int)AdjustmentReason.Other);
+            const reason = document.getElementById('Reason');
+            const notes = document.getElementById('Notes');
+            const hint = document.getElementById('notesHint');
+
+            // "Otro" exige explicar qué pasó.
+            function syncNotes() {
+                const required = parseInt(reason.value, 10) === other;
+                notes.required = required;
+                hint.textContent = required ? 'obligatorio' : 'opcional';
+            }
+            reason.addEventListener('change', syncNotes);
+            syncNotes();
+
+            // Evita el doble clic. Aunque se enviara dos veces, el código del formulario impide aplicarlo dos veces.
+            document.getElementById('adjustForm').addEventListener('submit', function () {
+                const button = document.getElementById('submitButton');
+                setTimeout(function () { button.disabled = true; }, 0);
+            });
+        });
+    </script>
+}

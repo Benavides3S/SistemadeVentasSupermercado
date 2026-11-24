@@ -41,6 +41,60 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.False(categoria.IsActive);
         }
 
+        // ---------- Proveedores ----------
+
+        [Fact]
+        public void Proveedor_ida_y_vuelta()
+        {
+            Supplier proveedor = new Supplier
+            {
+                Id = Guid.NewGuid(), Name = "Distribuidora Andina", TaxId = "900123456-7", Phone = "3001234567",
+                Email = "ventas@andina.co", Address = "Calle 10 # 5-20", Notes = "Entrega los martes", IsActive = false
+            };
+
+            SupplierDTO dto = proveedor.ToDTO();
+            Assert.Equal(proveedor.Id, dto.Id);
+            Assert.Equal("Distribuidora Andina", dto.Name);
+            Assert.Equal("900123456-7", dto.TaxId);
+            Assert.Equal("3001234567", dto.Phone);
+            Assert.Equal("ventas@andina.co", dto.Email);
+            Assert.Equal("Calle 10 # 5-20", dto.Address);
+            Assert.Equal("Entrega los martes", dto.Notes);
+            Assert.False(dto.IsActive);
+
+            Supplier nuevo = dto.ToEntity();
+            Assert.Equal(proveedor.Id, nuevo.Id);
+            Assert.Equal("Distribuidora Andina", nuevo.Name);
+            Assert.Equal("900123456-7", nuevo.TaxId);
+            Assert.Equal("3001234567", nuevo.Phone);
+            Assert.Equal("ventas@andina.co", nuevo.Email);
+            Assert.Equal("Calle 10 # 5-20", nuevo.Address);
+            Assert.Equal("Entrega los martes", nuevo.Notes);
+            Assert.False(nuevo.IsActive);
+        }
+
+        [Fact]
+        public void Proveedor_ApplyTo_copia_los_campos_y_conserva_el_id()
+        {
+            Guid id = Guid.NewGuid();
+            Supplier proveedor = new Supplier { Id = id, Name = "Viejo", TaxId = "1", Phone = "2", Email = "a@b.co", IsActive = true };
+
+            new SupplierDTO
+            {
+                Id = Guid.NewGuid(), Name = "Nuevo", TaxId = null, Phone = "3", Email = null,
+                Address = "Dir", Notes = "Nota", IsActive = false
+            }.ApplyTo(proveedor);
+
+            Assert.Equal(id, proveedor.Id);
+            Assert.Equal("Nuevo", proveedor.Name);
+            Assert.Null(proveedor.TaxId);
+            Assert.Equal("3", proveedor.Phone);
+            Assert.Null(proveedor.Email);
+            Assert.Equal("Dir", proveedor.Address);
+            Assert.Equal("Nota", proveedor.Notes);
+            Assert.False(proveedor.IsActive);
+        }
+
         // ---------- Clientes ----------
 
         [Fact]
@@ -102,7 +156,6 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.Equal("Campesino", dto.Description);
             Assert.Equal(12000.50m, dto.Price);
             Assert.Equal(3.250m, dto.Stock);
-            Assert.Equal(3.250m, dto.StockOriginal); // el formulario de edición lo envía de vuelta oculto
             Assert.Equal(UnitOfMeasure.Kilogram, dto.Unit);
             Assert.Equal(categoria.Id, dto.CategoryId);
             Assert.Equal("Quesos", dto.CategoryName);
@@ -164,6 +217,23 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.Equal(categoriaNueva, producto.CategoryId);
             Assert.Equal(4.5m, producto.Stock);                     // el stock se maneja aparte
             Assert.Equal(UnitOfMeasure.Kilogram, producto.Unit);    // el formulario de edición no trae unidad
+        }
+
+        [Fact]
+        public void Producto_muestra_el_ultimo_costo_pero_ni_crear_ni_editar_lo_copian()
+        {
+            // Solo el módulo de compras fija el costo: un formulario manipulado no puede cambiarlo.
+            Product conCosto = new Product { Id = Guid.NewGuid(), Name = "Arroz", Price = 2500m, Cost = 1800m };
+            Assert.Equal(1800m, conCosto.ToDTO().Cost);
+            Assert.Null(new Product { Id = Guid.NewGuid(), Name = "Nuevo" }.ToDTO().Cost);
+
+            ProductDTO manipulado = new ProductDTO { Id = conCosto.Id, Name = "Arroz", Price = 2600m, Cost = 1m, CategoryId = Guid.NewGuid() };
+
+            Assert.Null(manipulado.ToEntity().Cost);
+
+            manipulado.ApplyTo(conCosto);
+            Assert.Equal(1800m, conCosto.Cost);
+            Assert.Equal(2600m, conCosto.Price);
         }
 
         // ---------- Usuarios ----------

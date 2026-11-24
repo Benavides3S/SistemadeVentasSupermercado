@@ -143,6 +143,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     IdempotencyKey = dto.IdempotencyKey
                 };
 
+                // Historial de inventario: se arma un movimiento por producto justo después de descontarlo
+                // y se guarda junto con la venta (el número de la venta se conoce al guardar).
+                List<InventoryMovement> movements = new();
+
                 foreach (var line in lines)
                 {
                     Product product = products[line.ProductId];
@@ -158,6 +162,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
                     if (updated == 0)
                         return Fail($"Stock insuficiente de \"{product.Name}\"");
+
+                    movements.Add(await InventoryRecorder.BuildAsync(
+                        _context, product.Id, InventoryMovementType.Sale, -quantity, userId, referenceId: sale.Id));
 
                     sale.Items.Add(new SaleItem
                     {
@@ -175,6 +182,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
                 _context.Sales.Add(sale);
                 await _context.SaveChangesAsync();
+
+                // Ya existe el número de la venta: se guardan los movimientos del historial (misma transacción).
+                await InventoryRecorder.SaveAsync(_context, movements, sale.Number);
                 await transaction.CommitAsync();
 
                 return Response<SaleResultDTO>.Success(
@@ -217,7 +227,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 var sale = await _context.Sales
                     .AsNoTracking()
                     .Where(s => s.Id == saleId)
-                    .Select(s => new { s.Status, s.CashSessionId, s.ReturnedTotal })
+                    .Select(s => new { s.Number, s.Status, s.CashSessionId, s.ReturnedTotal })
                     .FirstOrDefaultAsync();
 
                 if (sale is null)
@@ -275,8 +285,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     await _context.Products
                         .Where(p => p.Id == line.ProductId)
                         .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + line.Quantity));
+
+                    await InventoryRecorder.RecordAsync(_context, line.ProductId, InventoryMovementType.SaleCancellation,
+                        line.Quantity, userId, referenceId: saleId, referenceNumber: sale.Number);
                 }
 
+                await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch (Exception ex)

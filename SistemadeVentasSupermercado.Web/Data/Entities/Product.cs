@@ -32,6 +32,13 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         [Display(Name = "Stock")]
         public decimal Stock { get; set; }
 
+        /// <summary>
+        /// Último costo de compra (por unidad, kilo, libra o litro). Lo actualiza solo el módulo de
+        /// compras; vacío si el producto nunca se ha comprado. El formulario de producto no lo edita.
+        /// </summary>
+        [Display(Name = "Último costo")]
+        public decimal? Cost { get; set; }
+
         [Display(Name = "Unidad de medida")]
         public UnitOfMeasure Unit { get; set; } = UnitOfMeasure.Unit;
 

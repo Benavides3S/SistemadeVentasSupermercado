@@ -18,6 +18,8 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
         {
             // Las categorías de ejemplo se crean siempre (punto de partida); los productos solo en desarrollo.
             await new ProductsSeeder(_context).SeedAsync(crearProductos: esDesarrollo);
+            // Después de los productos: los de ejemplo y los que ya existían reciben su saldo inicial.
+            await new InventorySeeder(_context).SeedOpeningBalanceAsync();
             await new PermissionsSeeder(_context).SeedAsync();
             await new UserRolesSeeder(_context, _usersService).SeedAsync(passwordInicial, esDesarrollo);
         }

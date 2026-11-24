@@ -5,6 +5,7 @@ Aplicación web de punto de venta y administración para supermercados en Colomb
 - **Inventario:** productos por unidad o por peso (kg, lb, litro), categorías activas/inactivas.
 - **Punto de venta:** buscador, carrito, cobro en efectivo, tarjeta o transferencia; varios cajeros a la vez sin vender stock que no existe.
 - **Caja:** apertura con monto inicial, cierre con arqueo ciego (el cajero cuenta sin ver el esperado), reporte de cierre.
+- **Proveedores y compras:** registro de la mercancía que llega (suma el stock y guarda el último costo de cada producto), historial y anulación.
 - **Anulaciones y devoluciones parciales** que devuelven el stock y ajustan el efectivo esperado.
 - **Reportes:** ventas por día y productos más vendidos, con exportación a Excel e impresión a PDF.
 - **Usuarios, roles y permisos** propios por módulo.
@@ -86,7 +87,7 @@ dotnet test           # desde la carpeta del .sln
 
 - Usan una base **separada**, `SistemaVentasTests` (cadena en `SistemadeVentasSupermercado.Tests/appsettings.Tests.json`, o la variable de entorno `ConnectionStrings__TestsConnection`).
 - **Esa base se borra y se recrea** con las migraciones en cada ejecución. Por seguridad, las pruebas se niegan a correr si la cadena apunta a una base con otro nombre.
-- Cubren ventas (incluidos varios cajeros a la vez), caja, anulaciones, devoluciones, reportes, formatos, edición de productos y contraseñas y roles de usuarios.
+- Cubren ventas (incluidos varios cajeros a la vez), compras (reintentos, anulación y compras y ventas simultáneas), caja, anulaciones, devoluciones, reportes, formatos, edición de productos y contraseñas y roles de usuarios.
 
 ## Permisos
 
@@ -100,11 +101,16 @@ El rol **Admin** tiene acceso a todo. Para los demás roles, asigna permisos en 
 | Ventas | `createReturns` | Hacer devoluciones |
 | Caja | `manageCashSessions` | Abrir y cerrar su propia caja |
 | Caja | `showCashSessions` | Ver todos los turnos y cerrar cajas olvidadas |
+| Compras | `showPurchases` | Ver el historial y el detalle de las compras |
+| Compras | `createPurchases` | Registrar compras a proveedores (suma el stock) |
+| Compras | `cancelPurchases` | Anular compras (resta el stock, solo si todavía alcanza) |
+| Inventario | `showInventory` | Ver el historial de movimientos de inventario |
+| Inventario | `adjustInventory` | Ajustar el stock a mano (mermas, pérdidas, conteo físico) |
 | Reportes | `showReports` | Ver y exportar reportes |
-| Productos, Categorías, Clientes, Usuarios, Roles | `show*`, `create*`, `update*`, `delete*` | Administración |
+| Productos, Categorías, Proveedores, Clientes, Usuarios, Roles | `show*`, `create*`, `update*`, `delete*` | Administración |
 | Usuarios | `resetPasswords` | Restablecer la contraseña de un usuario (genera una temporal) |
 
-El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **Supervisor** (lo del cajero, más `showSales`, `cancelSales`, `createReturns`, `showCashSessions` y `showReports`). Puedes cambiarles los permisos en **Roles**; el sistema no los vuelve a poner.
+El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **Supervisor** (lo del cajero, más `showSales`, `cancelSales`, `createReturns`, `showCashSessions`, `showReports`, `showPurchases`, `createPurchases`, `cancelPurchases` y `showInventory`). Puedes cambiarles los permisos en **Roles**; el sistema no los vuelve a poner. En una instalación que ya existía, el rol **Supervisor** no recibe los permisos de Compras ni de Inventario solo: márcalos en **Roles**. El permiso `adjustInventory` no se da a ningún rol de ejemplo: solo el Admin ajusta stock hasta que lo marques.
 
 ## Flujo diario
 
@@ -112,6 +118,23 @@ El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **
 2. Vende en el **Punto de venta**. Sin caja abierta no se puede vender. Con un **lector de código de barras** USB (cualquiera que funcione como teclado) basta con escanear: el producto se agrega al carrito; si el código no existe o el producto no tiene stock, suena un pitido y aparece el motivo bajo el buscador. El código de cada producto se registra en **Productos** (se puede escanear sobre el campo).
 3. Si hay un error, un supervisor **anula** la venta desde su comprobante (solo con el turno abierto). Si el cliente vuelve después, se hace una **devolución**.
 4. Al final del turno, el cajero cuenta el efectivo y **cierra la caja**. El reporte de cierre muestra sobrante o faltante.
+
+### Cuando llega mercancía
+
+1. Crea el proveedor en **Proveedores** (si es nuevo).
+2. En **Compras → Registrar compra**, elige el proveedor, escribe la factura (opcional) y agrega los productos escaneando o buscando. Cada línea lleva la **cantidad** y el **costo por unidad** (se precarga el último costo). Aquí aparecen también los productos sin stock.
+3. Al guardar, el stock de cada producto sube y su **último costo** pasa a ser el de esa compra (se ve en la lista de **Productos**). Si repites la factura de un proveedor, el sistema **avisa**, pero deja registrar la compra.
+4. Si hubo un error, se **anula** desde el detalle de la compra (con motivo). Solo se puede si todavía queda stock suficiente: si parte de esa mercancía ya se vendió, el sistema lo rechaza y dice qué producto falta.
+
+### Inventario
+
+- **Inventario** muestra cada movimiento de stock: ventas, anulaciones, devoluciones, compras, ajustes y el stock inicial, con quién, cuándo y cuánto quedó. Filtra por producto, tipo, fechas o texto; desde la lista de **Productos** hay un botón de historial por producto.
+- Para corregir el stock (merma, pérdida, conteo físico, consumo interno) usa **Ajustar stock**: eliges entrada o salida, cantidad y motivo (con notas si es "Otro"). El stock ya no se edita en el formulario de Editar producto.
+- Al instalar esta versión, cada producto con stock recibe un movimiento "Saldo inicial del historial": el historial empieza ahí, no reconstruye lo anterior.
+
+## Pantalla de Inicio
+
+Al entrar sin sesión se pide iniciar sesión. El Inicio muestra, según tus permisos: accesos rápidos, las ventas de hoy, un aviso si no tienes la caja abierta y los productos con **5 unidades o menos** de stock (con enlace a su historial y a ajustar).
 
 ## Reglas importantes del diseño
 
@@ -132,5 +155,6 @@ El código de terceros y sus licencias están en [THIRD-PARTY-NOTICES.md](THIRD-
 ## Problemas conocidos
 
 - Si la red se corta justo después de cobrar, el cajero puede volver a cobrar el mismo carrito sin riesgo: el sistema reconoce el reintento y no registra la venta dos veces. Pero si **recarga la página (F5)** después del error, el carrito se pierde; en ese caso revisar el historial antes de armar la venta de nuevo.
-- Al editar un producto, el stock se guarda como **ajuste** (la diferencia con lo que se veía al abrir el formulario), así no se pierden las ventas hechas mientras tanto. Todavía no hay historial de ajustes.
 - La unidad de medida de un producto no se puede cambiar después de crearlo.
+- El producto guarda solo el **último** costo de compra (no hay historial de costos). Al anular una compra, el costo vuelve al de la compra anterior si esa era la más reciente.
+- Un proveedor con compras no se puede borrar: se desactiva. Tampoco hay pagos ni cuentas por pagar.

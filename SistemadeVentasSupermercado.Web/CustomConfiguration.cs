@@ -100,12 +100,16 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddScoped<IRolesService, RolesService>();
             builder.Services.AddScoped<IUsersService, UsersService>();
             builder.Services.AddScoped<ICategoryService, CategoriesService>();
+            builder.Services.AddScoped<ISupplierService, SuppliersService>();
 
             builder.Services.AddTransient<SeedDb>();
             builder.Services.AddScoped<ISalesService, SalesService>();
             builder.Services.AddScoped<ICashSessionService, CashSessionService>();
             builder.Services.AddScoped<ISaleReturnsService, SaleReturnsService>();
+            builder.Services.AddScoped<IPurchasesService, PurchasesService>();
+            builder.Services.AddScoped<IInventoryService, InventoryService>();
             builder.Services.AddScoped<IReportsService, ReportsService>();
+            builder.Services.AddScoped<IHomeService, HomeService>();
             builder.Services.AddTransient<ICombosHelper, CombosHelper>();
 
             // Datos del negocio para el comprobante (sección "Negocio" de appsettings.json).

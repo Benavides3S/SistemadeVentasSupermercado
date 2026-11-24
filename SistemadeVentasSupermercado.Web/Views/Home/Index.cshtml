@@ -1,5 +1,35 @@
-﻿@{
+@using SistemadeVentasSupermercado.Web.Data.Entities
+@using SistemadeVentasSupermercado.Web.Services.Implementations
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
+@model HomeSummaryDTO
+
+@{
     ViewData["Title"] = "Inicio";
+
+    // Accesos rápidos: solo los que el usuario puede usar (el Admin los ve todos).
+    var shortcuts = new List<(string Permission, string Module, string Controller, string Action, string Icon, string Text)>
+    {
+        ("createSales", "Ventas", "Sales", "Create", "bi-cart3", "Punto de venta"),
+        ("manageCashSessions", "Caja", "CashSessions", "Current", "bi-safe", "Mi caja"),
+        ("showSales", "Ventas", "Sales", "Index", "bi-receipt", "Ventas"),
+        ("showCashSessions", "Caja", "CashSessions", "Index", "bi-journal-check", "Turnos de caja"),
+        ("createPurchases", "Compras", "Purchases", "Create", "bi-bag-plus", "Registrar compra"),
+        ("showInventory", "Inventario", "Inventory", "Index", "bi-boxes", "Inventario"),
+        ("showProducts", "Productos", "Product", "Index", "bi-book", "Productos"),
+        ("showSuppliers", "Proveedores", "Suppliers", "Index", "bi-truck", "Proveedores"),
+        ("showClients", "Clientes", "Client", "Index", "bi-person-add", "Clientes"),
+        ("showReports", "Reportes", "Reports", "Index", "bi-bar-chart-line", "Reportes")
+    };
+
+    var allowed = new List<(string Controller, string Action, string Icon, string Text)>();
+    foreach (var s in shortcuts)
+    {
+        if (await _usersService.CurrentUserIsAuthorizedAsync(s.Permission, s.Module))
+            allowed.Add((s.Controller, s.Action, s.Icon, s.Text));
+    }
+
+    bool canAdjust = await _usersService.CurrentUserIsAuthorizedAsync("adjustInventory", "Inventario");
+    bool canSeeHistory = await _usersService.CurrentUserIsAuthorizedAsync("showInventory", "Inventario");
 }
 
 <div class="pagetitle">
@@ -12,5 +42,120 @@
 </div>
 
 <section class="section dashboard">
-    <h1>Bienvenido a tu Sistema de ventas</h1>
+    @if (Model.HasOpenCashSession == false)
+    {
+        <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>No tienes la caja abierta: no podrás vender hasta abrirla.</span>
+            <a asp-controller="CashSessions" asp-action="Current" class="btn btn-sm btn-warning ms-auto">Abrir mi caja</a>
+        </div>
+    }
+
+    @if (Model.SalesCountToday.HasValue || Model.HasOpenCashSession == true)
+    {
+        <div class="row">
+            @if (Model.SalesCountToday.HasValue)
+            {
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body pt-3">
+                            <div class="text-muted small">Ventas de hoy (todos los cajeros)</div>
+                            <div class="fs-3 fw-semibold">@DisplayFormat.Money(Model.SalesTotalToday)</div>
+                            <div class="text-muted">@Model.SalesCountToday venta(s) completada(s)</div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (Model.HasOpenCashSession == true)
+            {
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body pt-3">
+                            <div class="text-muted small">Mi caja</div>
+                            <div class="fs-3 fw-semibold text-success">Abierta</div>
+                            <div class="text-muted">Desde @DisplayFormat.DateTimeColombia(Model.CashSessionOpenedAtUtc!.Value)</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (allowed.Count > 0)
+    {
+        <div class="card">
+            <div class="card-header"><h5 class="m-0">Accesos rápidos</h5></div>
+            <div class="card-body pt-3">
+                <div class="row g-3">
+                    @foreach (var item in allowed)
+                    {
+                        <div class="col-6 col-md-4 col-lg-3">
+                            <a asp-controller="@item.Controller" asp-action="@item.Action" class="btn btn-outline-primary w-100 py-3">
+                                <i class="bi @item.Icon fs-3 d-block mb-1"></i>@item.Text
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body pt-3">
+                <h5>Bienvenido a tu Sistema de ventas</h5>
+                <p class="mb-0 text-muted">Tu usuario todavía no tiene permisos asignados. Pide a un administrador que te asigne un rol.</p>
+            </div>
+        </div>
+    }
+
+    @if (Model.LowStock != null)
+    {
+        <div class="card">
+            <div class="card-header">
+                <h5 class="m-0">Productos con poco stock <small class="text-muted">(@HomeService.LowStockThreshold.ToString("0") o menos)</small></h5>
+            </div>
+            <div class="card-body pt-3">
+                @if (Model.LowStock.Count == 0)
+                {
+                    <p class="mb-0 text-muted"><i class="bi bi-check-circle text-success"></i> Ningún producto está por agotarse.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-end">Stock</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (LowStockProductDTO product in Model.LowStock)
+                                {
+                                    <tr>
+                                        <td>@product.Name</td>
+                                        <td class="text-end @(product.Stock == 0 ? "text-danger fw-semibold" : "")">
+                                            @DisplayFormat.Quantity(product.Stock) @product.Unit.Abbreviation()
+                                        </td>
+                                        <td class="text-end">
+                                            @if (canSeeHistory)
+                                            {
+                                                <a asp-controller="Inventory" asp-action="Index" asp-route-ProductId="@product.Id" class="btn btn-sm btn-outline-secondary">Historial</a>
+                                            }
+                                            @if (canAdjust)
+                                            {
+                                                <a asp-controller="Inventory" asp-action="Adjust" asp-route-productId="@product.Id" class="btn btn-sm btn-outline-primary">Ajustar</a>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 </section>

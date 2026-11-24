@@ -4,6 +4,8 @@
 
 @{
     ViewData["Title"] = "Productos";
+    bool canSeeInventory = await _usersService.CurrentUserIsAuthorizedAsync("showInventory", "Inventario");
+    bool canAdjustInventory = await _usersService.CurrentUserIsAuthorizedAsync("adjustInventory", "Inventario");
 }
 
 <div class="pagetitle">
@@ -63,13 +65,14 @@
             </form>
 
             @* Tabla de Productos *@
-            <table class="table table-bordered">
+            <table class="table table-bordered tabla-apilable">
                 <thead>
                     <tr>
                         <th>Código</th>
                         <th>Nombre</th>
                         <th>Descripción</th>
                         <th>Precio</th>
+                        <th>Último costo</th>
                         <th>Stock</th>
                         <th>Categoría</th>
                         <th></th>
@@ -86,9 +89,31 @@
                                 <td>@item.Name</td>
                                 <td>@item.Description</td>
                                 <td>@item.Price</td>
+                                <td>
+                                    @if (item.Cost.HasValue)
+                                    {
+                                        @($"{DisplayFormat.Money(item.Cost.Value)} / {item.Unit.Abbreviation()}")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" title="Aún no se ha comprado">—</span>
+                                    }
+                                </td>
                                 <td>@item.Stock.ToString("0.###") @item.Unit.Abbreviation()</td>
                                 <td>@item.CategoryName</td>
                                 <td>
+                                    @if (canSeeInventory)
+                                    {
+                                        <a asp-controller="Inventory" asp-action="Index" asp-route-ProductId="@item.Id" class="btn btn-sm btn-info" title="Historial de inventario">
+                                            <i class="bi bi-clock-history"></i>
+                                        </a>
+                                    }
+                                    @if (canAdjustInventory)
+                                    {
+                                        <a asp-controller="Inventory" asp-action="Adjust" asp-route-productId="@item.Id" class="btn btn-sm btn-secondary" title="Ajustar stock">
+                                            <i class="bi bi-sliders"></i>
+                                        </a>
+                                    }
                                     @if (await _usersService.CurrentUserIsAuthorizedAsync("updateProducts", "Productos"))
                                     {
                                         <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">
@@ -111,7 +136,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center">No hay productos registrados.</td>
+                            <td colspan="8" class="text-center">No hay productos registrados.</td>
                         </tr>
                     }
                 </tbody>

@@ -37,6 +37,17 @@ namespace SistemadeVentasSupermercado.Web.Helpers.Implementations
                 .ToListAsync();
         }
 
-
+        public async Task<IEnumerable<SelectListItem>> GetComboSuppliers()
+        {
+            return await _context.Suppliers
+                .Where(s => s.IsActive)
+                .OrderBy(s => s.Name)
+                .Select(s => new SelectListItem
+                {
+                    Text = s.Name,
+                    Value = s.Id.ToString()
+                })
+                .ToListAsync();
+        }
     }
 }

@@ -20,7 +20,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             _context = context;
         }
 
-        public async Task<Response<ProductDTO>> CreateAsync(ProductDTO dto)
+        public async Task<Response<ProductDTO>> CreateAsync(ProductDTO dto, string? userId = null)
         {
             dto.Name = dto.Name.Trim();
 
@@ -34,7 +34,35 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId && c.IsActive))
                 return Response<ProductDTO>.Failure("Seleccione una categoría válida y activa");
 
-            return await CreateAsync<Product, ProductDTO>(dto, d => d.ToEntity());
+            // Sin stock inicial no hay nada que registrar en el historial.
+            if (dto.Stock <= 0)
+                return await CreateAsync<Product, ProductDTO>(dto, d => d.ToEntity());
+
+            try
+            {
+                // El producto y su movimiento de "Stock inicial" se guardan juntos o no se guarda nada.
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
+                Response<ProductDTO> created = await CreateAsync<Product, ProductDTO>(dto, d => d.ToEntity());
+                if (!created.IsSuccess)
+                    return created; // la transacción se deshace sola
+
+                // El nombre es único, así que identifica al producto recién creado.
+                Guid productId = await _context.Products
+                    .Where(p => p.Name == dto.Name)
+                    .Select(p => p.Id)
+                    .SingleAsync();
+
+                await InventoryRecorder.RecordAsync(_context, productId, InventoryMovementType.InitialStock, dto.Stock, userId);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return created;
+            }
+            catch (Exception ex)
+            {
+                return Response<ProductDTO>.Failure(ex);
+            }
         }
 
         public async Task<Response<object>> DeleteAsync(Guid id)
@@ -59,9 +87,23 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             //{
             //    return Response<object>.Failure(ex);
             //}
+            // Ventas, compras y movimientos de inventario guardan el producto (FK Restrict): con historial no se borra.
+            // Se revisa antes para dar un mensaje claro en lugar del error técnico de la base de datos.
+            bool hasHistory = await _context.SaleItems.AnyAsync(i => i.ProductId == id)
+                              || await _context.PurchaseItems.AnyAsync(i => i.ProductId == id)
+                              || await _context.InventoryMovements.AnyAsync(m => m.ProductId == id);
+
+            if (hasHistory)
+                return Response<object>.Failure("Este producto tiene ventas, compras o movimientos de inventario registrados y no se puede borrar. " +
+                                                "Para que no se venda, desactiva su categoría o déjalo sin stock.");
+
             return await DeleteAsync<Product>(id);
         }
 
+        /// <summary>
+        /// Edita los datos del producto. El stock NO se cambia aquí: se ajusta con InventoryService.AdjustAsync
+        /// (queda en el historial con su motivo). ProductDTO.ApplyTo no copia Stock, Unit ni Cost.
+        /// </summary>
         public async Task<Response<ProductDTO>> EditAsync(ProductDTO dto)
         {
             dto.Name = dto.Name.Trim();
@@ -76,53 +118,20 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId))
                 return Response<ProductDTO>.Failure("La categoría seleccionada no existe");
 
-            // El stock se guarda como AJUSTE: la diferencia entre lo que escribió el administrador y lo
-            // que vio al abrir el formulario. Si en ese tiempo un cajero vendió, la venta no se pierde.
-            decimal delta = dto.Stock - dto.StockOriginal;
-
             try
             {
-                // Si salimos sin llegar a CommitAsync, la transacción se deshace sola
-                // (ni el ajuste ni los demás cambios quedan a medias).
-                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
-
                 Product? product = await _context.Products.FirstOrDefaultAsync(p => p.Id == dto.Id);
                 if (product is null)
                     return Response<ProductDTO>.Failure($"No existe el producto con id: {dto.Id}");
 
-                if (delta != 0)
-                {
-                    // Una sola operación en la base (sin leer y luego guardar), igual que el descuento
-                    // de las ventas: SET Stock = Stock + delta WHERE Stock + delta >= 0.
-                    int updated = await _context.Products
-                        .Where(p => p.Id == dto.Id && p.Stock + delta >= 0)
-                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.Stock, p => p.Stock + delta));
-
-                    if (updated == 0)
-                    {
-                        decimal current = await CurrentStockAsync(dto.Id);
-                        return Response<ProductDTO>.Failure(
-                            $"No se guardó: el ajuste de {Signed(delta)} dejaría el stock negativo. " +
-                            $"Stock actual: {DisplayFormat.Quantity(current)} (pudo cambiar por ventas mientras editabas).");
-                    }
-                }
-
-                // Los demás campos (nombre, precio, etc.). ApplyTo no toca el stock, así que EF no lo
-                // incluye en el UPDATE aunque el valor cargado arriba ya esté desactualizado.
+                // ApplyTo no toca el stock, así que EF no lo incluye en el UPDATE: una venta hecha
+                // mientras se editaba no se pisa.
                 dto.ApplyTo(product);
                 await _context.SaveChangesAsync();
 
-                decimal stock = await CurrentStockAsync(dto.Id);
-                await transaction.CommitAsync();
+                dto.Stock = await CurrentStockAsync(dto.Id);
 
-                dto.Stock = stock;
-                dto.StockOriginal = stock;
-
-                string message = delta == 0
-                    ? $"Producto actualizado con éxito. Stock actual: {DisplayFormat.Quantity(stock)}"
-                    : $"Producto actualizado. Stock ajustado {Signed(delta)}; stock actual: {DisplayFormat.Quantity(stock)}";
-
-                return Response<ProductDTO>.Success(dto, message);
+                return Response<ProductDTO>.Success(dto, $"Producto actualizado con éxito. Stock actual: {DisplayFormat.Quantity(dto.Stock)}");
             }
             catch (Exception ex)
             {
@@ -152,10 +161,6 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         private Task<decimal> CurrentStockAsync(Guid productId)
             => _context.Products.Where(p => p.Id == productId).Select(p => p.Stock).SingleAsync();
-
-        /// <summary>+2 o -1,5 (con signo).</summary>
-        private static string Signed(decimal value)
-            => (value > 0 ? "+" : "") + DisplayFormat.Quantity(value);
 
 
         public async Task<Response<List<ProductDTO>>> GetListAsync()

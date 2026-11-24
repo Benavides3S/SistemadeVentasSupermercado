@@ -1,0 +1,68 @@
+/* En pantallas angostas (celular), las listas con la clase "tabla-apilable" dejan de ser una tabla ancha
+   que obliga a desplazarse de lado: cada fila se muestra como una tarjeta con "Etiqueta: valor".
+   Las etiquetas salen de los encabezados (wwwroot/js/tablas-moviles.js). */
+@media (max-width: 767.98px) {
+  .tabla-apilable thead {
+    display: none;
+  }
+
+  .tabla-apilable,
+  .tabla-apilable tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .tabla-apilable tbody tr {
+    display: block;
+    margin-bottom: .75rem;
+    padding: .25rem .75rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: .5rem;
+    background: var(--bs-body-bg, #fff);
+  }
+
+  .tabla-apilable tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: .4rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--bs-border-color-translucent, rgba(0, 0, 0, .08));
+    text-align: right;
+    word-break: break-word;
+  }
+
+  .tabla-apilable tbody td:last-child {
+    border-bottom: 0;
+  }
+
+  .tabla-apilable tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    max-width: 45%;
+    font-weight: 600;
+    text-align: left;
+    color: var(--bs-secondary-color, #6c757d);
+  }
+
+  /* Sin encabezado (columna de botones) o mensaje de lista vacía: sin etiqueta y centrado. */
+  .tabla-apilable tbody td[data-label=""]::before {
+    content: none;
+  }
+
+  .tabla-apilable tbody td[data-label=""] {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .tabla-apilable tbody td[colspan] {
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Celdas sin contenido (p. ej. descripción vacía): no ocupan una línea. */
+  .tabla-apilable tbody td.celda-vacia {
+    display: none;
+  }
+}

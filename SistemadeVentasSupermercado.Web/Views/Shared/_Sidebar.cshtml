@@ -77,6 +77,41 @@
             </li>
         }
 
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showSuppliers", "Proveedores"))
+        {
+            <li class="nav">
+                <a class="nav-link collapsed" asp-controller="Suppliers" asp-action="Index">
+                    <i class="bi bi-truck"></i><span>Proveedores</span>
+                </a>
+            </li>
+        }
+
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showPurchases", "Compras"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Purchases" asp-action="Index">
+                    <i class="bi bi-bag-plus"></i><span>Compras</span>
+                </a>
+            </li>
+        }
+        else if (await _usersService.CurrentUserIsAuthorizedAsync("createPurchases", "Compras"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Purchases" asp-action="Create">
+                    <i class="bi bi-bag-plus"></i><span>Registrar compra</span>
+                </a>
+            </li>
+        }
+
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showInventory", "Inventario"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Inventory" asp-action="Index">
+                    <i class="bi bi-boxes"></i><span>Inventario</span>
+                </a>
+            </li>
+        }
+
         @if (await _usersService.CurrentUserIsAuthorizedAsync("showClients", "Clientes"))
         {
             <li class="nav">

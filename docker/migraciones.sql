@@ -1191,3 +1191,292 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123022728_Proveedores'
+)
+BEGIN
+    CREATE TABLE [Suppliers] (
+        [Id] uniqueidentifier NOT NULL,
+        [Name] nvarchar(100) NOT NULL,
+        [TaxId] nvarchar(30) NULL,
+        [Phone] nvarchar(20) NULL,
+        [Email] nvarchar(100) NULL,
+        [Address] nvarchar(200) NULL,
+        [Notes] nvarchar(500) NULL,
+        [IsActive] bit NOT NULL,
+        CONSTRAINT [PK_Suppliers] PRIMARY KEY ([Id])
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123022728_Proveedores'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Suppliers_Name] ON [Suppliers] ([Name]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123022728_Proveedores'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_Suppliers_TaxId] ON [Suppliers] ([TaxId]) WHERE [TaxId] IS NOT NULL');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123022728_Proveedores'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261123022728_Proveedores', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    ALTER TABLE [Products] ADD [Cost] decimal(18,2) NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    CREATE TABLE [Purchases] (
+        [Id] uniqueidentifier NOT NULL,
+        [Number] int NOT NULL IDENTITY,
+        [CreatedAtUtc] datetime2 NOT NULL,
+        [UserId] nvarchar(450) NOT NULL,
+        [SupplierId] uniqueidentifier NOT NULL,
+        [SupplierInvoiceNumber] nvarchar(50) NULL,
+        [Notes] nvarchar(200) NULL,
+        [Status] int NOT NULL,
+        [Total] decimal(18,2) NOT NULL,
+        [CancelledAtUtc] datetime2 NULL,
+        [CancelReason] nvarchar(200) NULL,
+        [CancelledByUserId] nvarchar(450) NULL,
+        [IdempotencyKey] uniqueidentifier NULL,
+        CONSTRAINT [PK_Purchases] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_Purchases_AspNetUsers_CancelledByUserId] FOREIGN KEY ([CancelledByUserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Purchases_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_Purchases_Suppliers_SupplierId] FOREIGN KEY ([SupplierId]) REFERENCES [Suppliers] ([Id]) ON DELETE NO ACTION
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    CREATE TABLE [PurchaseItems] (
+        [Id] uniqueidentifier NOT NULL,
+        [PurchaseId] uniqueidentifier NOT NULL,
+        [ProductId] uniqueidentifier NOT NULL,
+        [ProductName] nvarchar(100) NOT NULL,
+        [Unit] int NOT NULL,
+        [UnitCost] decimal(18,2) NOT NULL,
+        [Quantity] decimal(18,3) NOT NULL,
+        [Total] decimal(18,2) NOT NULL,
+        CONSTRAINT [PK_PurchaseItems] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_PurchaseItems_Quantity_Positive] CHECK ([Quantity] > 0),
+        CONSTRAINT [CK_PurchaseItems_UnitCost_Positive] CHECK ([UnitCost] > 0),
+        CONSTRAINT [FK_PurchaseItems_Products_ProductId] FOREIGN KEY ([ProductId]) REFERENCES [Products] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_PurchaseItems_Purchases_PurchaseId] FOREIGN KEY ([PurchaseId]) REFERENCES [Purchases] ([Id]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    CREATE INDEX [IX_PurchaseItems_ProductId] ON [PurchaseItems] ([ProductId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    CREATE INDEX [IX_PurchaseItems_PurchaseId] ON [PurchaseItems] ([PurchaseId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    CREATE INDEX [IX_Purchases_CancelledByUserId] ON [Purchases] ([CancelledByUserId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    CREATE INDEX [IX_Purchases_CreatedAtUtc] ON [Purchases] ([CreatedAtUtc]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_Purchases_IdempotencyKey_UserId] ON [Purchases] ([IdempotencyKey], [UserId]) WHERE [IdempotencyKey] IS NOT NULL');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Purchases_Number] ON [Purchases] ([Number]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    CREATE INDEX [IX_Purchases_SupplierId_SupplierInvoiceNumber] ON [Purchases] ([SupplierId], [SupplierInvoiceNumber]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    CREATE INDEX [IX_Purchases_UserId] ON [Purchases] ([UserId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123160056_Compras'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261123160056_Compras', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123172140_MovimientosInventario'
+)
+BEGIN
+    CREATE TABLE [InventoryMovements] (
+        [Id] uniqueidentifier NOT NULL,
+        [Number] int NOT NULL IDENTITY,
+        [CreatedAtUtc] datetime2 NOT NULL,
+        [ProductId] uniqueidentifier NOT NULL,
+        [UserId] nvarchar(450) NULL,
+        [Type] int NOT NULL,
+        [Quantity] decimal(18,3) NOT NULL,
+        [StockAfter] decimal(18,3) NOT NULL,
+        [ReferenceId] uniqueidentifier NULL,
+        [ReferenceNumber] int NULL,
+        [Reason] int NULL,
+        [Notes] nvarchar(200) NULL,
+        [IdempotencyKey] uniqueidentifier NULL,
+        CONSTRAINT [PK_InventoryMovements] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_InventoryMovements_Quantity_NonZero] CHECK ([Quantity] <> 0),
+        CONSTRAINT [CK_InventoryMovements_StockAfter_NonNegative] CHECK ([StockAfter] >= 0),
+        CONSTRAINT [FK_InventoryMovements_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_InventoryMovements_Products_ProductId] FOREIGN KEY ([ProductId]) REFERENCES [Products] ([Id]) ON DELETE NO ACTION
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123172140_MovimientosInventario'
+)
+BEGIN
+    CREATE INDEX [IX_InventoryMovements_CreatedAtUtc] ON [InventoryMovements] ([CreatedAtUtc]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123172140_MovimientosInventario'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_InventoryMovements_IdempotencyKey_UserId] ON [InventoryMovements] ([IdempotencyKey], [UserId]) WHERE [IdempotencyKey] IS NOT NULL');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123172140_MovimientosInventario'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_InventoryMovements_Number] ON [InventoryMovements] ([Number]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123172140_MovimientosInventario'
+)
+BEGIN
+    CREATE INDEX [IX_InventoryMovements_ProductId_Number] ON [InventoryMovements] ([ProductId], [Number]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123172140_MovimientosInventario'
+)
+BEGIN
+    CREATE INDEX [IX_InventoryMovements_UserId] ON [InventoryMovements] ([UserId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261123172140_MovimientosInventario'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261123172140_MovimientosInventario', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+

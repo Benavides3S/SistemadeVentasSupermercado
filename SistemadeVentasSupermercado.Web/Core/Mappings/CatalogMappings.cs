@@ -35,6 +35,43 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
             category.IsActive = dto.IsActive;
         }
 
+        // ---------- Proveedores ----------
+
+        public static SupplierDTO ToDTO(this Supplier supplier) => new SupplierDTO
+        {
+            Id = supplier.Id,
+            Name = supplier.Name,
+            TaxId = supplier.TaxId,
+            Phone = supplier.Phone,
+            Email = supplier.Email,
+            Address = supplier.Address,
+            Notes = supplier.Notes,
+            IsActive = supplier.IsActive
+        };
+
+        public static Supplier ToEntity(this SupplierDTO dto) => new Supplier
+        {
+            Id = dto.Id,
+            Name = dto.Name,
+            TaxId = dto.TaxId,
+            Phone = dto.Phone,
+            Email = dto.Email,
+            Address = dto.Address,
+            Notes = dto.Notes,
+            IsActive = dto.IsActive
+        };
+
+        public static void ApplyTo(this SupplierDTO dto, Supplier supplier)
+        {
+            supplier.Name = dto.Name;
+            supplier.TaxId = dto.TaxId;
+            supplier.Phone = dto.Phone;
+            supplier.Email = dto.Email;
+            supplier.Address = dto.Address;
+            supplier.Notes = dto.Notes;
+            supplier.IsActive = dto.IsActive;
+        }
+
         // ---------- Clientes ----------
 
         public static ClientDTO ToDTO(this Client client) => new ClientDTO
@@ -74,7 +111,7 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
             Description = product.Description,
             Price = product.Price,
             Stock = product.Stock,
-            StockOriginal = product.Stock,
+            Cost = product.Cost,
             Unit = product.Unit,
             CategoryId = product.CategoryId,
             CategoryName = product.Category?.Name
@@ -94,9 +131,11 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
 
         /// <summary>
         /// NO copia:
-        ///  - Stock: lo maneja ProductsService.EditAsync aparte, para no pisar las ventas de los cajeros.
+        ///  - Stock: el formulario de edición ya no lo tiene; se ajusta en el módulo Inventario
+        ///    (InventoryService.AdjustAsync), que lo deja en el historial y no pisa las ventas de los cajeros.
         ///  - Unit: el formulario de edición no tiene ese campo; copiarlo convertía en "Unidad"
         ///    los productos por peso cada vez que se editaban.
+        ///  - Cost: el último costo lo fija solo el módulo de compras.
         /// </summary>
         public static void ApplyTo(this ProductDTO dto, Product product)
         {
