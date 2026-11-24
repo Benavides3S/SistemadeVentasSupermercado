@@ -1,0 +1,56 @@
+name: Pruebas
+
+# Compila y corre las pruebas automáticas en cada push y en cada pull request.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      # Clave del SQL Server DESECHABLE de este flujo (existe solo mientras corre el trabajo y
+      # solo escucha dentro del ejecutor). No es un secreto: no se usa en ningún otro sitio.
+      SA_PASSWORD_PRUEBAS: Aa1-0QGQo1CaCRphSZb0HOrB
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Aa1-0QGQo1CaCRphSZb0HOrB
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 20s
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restaurar paquetes
+        run: dotnet restore SistemadeVentasSupermercado.sln
+
+      - name: Compilar
+        run: dotnet build SistemadeVentasSupermercado.sln -c Release --no-restore
+
+      - name: Pruebas
+        env:
+          # Reemplaza la cadena de appsettings.Tests.json (el fixture solo acepta la base SistemaVentasTests).
+          ConnectionStrings__TestsConnection: "Server=localhost,1433;Database=SistemaVentasTests;User Id=sa;Password=${{ env.SA_PASSWORD_PRUEBAS }};TrustServerCertificate=True;MultipleActiveResultSets=true"
+        run: dotnet test SistemadeVentasSupermercado.sln -c Release --no-build
