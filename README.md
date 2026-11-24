@@ -87,6 +87,8 @@ dotnet test           # desde la carpeta del .sln
 
 - Usan una base **separada**, `SistemaVentasTests` (cadena en `SistemadeVentasSupermercado.Tests/appsettings.Tests.json`, o la variable de entorno `ConnectionStrings__TestsConnection`).
 - **Esa base se borra y se recrea** con las migraciones en cada ejecución. Por seguridad, las pruebas se niegan a correr si la cadena apunta a una base con otro nombre.
+- **Permisos de punta a punta:** unas pruebas arrancan la aplicación completa (base propia `SistemaVentasTestsWeb`, mismo servidor), inician sesión con cada rol de ejemplo y comprueban qué pantallas de Proveedores, Compras, Inventario, comprobantes de devolución y reportes de caja puede abrir cada uno. Otra prueba revisa que toda acción de los controladores tenga `[CustomAuthorize]` o `[AllowAnonymous]`: si agregas una acción sin protección, falla.
+- **GitHub Actions:** `.github/workflows/pruebas.yml` compila y corre las pruebas en cada push y pull request, con un SQL Server 2022 desechable.
 - Cubren ventas (incluidos varios cajeros a la vez), compras (reintentos, anulación y compras y ventas simultáneas), caja, anulaciones, devoluciones, reportes, formatos, edición de productos y contraseñas y roles de usuarios.
 
 ## Permisos
