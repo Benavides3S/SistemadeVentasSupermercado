@@ -74,6 +74,8 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public DateTime? CancelledAtUtc { get; set; }
         public string? CancelReason { get; set; }
         public string? CancelledByName { get; set; }
+        /// <summary>Supervisor que autorizó la anulación (null si quien anuló tenía el permiso).</summary>
+        public string? CancelAuthorizedByName { get; set; }
 
         /// <summary>Se puede anular si sigue completada, sin devoluciones y con su turno de caja abierto.</summary>
         public bool CanBeCancelled { get; set; }

@@ -39,20 +39,20 @@ namespace SistemadeVentasSupermercado.Web.Helpers
             moneyColumns: [3, 4, 5, 6, 8, 10, 12, 14, 17, 18], dateColumns: []);
 
             Sheet(workbook, businessName, details, "Anulaciones",
-                ["Venta", "Cobrada", "Anulada", "Valor", "Cobró", "Anuló", "Motivo"],
+                ["Venta", "Cobrada", "Anulada", "Valor", "Cobró", "Anuló", "Autorizó", "Motivo"],
                 details.Cancellations.Select(c => new XLCellValue[]
                 {
                     c.SaleNumber, Local(c.SoldAtUtc), Local(c.CancelledAtUtc), c.Total, c.ChargedByName,
-                    c.CancelledByName, c.Reason
+                    c.CancelledByName, c.AuthorizedByName ?? string.Empty, c.Reason
                 }),
                 moneyColumns: [4], dateColumns: [2, 3]);
 
             Sheet(workbook, businessName, details, "Devoluciones",
-                ["Devolución", "Venta", "Fecha", "Valor", "Reembolso", "Cobró la venta", "Registró", "Motivo"],
+                ["Devolución", "Venta", "Fecha", "Valor", "Reembolso", "Cobró la venta", "Registró", "Autorizó", "Motivo"],
                 details.Returns.Select(r => new XLCellValue[]
                 {
                     r.ReturnNumber, r.SaleNumber, Local(r.CreatedAtUtc), r.Total, r.RefundMethod.Label(),
-                    r.ChargedByName, r.RegisteredByName, r.Reason
+                    r.ChargedByName, r.RegisteredByName, r.AuthorizedByName ?? string.Empty, r.Reason
                 }),
                 moneyColumns: [4], dateColumns: [3]);
 

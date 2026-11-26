@@ -62,6 +62,8 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public string Reason { get; set; } = string.Empty;
         public string ChargedByName { get; set; } = string.Empty;
         public string CancelledByName { get; set; } = string.Empty;
+        /// <summary>Supervisor que la autorizó con su PIN (null si no hizo falta).</summary>
+        public string? AuthorizedByName { get; set; }
     }
 
     public class CashierReturnDTO
@@ -76,6 +78,8 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public string Reason { get; set; } = string.Empty;
         public string ChargedByName { get; set; } = string.Empty;
         public string RegisteredByName { get; set; } = string.Empty;
+        /// <summary>Supervisor que la autorizó con su PIN (null si no hizo falta).</summary>
+        public string? AuthorizedByName { get; set; }
     }
 
     public class CashierSessionDTO

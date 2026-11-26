@@ -507,6 +507,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         CancelledAtUtc = s.CancelledAtUtc,
                         CancelReason = s.CancelReason,
                         CancelledByName = s.CancelledByUser != null ? s.CancelledByUser.FirstName + " " + s.CancelledByUser.LastName : null,
+                        CancelAuthorizedByName = s.CancelAuthorizedByUser != null
+                            ? s.CancelAuthorizedByUser.FirstName + " " + s.CancelAuthorizedByUser.LastName : null,
                         CanBeCancelled = s.Status == SaleStatus.Completed
                                       && s.ReturnedTotal == 0
                                       && s.CashSession != null

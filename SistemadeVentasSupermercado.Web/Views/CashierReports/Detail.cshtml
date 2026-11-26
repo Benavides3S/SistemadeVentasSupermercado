@@ -68,6 +68,7 @@
                             <th class="text-end">Valor</th>
                             <th>Cobró</th>
                             <th>Anuló</th>
+                            <th>Autorizó</th>
                             <th>Motivo</th>
                         </tr>
                     </thead>
@@ -81,12 +82,13 @@
                                 <td class="text-end">@DisplayFormat.Money(item.Total)</td>
                                 <td>@item.ChargedByName</td>
                                 <td>@item.CancelledByName</td>
+                                <td>@(item.AuthorizedByName ?? "—")</td>
                                 <td class="text-break">@item.Reason</td>
                             </tr>
                         }
                         @if (Model.Cancellations.Count == 0)
                         {
-                            <tr><td colspan="7" class="text-center text-muted">Sin anulaciones en estas fechas.</td></tr>
+                            <tr><td colspan="8" class="text-center text-muted">Sin anulaciones en estas fechas.</td></tr>
                         }
                     </tbody>
                 </table>
@@ -108,6 +110,7 @@
                             <th>Reembolso</th>
                             <th>Cobró la venta</th>
                             <th>Registró</th>
+                            <th>Autorizó</th>
                             <th>Motivo</th>
                         </tr>
                     </thead>
@@ -122,12 +125,13 @@
                                 <td>@item.RefundMethod.Label()</td>
                                 <td>@item.ChargedByName</td>
                                 <td>@item.RegisteredByName</td>
+                                <td>@(item.AuthorizedByName ?? "—")</td>
                                 <td class="text-break">@item.Reason</td>
                             </tr>
                         }
                         @if (Model.Returns.Count == 0)
                         {
-                            <tr><td colspan="8" class="text-center text-muted">Sin devoluciones en estas fechas.</td></tr>
+                            <tr><td colspan="9" class="text-center text-muted">Sin devoluciones en estas fechas.</td></tr>
                         }
                     </tbody>
                 </table>

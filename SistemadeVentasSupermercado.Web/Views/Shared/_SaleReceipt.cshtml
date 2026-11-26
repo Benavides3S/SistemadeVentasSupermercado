@@ -44,6 +44,10 @@
         {
             <div>Por: @Model.CancelledByName</div>
         }
+        @if (Model.CancelAuthorizedByName != null)
+        {
+            <div>Autorizó: @Model.CancelAuthorizedByName</div>
+        }
         @if (Model.CancelReason != null)
         {
             <div>Motivo: @Model.CancelReason</div>

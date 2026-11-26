@@ -109,7 +109,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                             Total = c.Total,
                             Reason = c.Reason ?? string.Empty,
                             ChargedByName = NameOf(c.ChargedById),
-                            CancelledByName = NameOf(c.CancelledById)
+                            CancelledByName = NameOf(c.CancelledById),
+                            AuthorizedByName = c.AuthorizedById is null ? null : NameOf(c.AuthorizedById)
                         })
                         .ToList(),
                     Returns = activity.Returns
@@ -126,7 +127,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                             RefundMethod = r.RefundMethod,
                             Reason = r.Reason,
                             ChargedByName = NameOf(r.ChargedById),
-                            RegisteredByName = NameOf(r.RegisteredById)
+                            RegisteredByName = NameOf(r.RegisteredById),
+                            AuthorizedByName = r.AuthorizedById is null ? null : NameOf(r.AuthorizedById)
                         })
                         .ToList(),
                     // Los turnos son solo de su cajero.
@@ -167,10 +169,11 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         private sealed record SalesGroup(string UserId, PaymentMethod Method, int Count, decimal Total);
 
         private sealed record Cancellation(Guid SaleId, int SaleNumber, DateTime SoldAtUtc, DateTime CancelledAtUtc,
-            decimal Total, string? Reason, string ChargedById, string? CancelledById);
+            decimal Total, string? Reason, string ChargedById, string? CancelledById, string? AuthorizedById);
 
         private sealed record Return(Guid ReturnId, int ReturnNumber, Guid SaleId, int SaleNumber, DateTime CreatedAtUtc,
-            decimal Total, PaymentMethod RefundMethod, string Reason, string ChargedById, string RegisteredById);
+            decimal Total, PaymentMethod RefundMethod, string Reason, string ChargedById, string RegisteredById,
+            string? AuthorizedById);
 
         private sealed record Session(Guid SessionId, int Number, string CashierId, CashSessionStatus Status,
             DateTime OpenedAtUtc, DateTime? ClosedAtUtc, decimal? ExpectedAmount, decimal? CountedAmount,
@@ -191,7 +194,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 .Where(s => s.Status == SaleStatus.Cancelled && s.CancelledAtUtc >= fromUtc && s.CancelledAtUtc < toUtc)
                 .Select(s => new
                 {
-                    s.Id, s.Number, s.CreatedAtUtc, s.CancelledAtUtc, s.Total, s.CancelReason, s.UserId, s.CancelledByUserId
+                    s.Id, s.Number, s.CreatedAtUtc, s.CancelledAtUtc, s.Total, s.CancelReason, s.UserId, s.CancelledByUserId,
+                    s.CancelAuthorizedByUserId
                 })
                 .ToListAsync();
 
@@ -200,7 +204,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 .Select(r => new
                 {
                     r.Id, r.Number, r.SaleId, SaleNumber = r.Sale!.Number, r.CreatedAtUtc, r.Total, r.RefundMethod,
-                    r.Reason, ChargedById = r.Sale.UserId, r.UserId
+                    r.Reason, ChargedById = r.Sale.UserId, r.UserId, r.AuthorizedByUserId
                 })
                 .ToListAsync();
 
@@ -218,9 +222,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             return new Activity(
                 sales.Select(s => new SalesGroup(s.UserId, s.PaymentMethod, s.Count, s.Total)).ToList(),
                 cancellations.Select(c => new Cancellation(c.Id, c.Number, c.CreatedAtUtc, c.CancelledAtUtc!.Value,
-                    c.Total, c.CancelReason, c.UserId, c.CancelledByUserId)).ToList(),
+                    c.Total, c.CancelReason, c.UserId, c.CancelledByUserId, c.CancelAuthorizedByUserId)).ToList(),
                 returns.Select(r => new Return(r.Id, r.Number, r.SaleId, r.SaleNumber, r.CreatedAtUtc, r.Total,
-                    r.RefundMethod, r.Reason, r.ChargedById, r.UserId)).ToList(),
+                    r.RefundMethod, r.Reason, r.ChargedById, r.UserId, r.AuthorizedByUserId)).ToList(),
                 sessions.Select(c => new Session(c.Id, c.Number, c.UserId, c.Status, c.OpenedAtUtc, c.ClosedAtUtc,
                     c.ExpectedAmount, c.CountedAmount, c.Difference, c.Notes, c.ClosedByUserId)).ToList());
         }
@@ -234,6 +238,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             List<string> ids = activity.Sales.Select(s => s.UserId)
                 .Concat(activity.Cancellations.SelectMany(c => new[] { c.ChargedById, c.CancelledById }).OfType<string>())
                 .Concat(activity.Returns.SelectMany(r => new[] { r.ChargedById, r.RegisteredById }))
+                // Quien solo autorizó necesita su nombre en el detalle (en el resumen no suma nada).
+                .Concat(activity.Cancellations.Select(c => c.AuthorizedById).OfType<string>())
+                .Concat(activity.Returns.Select(r => r.AuthorizedById).OfType<string>())
                 .Concat(activity.Sessions.SelectMany(s => new[] { s.CashierId, s.ClosedById }).OfType<string>())
                 .Distinct()
                 .ToList();

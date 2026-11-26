@@ -111,8 +111,9 @@ namespace SistemadeVentasSupermercado.Tests
 
                 // La otra prueba crea un cajero igual en las mismas fechas: se busca la fila del propio.
                 IXLRow anulacion = libro.Worksheet("Anulaciones").RowsUsed().Single(r => r.Cell(5).GetString() == cajero.FullName);
-                Assert.StartsWith("=1+1", anulacion.Cell(7).GetString());
-                Assert.False(anulacion.Cell(7).HasFormula);
+                Assert.Equal(string.Empty, anulacion.Cell(7).GetString()); // "Autorizó": no hizo falta
+                Assert.StartsWith("=1+1", anulacion.Cell(8).GetString());
+                Assert.False(anulacion.Cell(8).HasFormula);
                 Assert.Equal(XLDataType.Number, anulacion.Cell(4).DataType);
                 Assert.Equal(XLDataType.DateTime, anulacion.Cell(3).DataType);
                 Assert.Equal(new DateTime(2018, 9, 10, 10, 0, 0), anulacion.Cell(3).GetDateTime()); // hora de Colombia

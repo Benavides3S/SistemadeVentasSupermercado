@@ -167,6 +167,35 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.Equal(SaleStatus.Completed, (await LeerVentaAsync(venta.Id)).Status);
         }
 
+        // ---------- Dónde se ve ----------
+
+        [Fact]
+        public async Task QuienAutorizo_SaleEnComprobantesYReporte_SinSumarleOperaciones()
+        {
+            string supervisor = await _fixture.CrearCajeroAsync("Autorizadora");
+            var (_, anulada) = await VenderAsync();
+            var (_, devuelta) = await VenderAsync();
+            await AnularAsync(anulada.Id, supervisor);
+            Response<SaleReturnDetailDTO> devolucion = await DevolverAsync(devuelta.Id, 1m, supervisor);
+
+            await using DataContext context = _fixture.CrearContexto();
+            SaleDetailDTO comprobante = (await new SalesService(context).GetOneAsync(anulada.Id)).Result!;
+            Assert.StartsWith("Autorizadora", comprobante.CancelAuthorizedByName);
+            Assert.StartsWith("Autorizadora", devolucion.Result!.AuthorizedByName);
+
+            DateOnly hoy = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-5));
+            // Consulta una persona sin caja abierta: no se le oculta nada.
+            CashierReportService reporte = new(context);
+            CashierDetailsDTO detalle = (await reporte.GetDetailsAsync(hoy, hoy, supervisor)).Result!;
+            Assert.Equal(comprobante.CancelAuthorizedByName,
+                detalle.Cancellations.Single(c => c.SaleId == anulada.Id).AuthorizedByName);
+            Assert.Equal(devolucion.Result.AuthorizedByName,
+                detalle.Returns.Single(r => r.SaleId == devuelta.Id).AuthorizedByName);
+
+            CashierReportDTO resumen = (await reporte.GetSummaryAsync(hoy, hoy, supervisor)).Result!;
+            Assert.DoesNotContain(resumen.Rows, r => r.UserId == supervisor);
+        }
+
         // ---------- Devolución ----------
 
         [Fact]

@@ -300,6 +300,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         CreatedAtUtc = r.CreatedAtUtc,
                         UserId = r.UserId,
                         UserName = r.User!.FirstName + " " + r.User.LastName,
+                        AuthorizedByName = r.AuthorizedByUser != null
+                            ? r.AuthorizedByUser.FirstName + " " + r.AuthorizedByUser.LastName : null,
                         Reason = r.Reason,
                         RefundMethod = r.RefundMethod,
                         Total = r.Total,
