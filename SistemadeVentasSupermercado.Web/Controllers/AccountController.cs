@@ -124,7 +124,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                Response<AccountUserDTO> result = await _usersService.UpdateUserAsync(dto);
+                Response<AccountUserDTO> result = await _usersService.UpdateUserAsync(dto, User.Identity!.Name!);
 
                 if (result.IsSuccess)
                 {

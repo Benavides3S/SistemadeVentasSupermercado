@@ -38,7 +38,6 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
         /// <summary>Datos de "Mi cuenta".</summary>
         public static AccountUserDTO ToAccountUserDTO(this User user) => new AccountUserDTO
         {
-            Id = user.Id,
             Document = user.Document,
             FirstName = user.FirstName,
             LastName = user.LastName,

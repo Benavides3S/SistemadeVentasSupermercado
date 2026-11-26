@@ -22,7 +22,6 @@
             <h5 class="card-title text.primary">Editar Usuario</h5>
 
             <form asp-action="UpdateUser" method="POST" class="row g-3" enctype='multipart/form-data'>
-                <input type="hidden" asp-for="Id" />
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                 <input type="hidden" asp-for="Email" />
 

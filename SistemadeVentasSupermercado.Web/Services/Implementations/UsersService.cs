@@ -428,11 +428,18 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             await _signInManager.SignOutAsync();
         }
 
-        public async Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto)
+        /// <summary>
+        /// "Mi perfil". A quién se edita lo decide userName (el de la sesión), nunca el formulario:
+        /// si viniera del navegador, cualquiera podría cambiar los datos de otro usuario.
+        /// </summary>
+        public async Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto, string userName)
         {
             try
             {
-                User user = await GetUserAsync(dto.Id);
+                User? user = await _userManager.FindByNameAsync(userName);
+                if (user is null)
+                    return Response<AccountUserDTO>.Failure("No existe el usuario.");
+
                 user.PhoneNumber = dto.PhoneNumber;
                 user.Document = dto.Document;
                 user.FirstName = dto.FirstName;

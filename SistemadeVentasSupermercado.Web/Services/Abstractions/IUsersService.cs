@@ -18,7 +18,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         public Task<User> GetUserByIdAsync(Guid id);
         public Task<Response<SignInResult>> LoginAsync(LoginDTO dto);
         public Task LogoutAsync();
-        public Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto);
+        public Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto, string userName);
         // For Management
         public Task<Response<TemporaryPasswordDTO>> CreateAsync(UserDTO dto, string requestedByUserName);
         public Task<Response<TemporaryPasswordDTO>> ResetPasswordAsync(Guid userId, string requestedByUserName);

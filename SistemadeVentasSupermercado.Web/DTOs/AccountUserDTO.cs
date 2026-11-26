@@ -4,8 +4,6 @@ namespace SistemadeVentasSupermercado.Web.DTOs
 {
     public class AccountUserDTO
     {
-        public string? Id { get; set; }
-
         [Display(Name = "Documento")]
         [MaxLength(32)]
         [Required(ErrorMessage = "El campo {0} es requerido.")]
