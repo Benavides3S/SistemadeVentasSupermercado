@@ -89,6 +89,13 @@ Para cuando el cajero no tiene permiso de anular o devolver y no se quiere cambi
 - Las reglas no cambian: solo se anula con el turno de la venta abierto, y el efectivo de una devolución sale de la caja de quien la hace.
 - **Cuidados:** el PIN no sirve para iniciar sesión, pero quien lo vea podría usarlo desde su sesión: que nadie mire al escribirlo y cámbialo si hay dudas. Un cajero puede bloquearle el PIN a un supervisor equivocándose a propósito (queda registrado). Como el cajero puede consultar ventas por número, podría ir sumando las suyas antes del arqueo: la búsqueda no tiene lista para no facilitarlo.
 
+## Foto de perfil
+
+- Cada usuario pone, cambia o quita su foto en **Mi perfil**. Se ve allí y en la barra superior, y **solo la ve su dueño**. Sin foto se muestran las iniciales.
+- Se puede elegir JPG, PNG o WebP (hasta 15 MB). El navegador la recorta al centro, la reduce a 256 × 256 y la envía como JPG.
+- El servidor solo acepta JPG de máximo 200 KB y 512 × 512 píxeles. Revisa el contenido, no el nombre del archivo.
+- Se guarda en la base de datos, así que entra en las copias de seguridad.
+
 ## Bloqueo de pantalla
 
 - La pantalla se bloquea tras **5 minutos** sin usar el teclado, el ratón o la pantalla táctil, o al momento con el botón **Bloquear** de la barra superior. Se desbloquea con la **contraseña** del usuario y todo sigue como estaba, incluido el carrito sin cobrar.
