@@ -951,6 +951,78 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.UserActivity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("ActorUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("GroupKey")
+                        .HasMaxLength(350)
+                        .HasColumnType("nvarchar(350)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<DateTime?>("LastAttemptAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Number")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Number"));
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TargetName")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("TargetUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("GroupKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserActivities_GroupKey")
+                        .HasFilter("[GroupKey] IS NOT NULL");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("TargetUserId");
+
+                    b.ToTable("UserActivities", t =>
+                        {
+                            t.HasCheckConstraint("CK_UserActivities_AttemptCount_Positive", "[AttemptCount] >= 1");
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -1226,6 +1298,23 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .IsRequired();
 
                     b.Navigation("SistemaVentasRole");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.UserActivity", b =>
+                {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "TargetUser")
+                        .WithMany()
+                        .HasForeignKey("TargetUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ActorUser");
+
+                    b.Navigation("TargetUser");
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.CashSession", b =>
