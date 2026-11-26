@@ -118,6 +118,14 @@
             throw new Error('No hay conexión con el servidor. Revisa la red e inténtalo de nuevo.');
         }
 
+        if (response.status === 423) {
+            // Pantalla bloqueada: el servidor no hizo nada. Se tapa y se avisa para repetir al desbloquear.
+            if (window.sessionLock) window.sessionLock.showFromServer();
+            const error = new Error('La pantalla estaba bloqueada.');
+            error.screenLocked = true;
+            throw error;
+        }
+
         const type = response.headers.get('content-type') || '';
         if (response.redirected || !type.includes('application/json')) {
             if (response.status === 400) {
@@ -511,8 +519,13 @@
         } catch (err) {
             // No se sabe si la compra quedó. Se conserva el código: al reintentar, el servidor
             // devuelve la compra si ya estaba registrada, o la registra si no.
-            await notify('error', 'No se sabe si la compra quedó registrada',
-                err.message + ' Vuelve a guardar: el sistema no sumará el stock dos veces.');
+            // Con la pantalla bloqueada, ESTE intento no llegó a registrarse. El código se conserva igual,
+            // porque un intento anterior pudo haber quedado.
+            await notify('error',
+                err.screenLocked ? 'La pantalla estaba bloqueada' : 'No se sabe si la compra quedó registrada',
+                err.screenLocked
+                    ? 'Vuelve a guardar: el sistema no sumará el stock dos veces.'
+                    : err.message + ' Vuelve a guardar: el sistema no sumará el stock dos veces.');
         } finally {
             saving = false;
             el.btnSave.innerHTML = originalHtml;
