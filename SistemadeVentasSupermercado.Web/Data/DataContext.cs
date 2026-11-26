@@ -28,6 +28,7 @@ namespace SistemadeVentasSupermercado.Web.Data
         public DbSet<InventoryMovement> InventoryMovements { get; set; }
         public DbSet<UserActivity> UserActivities { get; set; }
         public DbSet<UserAuthorizationPin> UserAuthorizationPins { get; set; }
+        public DbSet<UserPhoto> UserPhotos { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -134,6 +135,17 @@ namespace SistemadeVentasSupermercado.Web.Data
 
             builder.Entity<UserAuthorizationPin>().ToTable(t =>
                 t.HasCheckConstraint("CK_UserAuthorizationPins_FailedAttempts_NonNegative", "[FailedAttempts] >= 0"));
+
+            // ---------- Foto de perfil ----------
+            // Cascade: si se elimina el usuario, su foto se borra con él.
+            builder.Entity<UserPhoto>()
+                   .HasOne(p => p.User).WithOne()
+                   .HasForeignKey<UserPhoto>(p => p.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<UserPhoto>().ToTable(t =>
+                t.HasCheckConstraint("CK_UserPhotos_Content_Size",
+                    $"DATALENGTH([Content]) BETWEEN 1 AND {UserPhoto.MaxBytes}"));
 
             // ---------- Devoluciones ----------
             builder.Entity<SaleReturn>()

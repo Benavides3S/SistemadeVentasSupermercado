@@ -22,6 +22,10 @@ namespace SistemadeVentasSupermercado.Tests
             "Account.Logout",
             "Account.ChangePassword",
             "Account.UpdateUser",
+            // Foto de perfil: cada quien solo la suya (la acción no recibe un usuario).
+            "Account.Photo",
+            "Account.UploadPhoto",
+            "Account.RemovePhoto",
             // Bloqueo de pantalla: cualquiera con sesión, y solo sobre la suya.
             "Account.Lock",
             "Account.Activity",

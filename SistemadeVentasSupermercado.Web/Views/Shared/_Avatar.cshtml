@@ -1,0 +1,15 @@
+@model (string? FirstName, string? LastName, long? PhotoVersion)
+@{
+    // Foto del usuario de la sesión o, si no tiene, sus iniciales.
+    string initials = string.Concat(new[] { Model.FirstName, Model.LastName }
+        .Where(name => !string.IsNullOrWhiteSpace(name))
+        .Select(name => char.ToUpperInvariant(name!.Trim()[0])));
+}
+@if (Model.PhotoVersion is not null)
+{
+    <img src="@Url.Action("Photo", "Account", new { v = Model.PhotoVersion })" alt="Foto de perfil" class="sv-avatar">
+}
+else
+{
+    <span class="sv-avatar sv-avatar-iniciales" aria-hidden="true">@initials</span>
+}
