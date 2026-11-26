@@ -108,6 +108,7 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddScoped<IUsersService, UsersService>();
             builder.Services.AddScoped<IUserActivityRecorder, UserActivityRecorder>();
             builder.Services.AddScoped<IUserActivityService, UserActivityService>();
+            builder.Services.AddScoped<ICashierReportService, CashierReportService>();
             builder.Services.AddScoped<ICategoryService, CategoriesService>();
             builder.Services.AddScoped<ISupplierService, SuppliersService>();
 

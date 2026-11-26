@@ -20,8 +20,15 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         }
 
         /// <summary>Valida el rango y lo convierte en instantes UTC [inicio, fin).</summary>
-        private static string? ValidateRange(DateOnly from, DateOnly to, out DateTime fromUtc, out DateTime toUtcExclusive)
+        internal static string? ValidateRange(DateOnly from, DateOnly to, out DateTime fromUtc, out DateTime toUtcExclusive)
         {
+            // El último día posible no tiene "día siguiente": sin esto la consulta fallaba con un error 500.
+            if (to == DateOnly.MaxValue)
+            {
+                fromUtc = toUtcExclusive = default;
+                return "La fecha final no es válida";
+            }
+
             fromUtc = ColombiaCalendar.StartOfDayUtc(from);
             toUtcExclusive = ColombiaCalendar.StartOfDayUtc(to.AddDays(1));
 
