@@ -1,0 +1,17 @@
+<style>
+    .print-only { display: none; }
+
+    @@media print {
+        /* Horizontal: las tablas caben y la hoja es más ancha que el límite de "celular" (así no se vuelven tarjetas). */
+        @@page { size: letter landscape; margin: 10mm; }
+
+        #header, #sidebar, #footer, .back-to-top, .no-print, .notyf { display: none !important; }
+        .print-only { display: block; }
+        body { background: #fff !important; }
+        #main { margin: 0 !important; padding: 0 !important; }
+        .card { box-shadow: none !important; border: 0 !important; }
+        .table { font-size: 11px; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
+    }
+</style>

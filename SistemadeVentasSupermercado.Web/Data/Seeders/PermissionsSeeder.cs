@@ -111,7 +111,8 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
         {
             return new List<Permission>
             {
-                new Permission { Id = Guid.NewGuid(), Name = "showReports", Description = "Ver y exportar reportes de ventas", Module = "Reportes" }
+                new Permission { Id = Guid.NewGuid(), Name = "showReports", Description = "Ver y exportar reportes de ventas", Module = "Reportes" },
+                new Permission { Id = Guid.NewGuid(), Name = "showCashierReport", Description = "Ver y exportar el reporte por cajero (datos de cada empleado)", Module = "Reportes" }
             };
         }
 
