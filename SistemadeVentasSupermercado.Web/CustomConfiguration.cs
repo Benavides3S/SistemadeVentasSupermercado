@@ -90,6 +90,8 @@ namespace SistemadeVentasSupermercado.Web
                 conf.SlidingExpiration = true;
                 conf.LoginPath = "/Account/Login";
                 conf.AccessDeniedPath = "/Error/403";
+                // Usuario desactivado: pierde el acceso en su siguiente petición.
+                conf.Events.OnValidatePrincipal = ActiveUserCookieValidator.ValidateAsync;
             });
         }
 

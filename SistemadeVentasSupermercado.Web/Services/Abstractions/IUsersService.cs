@@ -31,6 +31,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         //public Task<Response<object>> DeleteAsync(Guid id);
         public Task<Response<UserDTO>> EditAsync(UserDTO dto, string requestedByUserName);
         //public Task<Response<UserDTO>> GetOneAsync(Guid id);
-        public Task<Response<PaginationResponse<UserDTO>>> GetPaginatedListAsync(PaginationRequest request);
+        public Task<Response<PaginationResponse<UserDTO>>> GetPaginatedListAsync(PaginationRequest request, UserStatus? status = null);
+        public Task<Response<UserDeactivationDTO>> DeactivateAsync(Guid userId, string requestedByUserName);
+        public Task<Response<string>> ReactivateAsync(Guid userId, string requestedByUserName);
+        public Task<Response<string>> UnlockAsync(Guid userId, string requestedByUserName);
     }
 }

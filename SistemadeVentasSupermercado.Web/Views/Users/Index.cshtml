@@ -4,6 +4,10 @@
 @{
     ViewData["Title"] = "Usuarios";
     bool canResetPasswords = await _usersService.CurrentUserIsAuthorizedAsync("resetPasswords", "Usuarios");
+    bool canDeactivate = await _usersService.CurrentUserIsAuthorizedAsync("deactivateUsers", "Usuarios");
+    bool canUpdate = await _usersService.CurrentUserIsAuthorizedAsync("updateUsers", "Usuarios");
+    UserStatus? status = ViewBag.Status as UserStatus?;
+    string? openCashWarning = TempData[SistemadeVentasSupermercado.Web.Controllers.UsersController.OpenCashWarningKey] as string;
 }
 
 
@@ -19,6 +23,14 @@
 </div>
 
 <section class="section dashboard">
+
+    @if (openCashWarning is not null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @openCashWarning
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
 
     <div class="card">
         <div class="card-header">
@@ -38,7 +50,7 @@
 
             <form asp-action="Index" class="navbar-search" method="GET">
 
-                <input type="hidden" name="Page" value="@Model.CurrentPage" />
+                <input type="hidden" name="Page" value="1" />
 
                 <div class="row mt-3">
                     <div class="col-md-auto">
@@ -53,7 +65,16 @@
 
                     </div>
 
-                    <div class="col-md-10">
+                    <div class="col-md-auto">
+                        <select name="Status" class="form-select bg-light border-0 small" aria-label="Estado">
+                            <option value="">Todos los estados</option>
+                            <option value="@UserStatus.Active" selected="@(status == UserStatus.Active)">Activos</option>
+                            <option value="@UserStatus.Locked" selected="@(status == UserStatus.Locked)">Bloqueados</option>
+                            <option value="@UserStatus.Deactivated" selected="@(status == UserStatus.Deactivated)">Desactivados</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md">
                         <div class="input-group-mb-3">
                             <input type="text"
                                    class="form-control bg-light border-0 small"
@@ -82,6 +103,8 @@
                         <th>Apellidos</th>
                         <th>Teléfono</th>
                         <th>Email</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -94,29 +117,74 @@
                             <td>@item.LastName</td>
                             <td>@item.PhoneNumber</td>
                             <td>@item.Email</td>
+                            <td>@item.RoleName</td>
                             <td>
-
-                                @if (await _usersService.CurrentUserIsAuthorizedAsync("updateUsers", "Usuarios"))
+                                @switch (item.Status)
                                 {
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning"><i class="bi bi-pencil-fill"></i></a>
+                                    case UserStatus.Deactivated:
+                                        <span class="badge bg-secondary">Desactivado</span>
+                                        break;
+                                    case UserStatus.Locked:
+                                        <span class="badge bg-warning text-dark">Bloqueado</span>
+                                        break;
+                                    default:
+                                        <span class="badge bg-success">Activo</span>
+                                        break;
+                                }
+                            </td>
+                            <td>
+                                @{
+                                    bool isSelf = string.Equals(item.Email, User.Identity!.Name, StringComparison.OrdinalIgnoreCase);
                                 }
 
-                                @if (canResetPasswords)
+                                @if (canUpdate)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning" title="Editar"><i class="bi bi-pencil-fill"></i></a>
+                                }
+
+                                @if (canResetPasswords && item.Status != UserStatus.Deactivated)
                                 {
                                     <form asp-action="ResetPassword" asp-route-id="@item.Id" method="POST" style="display: contents;">
-                                        <button type="submit" class="btn btn-sm btn-secondary btnResetPassword"
-                                                title="Restablecer contraseña" data-name="@item.FullName">
+                                        <button type="submit" class="btn btn-sm btn-secondary btnConfirm" title="Restablecer contraseña"
+                                                data-title="¿Restablecer la contraseña?" data-confirm="Restablecer"
+                                                data-text="Se generará una contraseña temporal para @item.FullName. Su contraseña actual dejará de funcionar y deberá cambiarla al entrar.">
                                             <i class="bi bi-key-fill"></i>
                                         </button>
                                     </form>
                                 }
 
-                                @* @if (await _usersService.CurrentUserIsAuthorizedAsync("deleteUsers", "Usuarios"))
-                                    {
-                                        <form asp-action="Delete" asp-route-id="@item.Id" style="display: contents;">
-                                            <button class="btn btn-sm btn-danger btnDelete"><i class="bi bi-trash-fill"></i></button>
-                                        </form>
-                                    } *@
+                                @if (canResetPasswords && item.Status == UserStatus.Locked)
+                                {
+                                    <form asp-action="Unlock" asp-route-id="@item.Id" method="POST" style="display: contents;">
+                                        <button type="submit" class="btn btn-sm btn-info btnConfirm" title="Desbloquear"
+                                                data-title="¿Desbloquear al usuario?" data-confirm="Desbloquear"
+                                                data-text="@item.FullName podrá volver a intentar entrar con su contraseña actual.">
+                                            <i class="bi bi-unlock-fill"></i>
+                                        </button>
+                                    </form>
+                                }
+
+                                @if (canDeactivate && item.Status != UserStatus.Deactivated && !isSelf)
+                                {
+                                    <form asp-action="Deactivate" asp-route-id="@item.Id" method="POST" style="display: contents;">
+                                        <button type="submit" class="btn btn-sm btn-danger btnConfirm" title="Desactivar"
+                                                data-title="¿Desactivar al usuario?" data-confirm="Desactivar"
+                                                data-text="@item.FullName perderá el acceso de inmediato, aunque tenga la sesión abierta. Sus ventas y turnos se conservan.">
+                                            <i class="bi bi-person-x-fill"></i>
+                                        </button>
+                                    </form>
+                                }
+
+                                @if (canDeactivate && item.Status == UserStatus.Deactivated)
+                                {
+                                    <form asp-action="Reactivate" asp-route-id="@item.Id" method="POST" style="display: contents;">
+                                        <button type="submit" class="btn btn-sm btn-success btnConfirm" title="Reactivar"
+                                                data-title="¿Reactivar al usuario?" data-confirm="Reactivar"
+                                                data-text="@item.FullName podrá volver a entrar con la contraseña que tenía. Si no confías en ella, restablécela después.">
+                                            <i class="bi bi-person-check-fill"></i>
+                                        </button>
+                                    </form>
+                                }
                             </td>
                         </tr>
                     }
@@ -133,18 +201,17 @@
 @section Scripts {
 
     <script>
-        // Confirmación antes de restablecer: la contraseña actual del usuario deja de servir.
-        document.querySelectorAll('.btnResetPassword').forEach(button => {
+        // Confirmación antes de las acciones que cambian el acceso de un usuario.
+        document.querySelectorAll('.btnConfirm').forEach(button => {
             button.addEventListener('click', event => {
                 event.preventDefault();
                 const form = button.closest('form');
                 Swal.fire({
-                    title: '¿Restablecer la contraseña?',
-                    text: 'Se generará una contraseña temporal para ' + button.dataset.name +
-                          '. Su contraseña actual dejará de funcionar y deberá cambiarla al entrar.',
+                    title: button.dataset.title,
+                    text: button.dataset.text,
                     icon: 'question',
                     showCancelButton: true,
-                    confirmButtonText: 'Restablecer',
+                    confirmButtonText: button.dataset.confirm,
                     cancelButtonText: 'Cancelar'
                 }).then(result => {
                     if (result.isConfirmed) form.submit();
@@ -152,36 +219,5 @@
             });
         });
     </script>
-
-    @* <script>
-
-        $(document).ready(function() {
-
-            $('.btnDelete').click(function(event) {
-
-                event.preventDefault();
-
-                Swal.fire({
-
-                    title: "¿Desea eliminar al usuario?",
-                    text: "No podrá revertirlo",
-                    icon: "question",
-                    showCancelButton: true
-
-                }).then((result) => {
-
-                    if (result.isConfirmed) {
-
-                        const form = $(this).closest('form');
-
-                        form.submit();
-                    }
-
-                });
-            });
-
-        });
-
-    </script> *@
 
 }

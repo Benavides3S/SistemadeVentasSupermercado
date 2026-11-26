@@ -84,6 +84,10 @@
                                         @if (item.Status == CashSessionStatus.Open)
                                         {
                                             <span class="badge bg-success">Abierta</span>
+                                            if (item.CashierDeactivated)
+                                            {
+                                                <span class="badge bg-warning text-dark">Usuario desactivado: falta cerrarla</span>
+                                            }
                                         }
                                         else
                                         {

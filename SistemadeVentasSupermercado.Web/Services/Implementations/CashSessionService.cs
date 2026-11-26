@@ -26,6 +26,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             Number = c.Number,
             UserId = c.UserId,
             CashierName = c.User!.FirstName + " " + c.User.LastName,
+            CashierDeactivated = c.User.DeactivatedAt != null,
             OpenedAtUtc = c.OpenedAtUtc,
             OpeningAmount = c.OpeningAmount,
             Status = c.Status,

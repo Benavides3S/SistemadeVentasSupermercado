@@ -31,6 +31,8 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public int Number { get; set; }
         public string UserId { get; set; } = string.Empty;
         public string CashierName { get; set; } = string.Empty;
+        /// <summary>El cajero está desactivado: si el turno sigue abierto, alguien debe cerrarlo.</summary>
+        public bool CashierDeactivated { get; set; }
         public DateTime OpenedAtUtc { get; set; }
         public decimal OpeningAmount { get; set; }
         public CashSessionStatus Status { get; set; }

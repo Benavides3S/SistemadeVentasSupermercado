@@ -20,7 +20,11 @@ namespace SistemadeVentasSupermercado.Web.Core.Mappings
             PhoneNumber = user.PhoneNumber ?? string.Empty,
             Email = user.Email ?? string.Empty,
             SistemaVentasRoleId = user.SistemaVentasRoleId.ToString(),
-            SistemaVentasRole = user.SistemaVentasRole
+            SistemaVentasRole = user.SistemaVentasRole,
+            RoleName = user.SistemaVentasRole?.Name,
+            Status = user.DeactivatedAt is not null ? UserStatus.Deactivated
+                   : user.LockoutEnd > DateTimeOffset.UtcNow ? UserStatus.Locked
+                   : UserStatus.Active
         };
 
         /// <summary>Usuario nuevo. El Id, la confirmación del correo y la contraseña los pone UsersService.</summary>
