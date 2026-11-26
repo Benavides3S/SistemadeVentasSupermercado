@@ -866,6 +866,9 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("DeactivatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Document")
                         .IsRequired()
                         .HasMaxLength(32)
