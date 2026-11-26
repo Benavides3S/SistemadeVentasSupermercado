@@ -18,6 +18,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         public Task<User> GetUserByIdAsync(Guid id);
         public Task<Response<SignInResult>> LoginAsync(LoginDTO dto);
         public Task LogoutAsync();
+
+        /// <summary>
+        /// Comprueba la contraseña del usuario de la sesión para desbloquear su pantalla. Los errores cuentan
+        /// para el mismo bloqueo de cuenta que el ingreso y quedan en el historial (agrupados).
+        /// </summary>
+        public Task<Response<bool>> CheckUnlockPasswordAsync(string userName, string? password);
         /// <summary>El formulario de ingreso se rechazó antes de revisar la contraseña (el correo no es válido).</summary>
         public Task RecordRejectedLoginFormAsync(LoginDTO dto);
         public Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto, string userName);

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using SistemadeVentasSupermercado.Web.Data.Entities;
 using SistemadeVentasSupermercado.Web.Core.Filters;
 using SistemadeVentasSupermercado.Web.Core.Mappings;
+using SistemadeVentasSupermercado.Web.Core.ScreenLock;
 using SistemadeVentasSupermercado.Web.DTOs;
 using SistemadeVentasSupermercado.Web.Services.Abstractions;
 
@@ -15,10 +16,12 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         private readonly IUsersService _usersService;
         private readonly INotyfService _notyfService;
         private readonly IAuthorizationPinService _pinService;
+        private readonly ScreenLockStore _screenLock;
 
         public AccountController(IUsersService usersService, INotyfService notyfService,
-            IAuthorizationPinService pinService)
+            IAuthorizationPinService pinService, ScreenLockStore screenLock)
         {
+            _screenLock = screenLock;
             _pinService = pinService;
             _usersService = usersService;
             _notyfService = notyfService;
@@ -67,9 +70,85 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             return View(dto);
         }
 
+        // ---------- Bloqueo de pantalla ----------
+        // La sesión es SIEMPRE la de la cookie: nadie puede bloquear ni desbloquear otra.
+
+        /// <summary>Bloquea la pantalla (botón o inactividad). Lo llama session-lock.js.</summary>
+        [Authorize]
+        [HttpPost]
+        [SkipMustChangePassword]
+        [AllowWhenLocked]
+        public IActionResult Lock()
+        {
+            _screenLock.Lock(ScreenLockSession.CurrentId(HttpContext)!);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// "Hay alguien usando la pantalla". No hace nada: al pasar por el filtro cuenta como actividad
+        /// (y si la sesión ya está bloqueada, el filtro responde 423).
+        /// </summary>
+        [Authorize]
+        [HttpPost]
+        [SkipMustChangePassword]
+        public IActionResult Activity() => NoContent();
+
+        /// <summary>Desbloqueo desde la capa que tapa la pantalla (fetch). Devuelve JSON.</summary>
+        [Authorize]
+        [HttpPost]
+        [SkipMustChangePassword]
+        [AllowWhenLocked]
+        public async Task<IActionResult> Unlock([FromForm] string? password)
+        {
+            Response<bool> result = await TryUnlockAsync(password);
+            return Json(new { isSuccess = result.IsSuccess, message = result.Message });
+        }
+
+        /// <summary>Pantalla de desbloqueo, para cuando se abre o recarga una página estando bloqueada.</summary>
         [Authorize]
         [HttpGet]
         [SkipMustChangePassword]
+        [AllowWhenLocked]
+        public IActionResult Locked([FromQuery] string? returnUrl)
+        {
+            if (!_screenLock.IsLocked(ScreenLockSession.CurrentId(HttpContext)!))
+                return LocalOrHome(returnUrl);
+
+            ViewBag.ReturnUrl = returnUrl;
+            return View();
+        }
+
+        [Authorize]
+        [HttpPost]
+        [SkipMustChangePassword]
+        [AllowWhenLocked]
+        public async Task<IActionResult> Locked([FromForm] string? password, [FromForm] string? returnUrl)
+        {
+            Response<bool> result = await TryUnlockAsync(password);
+            if (result.IsSuccess)
+                return LocalOrHome(returnUrl);
+
+            ModelState.AddModelError(string.Empty, result.Message ?? "No se pudo desbloquear.");
+            ViewBag.ReturnUrl = returnUrl;
+            return View();
+        }
+
+        private async Task<Response<bool>> TryUnlockAsync(string? password)
+        {
+            Response<bool> result = await _usersService.CheckUnlockPasswordAsync(User.Identity!.Name!, password);
+            if (result.IsSuccess)
+                _screenLock.Unlock(ScreenLockSession.CurrentId(HttpContext)!);
+            return result;
+        }
+
+        // Nunca a otro sitio: returnUrl viene del navegador.
+        private IActionResult LocalOrHome(string? returnUrl)
+            => Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl!) : RedirectToAction("Index", "Home");
+
+        [Authorize]
+        [HttpGet]
+        [SkipMustChangePassword]
+        [AllowWhenLocked]
         public async Task<IActionResult> Logout()
         {
             await _usersService.LogoutAsync();

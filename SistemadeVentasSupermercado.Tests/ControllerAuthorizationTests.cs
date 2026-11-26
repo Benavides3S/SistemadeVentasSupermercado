@@ -22,6 +22,11 @@ namespace SistemadeVentasSupermercado.Tests
             "Account.Logout",
             "Account.ChangePassword",
             "Account.UpdateUser",
+            // Bloqueo de pantalla: cualquiera con sesión, y solo sobre la suya.
+            "Account.Lock",
+            "Account.Activity",
+            "Account.Unlock",
+            "Account.Locked",
         ];
 
         // "Controlador.Acción": el controlador exige sesión y la acción revisa el permiso dentro del código,

@@ -19,6 +19,8 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         AccountLocked = 13,
         /// <summary>Intento de entrar con un usuario desactivado.</summary>
         DeactivatedLoginRejected = 14,
+        /// <summary>Contraseña equivocada al desbloquear la pantalla.</summary>
+        UnlockFailed = 15,
 
         // Contraseñas
         PasswordChanged = 20,
