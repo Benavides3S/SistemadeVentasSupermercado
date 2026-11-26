@@ -7,7 +7,7 @@ Aplicación web de punto de venta y administración para supermercados en Colomb
 - **Caja:** apertura con monto inicial, cierre con arqueo ciego (el cajero cuenta sin ver el esperado), reporte de cierre.
 - **Proveedores y compras:** registro de la mercancía que llega (suma el stock y guarda el último costo de cada producto), historial y anulación.
 - **Anulaciones y devoluciones parciales** que devuelven el stock y ajustan el efectivo esperado.
-- **Reportes:** ventas por día y productos más vendidos, con exportación a Excel e impresión a PDF.
+- **Reportes:** ventas por día, productos más vendidos y actividad de caja por cajero, con exportación a Excel e impresión a PDF.
 - **Usuarios, roles y permisos** propios por módulo.
 - Comprobantes para **impresora térmica de 80 mm**.
 
@@ -111,6 +111,7 @@ El rol **Admin** tiene acceso a todo. Para los demás roles, asigna permisos en 
 | Inventario | `showInventory` | Ver el historial de movimientos de inventario |
 | Inventario | `adjustInventory` | Ajustar el stock a mano (mermas, pérdidas, conteo físico) |
 | Reportes | `showReports` | Ver y exportar reportes |
+| Reportes | `showCashierReport` | Ver y exportar el reporte por cajero, con datos de cada empleado (al principio solo el Admin) |
 | Productos, Categorías, Proveedores, Clientes, Usuarios, Roles | `show*`, `create*`, `update*`, `delete*` | Administración |
 | Usuarios | `resetPasswords` | Restablecer la contraseña de un usuario (genera una temporal) y desbloquear cuentas |
 | Usuarios | `deactivateUsers` | Desactivar y reactivar usuarios (al principio solo el Admin) |
@@ -137,6 +138,15 @@ El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **
 - **Inventario** muestra cada movimiento de stock: ventas, anulaciones, devoluciones, compras, ajustes y el stock inicial, con quién, cuándo y cuánto quedó. Filtra por producto, tipo, fechas o texto; desde la lista de **Productos** hay un botón de historial por producto.
 - Para corregir el stock (merma, pérdida, conteo físico, consumo interno) usa **Ajustar stock**: eliges entrada o salida, cantidad y motivo (con notas si es "Otro"). El stock ya no se edita en el formulario de Editar producto.
 - Al instalar esta versión, cada producto con stock recibe un movimiento "Saldo inicial del historial": el historial empieza ahí, no reconstruye lo anterior.
+
+## Reporte por cajero
+
+En el menú **Reporte por cajero** se ve, entre dos fechas, lo que hizo cada persona en la caja: ventas cobradas, anulaciones, devoluciones y descuadres. Tocando un nombre sale el detalle. Se puede descargar en Excel o guardar como PDF desde la ventana de impresión.
+
+- **Quién cobró y quién corrigió van por separado.** No sumes esas columnas: una misma operación puede estar en las dos.
+- **Faltantes y sobrantes no se compensan.** Un turno de varios días puede incluir ventas anteriores a las fechas elegidas.
+- **Si tienes tu caja abierta,** no ves tus propias cifras y los totales salen parciales. Esto protege el conteo a ciegas solo en este reporte; con permisos sobre las ventas o el reporte por día se pueden obtener por otro lado.
+- El reporte indica qué revisar; no acusa a nadie. Tiene datos de empleados: comparte los archivos solo con quien deba verlos.
 
 ## Pantalla de Inicio
 
