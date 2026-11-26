@@ -83,6 +83,11 @@ namespace SistemadeVentasSupermercado.Web
               .AddEntityFrameworkStores<DataContext>()
               .AddDefaultTokenProviders();
 
+            // El "sello de seguridad" cambia al restablecer o cambiar la contraseña. Por defecto Identity lo
+            // revisa cada 30 minutos y mientras tanto las sesiones viejas siguen sirviendo: se revisa en
+            // cada petición para que se cierren de inmediato (cuesta unas consultas más por petición).
+            builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.Zero);
+
             builder.Services.ConfigureApplicationCookie(conf =>
             {
                 conf.Cookie.Name = "Auth";

@@ -9,8 +9,8 @@ namespace SistemadeVentasSupermercado.Web.Core
 {
     /// <summary>
     /// Se ejecuta en CADA petición con cookie de sesión: si el usuario está desactivado (o ya no existe),
-    /// la petición queda sin sesión. Así el bloqueo es inmediato, sin esperar a que Identity revise el
-    /// sello de seguridad (lo hace cada cierto tiempo). Al estar en la cookie cubre todas las acciones.
+    /// la petición queda sin sesión. No depende del sello de seguridad: un usuario desactivado no pasa aunque
+    /// su sello coincida. Después corre la revisión del sello. Al estar en la cookie cubre todas las acciones.
     /// </summary>
     public static class ActiveUserCookieValidator
     {
