@@ -176,6 +176,7 @@ namespace SistemadeVentasSupermercado.Web.Data.Seeders
                 new Permission { Name = "deleteUsers", Description = "Eliminar Usuarios", Module = "Usuarios"},
                 new Permission { Name = "resetPasswords", Description = "Restablecer contraseñas", Module = "Usuarios"},
                 new Permission { Name = "deactivateUsers", Description = "Desactivar y reactivar usuarios", Module = "Usuarios"},
+                new Permission { Name = "showUserActivity", Description = "Ver la actividad de usuarios", Module = "Usuarios"},
             };
         }
     }

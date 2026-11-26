@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Tests.Infraestructura;
 using SistemadeVentasSupermercado.Web;
@@ -36,10 +38,17 @@ namespace SistemadeVentasSupermercado.Tests
             return rol;
         }
 
+        private static RolesService CrearServicio(DataContext context)
+        {
+            HttpContextAccessor http = new();
+            return new RolesService(context,
+                new UserActivityRecorder(context, http, NullLogger<UserActivityRecorder>.Instance), http);
+        }
+
         private async Task<Response<SistemaVentaRoleDTO>> EditarAsync(Guid id, string nombre)
         {
             await using DataContext context = _fixture.CrearContexto();
-            return await new RolesService(context).EditAsync(new SistemaVentaRoleDTO { Id = id, Name = nombre });
+            return await CrearServicio(context).EditAsync(new SistemaVentaRoleDTO { Id = id, Name = nombre });
         }
 
         private async Task<string> NombreGuardadoAsync(Guid id)
@@ -83,7 +92,7 @@ namespace SistemadeVentasSupermercado.Tests
             int antes = await context.SistemaVentasRoles.CountAsync();
 
             Response<SistemaVentaRoleDTO> respuesta =
-                await new RolesService(context).CreateAsync(new SistemaVentaRoleDTO { Name = nombre });
+                await CrearServicio(context).CreateAsync(new SistemaVentaRoleDTO { Name = nombre });
 
             Assert.False(respuesta.IsSuccess);
             Assert.Contains("reservado", respuesta.Message);

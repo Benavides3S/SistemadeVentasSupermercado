@@ -21,13 +21,15 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         private readonly UserManager<User> _userManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<UsersService> _logger; // ✅ Agregar esto
+        private readonly IUserActivityRecorder _activity;
 
 
         public UsersService(DataContext context,
                         SignInManager<User> signInManager,
                         UserManager<User> userManager,
                         IHttpContextAccessor httpContextAccessor,
-                        ILogger<UsersService> logger) : base(context) // ✅ Agregar logger
+                        ILogger<UsersService> logger,
+                        IUserActivityRecorder activity) : base(context) // ✅ Agregar logger
 
         {
             _context = context;
@@ -35,6 +37,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
+            _activity = activity;
         }
 
         public async Task<Response<IdentityResult>> AddUserAsync(User user, string password)
@@ -110,6 +113,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 user.SistemaVentasRoleId = roleId;
                 user.MustChangePassword = true;
 
+                // El usuario y su registro en el historial quedan juntos (o ninguno).
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
                 string temporaryPassword = PasswordGenerator.Generate();
                 Response<IdentityResult> createResponse = await AddUserAsync(user, temporaryPassword);
 
@@ -118,6 +124,11 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     List<string>? errors = createResponse.Result?.Errors.Select(e => e.Description).ToList();
                     return Response<TemporaryPasswordDTO>.Failure("No se pudo crear el usuario.", errors);
                 }
+
+                string? roleName = await RoleNameAsync(roleId);
+                await _activity.StageAsync(UserActivityType.UserCreated, requestedByUserName, user, details: $"Rol: {roleName}");
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 _logger.LogInformation("Usuario creado: {Email} por {CreadoPor}", dto.Email, requestedByUserName);
 
@@ -156,12 +167,18 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 user.AccessFailedCount = 0;
                 user.LockoutEnd = null;
 
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
                 string token = await _userManager.GeneratePasswordResetTokenAsync(user);
                 IdentityResult result = await _userManager.ResetPasswordAsync(user, token, temporaryPassword);
 
                 if (!result.Succeeded)
                     return Response<TemporaryPasswordDTO>.Failure("No se pudo restablecer la contraseña.",
                         result.Errors.Select(e => e.Description).ToList());
+
+                await _activity.StageAsync(UserActivityType.PasswordReset, requestedByUserName, user);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 _logger.LogInformation("Contraseña restablecida: {Email} por {RestablecidoPor}", user.Email, requestedByUserName);
 
@@ -193,6 +210,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 // Se guarda junto con la contraseña nueva, en la misma operación de Identity.
                 user.MustChangePassword = false;
 
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
                 IdentityResult result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
 
                 if (!result.Succeeded)
@@ -202,6 +221,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         : e.Description).ToList();
                     return Response<User>.Failure(string.Join(" ", errors), errors);
                 }
+
+                await _activity.StageAsync(UserActivityType.PasswordChanged, userName, user);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 return Response<User>.Success(user, "Contraseña cambiada con éxito");
             }
@@ -293,6 +316,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     if (changed == 0)
                         return Response<UserDeactivationDTO>.Failure("El usuario ya estaba desactivado.");
 
+                    await _activity.StageAsync(UserActivityType.UserDeactivated, requestedByUserName, user);
+                    await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
                     fullName = user.FullName;
                 }
@@ -327,7 +352,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     .SetProperty(u => u.AccessFailedCount, 0)
                     .SetProperty(u => u.LockoutEnd, (DateTimeOffset?)null)
                     .SetProperty(u => u.ConcurrencyStamp, Guid.NewGuid().ToString())),
-                "Usuario reactivado");
+                UserActivityType.UserReactivated, "Usuario reactivado");
 
         /// <summary>Quita el bloqueo por intentos fallidos sin cambiar la contraseña.</summary>
         public Task<Response<string>> UnlockAsync(Guid userId, string requestedByUserName)
@@ -339,14 +364,19 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     .SetProperty(u => u.AccessFailedCount, 0)
                     .SetProperty(u => u.LockoutEnd, (DateTimeOffset?)null)
                     .SetProperty(u => u.ConcurrencyStamp, Guid.NewGuid().ToString())),
-                "Usuario desbloqueado");
+                UserActivityType.UserUnlocked, "Usuario desbloqueado");
 
         /// <summary>Parte común de reactivar y desbloquear. Un Admin solo lo puede tocar otro Admin.</summary>
         private async Task<Response<string>> ChangeAccessAsync(Guid userId, string requestedByUserName, string action,
-            Func<User, string?> rejection, Func<IQueryable<User>, Task<int>> update, string successMessage)
+            Func<User, string?> rejection, Func<IQueryable<User>, Task<int>> update, UserActivityType activityType,
+            string successMessage)
         {
             try
             {
+                // Con el bloqueo, dos clics a la vez no dejan dos registros: el segundo ya ve el cambio.
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+                await LockAdminRoleAsync();
+
                 string id = userId.ToString();
                 User? user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
                 if (user is null)
@@ -361,6 +391,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     return Response<string>.Failure(reason);
 
                 await update(_context.Users.Where(u => u.Id == id));
+                await _activity.StageAsync(activityType, requestedByUserName, user);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
                 _logger.LogInformation("{Mensaje}: {UserId} por {Quien}", successMessage, id, requestedByUserName);
 
                 return Response<string>.Success(user.FullName, successMessage);
@@ -501,12 +534,27 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     && !await ExistsOtherActiveAdminAsync(user))
                     return Response<UserDTO>.Failure($"No se puede quitar el rol '{Env.SUPER_ADMIN_ROLE_NAME}' al único administrador.");
 
+                Guid oldRoleId = user.SistemaVentasRoleId;
+                List<string> changedFields = ChangedFields(user, dto.Document, dto.FirstName, dto.LastName, dto.PhoneNumber);
+
                 user.PhoneNumber = dto.PhoneNumber;
                 user.Document = dto.Document;
                 user.FirstName = dto.FirstName;
                 user.LastName = dto.LastName;
                 user.SistemaVentasRoleId = newRoleId;
 
+                await _context.SaveChangesAsync();
+
+                if (roleChanges)
+                {
+                    await _activity.StageAsync(UserActivityType.UserRoleChanged, requestedByUserName, user,
+                        details: $"Rol: {await RoleNameAsync(oldRoleId)} → {await RoleNameAsync(newRoleId)}");
+                    // Uno por uno: en un mismo guardado EF los ordena por el Id (al azar) y el número no seguiría el orden.
+                    await _context.SaveChangesAsync();
+                }
+                if (changedFields.Count > 0)
+                    await _activity.StageAsync(UserActivityType.UserEdited, requestedByUserName, user,
+                        details: "Cambió: " + string.Join(", ", changedFields));
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -580,12 +628,24 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         public async Task<Response<SignInResult>> LoginAsync(LoginDTO dto)
         {
             // Un usuario desactivado no entra, y no se le dice por qué a quien está en el login.
-            if (await _context.Users.AnyAsync(u => u.UserName == dto.Email && u.DeactivatedAt != null))
+            User? account = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserName == dto.Email);
+            if (account?.DeactivatedAt is not null)
+            {
+                await _activity.RecordFailedLoginAsync(UserActivityType.DeactivatedLoginRejected, account, dto.Email);
                 return new Response<SignInResult> { Result = SignInResult.NotAllowed, IsSuccess = false };
+            }
 
             // lockoutOnFailure: true → tras 5 intentos fallidos seguidos la cuenta se bloquea 15 minutos
             // (ver CustomConfiguration.ConfigureIdentityOptions).
             SignInResult result = await _signInManager.PasswordSignInAsync(dto.Email, dto.Password, isPersistent: false, lockoutOnFailure: true);
+
+            if (result.Succeeded)
+                await _activity.RecordAccessAsync(UserActivityType.LoginSucceeded, dto.Email);
+            else
+                // Si alguien escribió su contraseña en los dos campos, el "correo" no se guarda.
+                await _activity.RecordFailedLoginAsync(
+                    result.IsLockedOut ? UserActivityType.AccountLocked : UserActivityType.LoginFailed,
+                    account, dto.Email == dto.Password ? null : dto.Email);
 
             return new Response<SignInResult>
             {
@@ -594,9 +654,31 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             };
         }
 
+        public Task RecordRejectedLoginFormAsync(LoginDTO dto)
+            => _activity.RecordFailedLoginAsync(UserActivityType.LoginFailed, null,
+                dto.Email == dto.Password ? null : dto.Email);
+
         public async Task LogoutAsync()
         {
+            string? userName = _httpContextAccessor.HttpContext?.User.Identity?.Name;
             await _signInManager.SignOutAsync();
+
+            if (userName is not null)
+                await _activity.RecordAccessAsync(UserActivityType.Logout, userName);
+        }
+
+        private Task<string?> RoleNameAsync(Guid roleId)
+            => _context.SistemaVentasRoles.Where(r => r.Id == roleId).Select(r => (string?)r.Name).FirstOrDefaultAsync();
+
+        /// <summary>Solo los NOMBRES de los campos que cambian: el historial no copia los datos personales.</summary>
+        private static List<string> ChangedFields(User user, string document, string firstName, string lastName, string? phone)
+        {
+            List<string> changed = [];
+            if (user.Document != document) changed.Add("Documento");
+            if (user.FirstName != firstName) changed.Add("Nombres");
+            if (user.LastName != lastName) changed.Add("Apellidos");
+            if ((user.PhoneNumber ?? string.Empty) != (phone ?? string.Empty)) changed.Add("Teléfono");
+            return changed;
         }
 
         /// <summary>
@@ -611,12 +693,19 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 if (user is null)
                     return Response<AccountUserDTO>.Failure("No existe el usuario.");
 
+                List<string> changedFields = ChangedFields(user, dto.Document, dto.FirstName, dto.LastName, dto.PhoneNumber);
+
                 user.PhoneNumber = dto.PhoneNumber;
                 user.Document = dto.Document;
                 user.FirstName = dto.FirstName;
                 user.LastName = dto.LastName;
 
                 _context.Users.Update(user);
+
+                // Se guarda junto con el cambio (un solo SaveChanges es una sola transacción).
+                if (changedFields.Count > 0)
+                    await _activity.StageAsync(UserActivityType.ProfileUpdated, userName, user,
+                        details: "Cambió: " + string.Join(", ", changedFields));
 
                 await _context.SaveChangesAsync();
 

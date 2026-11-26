@@ -56,6 +56,11 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 }
             }
 
+            else if (!string.IsNullOrEmpty(dto.Email) && !string.IsNullOrEmpty(dto.Password))
+            {
+                await _usersService.RecordRejectedLoginFormAsync(dto);
+            }
+
             return View(dto);
         }
 

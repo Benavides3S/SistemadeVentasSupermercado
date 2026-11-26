@@ -18,6 +18,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         public Task<User> GetUserByIdAsync(Guid id);
         public Task<Response<SignInResult>> LoginAsync(LoginDTO dto);
         public Task LogoutAsync();
+        /// <summary>El formulario de ingreso se rechazó antes de revisar la contraseña (el correo no es válido).</summary>
+        public Task RecordRejectedLoginFormAsync(LoginDTO dto);
         public Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto, string userName);
         // For Management
         public Task<Response<TemporaryPasswordDTO>> CreateAsync(UserDTO dto, string requestedByUserName);

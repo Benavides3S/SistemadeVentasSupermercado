@@ -131,6 +131,15 @@
             </li>
         }
 
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("showUserActivity", "Usuarios"))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="UserActivity" asp-action="Index">
+                    <i class="bi bi-clock-history"></i> <span>Actividad de usuarios</span>
+                </a>
+            </li>
+        }
+
         @if (await _usersService.CurrentUserIsAuthorizedAsync("showRoles", "Roles"))
         {
             <li class="nav-item">
