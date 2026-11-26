@@ -1680,3 +1680,35 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126180345_FotoPerfil'
+)
+BEGIN
+    CREATE TABLE [UserPhotos] (
+        [UserId] nvarchar(450) NOT NULL,
+        [Content] varbinary(max) NOT NULL,
+        [UpdatedAtUtc] datetime2 NOT NULL,
+        CONSTRAINT [PK_UserPhotos] PRIMARY KEY ([UserId]),
+        CONSTRAINT [CK_UserPhotos_Content_Size] CHECK (DATALENGTH([Content]) BETWEEN 1 AND 204800),
+        CONSTRAINT [FK_UserPhotos_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126180345_FotoPerfil'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261126180345_FotoPerfil', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+
