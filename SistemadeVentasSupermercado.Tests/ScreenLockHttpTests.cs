@@ -149,6 +149,20 @@ namespace SistemadeVentasSupermercado.Tests
         }
 
         [Fact]
+        public async Task LasPantallasConSesion_TraenElBloqueo_YElLoginNo()
+        {
+            using HttpClient cliente = await _app.CrearClienteConSesionAsync(AppWebFixture.Cajero);
+            using HttpClient sinSesion = _app.CrearCliente();
+
+            string pagina = await cliente.GetStringAsync("/Account/UpdateUser");
+
+            Assert.Contains("id=\"sessionLock\"", pagina);
+            Assert.Contains("data-idle-minutes=\"5\"", pagina);
+            Assert.Contains("data-lock-now", pagina);
+            Assert.DoesNotContain("sessionLock", await sinSesion.GetStringAsync("/Account/Login"));
+        }
+
+        [Fact]
         public async Task BloqueadaSePuedeCerrarSesion()
         {
             using HttpClient cliente = await _app.CrearClienteConSesionAsync(AppWebFixture.Cajero);

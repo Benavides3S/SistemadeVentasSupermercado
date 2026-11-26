@@ -89,6 +89,17 @@ Para cuando el cajero no tiene permiso de anular o devolver y no se quiere cambi
 - Las reglas no cambian: solo se anula con el turno de la venta abierto, y el efectivo de una devolución sale de la caja de quien la hace.
 - **Cuidados:** el PIN no sirve para iniciar sesión, pero quien lo vea podría usarlo desde su sesión: que nadie mire al escribirlo y cámbialo si hay dudas. Un cajero puede bloquearle el PIN a un supervisor equivocándose a propósito (queda registrado). Como el cajero puede consultar ventas por número, podría ir sumando las suyas antes del arqueo: la búsqueda no tiene lista para no facilitarlo.
 
+## Bloqueo de pantalla
+
+- La pantalla se bloquea tras **5 minutos** sin usar el teclado, el ratón o la pantalla táctil, o al momento con el botón **Bloquear** de la barra superior. Se desbloquea con la **contraseña** del usuario y todo sigue como estaba, incluido el carrito sin cobrar.
+- El tiempo se cambia en `appsettings.json` → `Seguridad:MinutosDeInactividad` (con Docker, la variable `Seguridad__MinutosDeInactividad`). Con `0` no hay bloqueo automático, pero el botón sigue funcionando. Hay que reiniciar la aplicación.
+- El bloqueo lo aplica el servidor: recargar la página no lo quita.
+- Otra persona solo puede **cerrar sesión** (se pierde lo que no esté guardado). La caja sigue abierta a nombre del cajero.
+- **5 contraseñas equivocadas** bloquean la cuenta 15 minutos, igual que al iniciar sesión, y quedan en **Actividad de usuarios**. No recargues la página si hay un carrito sin cobrar. Un administrador puede **desbloquear** la cuenta; **restablecer la contraseña** cierra la sesión y el carrito se pierde.
+- Las pestañas del mismo navegador se bloquean y desbloquean juntas. Cada navegador va por separado.
+- Al reiniciar la aplicación, las sesiones abiertas quedan bloqueadas. Al instalar esta versión por primera vez, todos deben iniciar sesión de nuevo.
+- Protege esta aplicación, no el computador: usa también el bloqueo de Windows.
+
 ## Instalación con Docker (para un negocio)
 
 Ver la guía [docker/LEEME.md](docker/LEEME.md): primera instalación, actualizaciones, HTTPS y seguridad.
