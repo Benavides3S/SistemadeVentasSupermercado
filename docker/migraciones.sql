@@ -1593,3 +1593,90 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    ALTER TABLE [Sales] ADD [CancelAuthorizedByUserId] nvarchar(450) NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    ALTER TABLE [SaleReturns] ADD [AuthorizedByUserId] nvarchar(450) NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    CREATE TABLE [UserAuthorizationPins] (
+        [UserId] nvarchar(450) NOT NULL,
+        [PinHash] nvarchar(200) NOT NULL,
+        [FailedAttempts] int NOT NULL,
+        [LockedUntilUtc] datetime2 NULL,
+        CONSTRAINT [PK_UserAuthorizationPins] PRIMARY KEY ([UserId]),
+        CONSTRAINT [CK_UserAuthorizationPins_FailedAttempts_NonNegative] CHECK ([FailedAttempts] >= 0),
+        CONSTRAINT [FK_UserAuthorizationPins_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    CREATE INDEX [IX_Sales_CancelAuthorizedByUserId] ON [Sales] ([CancelAuthorizedByUserId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    CREATE INDEX [IX_SaleReturns_AuthorizedByUserId] ON [SaleReturns] ([AuthorizedByUserId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    ALTER TABLE [SaleReturns] ADD CONSTRAINT [FK_SaleReturns_AspNetUsers_AuthorizedByUserId] FOREIGN KEY ([AuthorizedByUserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    ALTER TABLE [Sales] ADD CONSTRAINT [FK_Sales_AspNetUsers_CancelAuthorizedByUserId] FOREIGN KEY ([CancelAuthorizedByUserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261126153518_AutorizacionSupervisor', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+
