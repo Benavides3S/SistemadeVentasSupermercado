@@ -1,0 +1,27 @@
+/* Foto de perfil (o iniciales) en el encabezado y en "Mi perfil". */
+.sv-avatar {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.sv-avatar-iniciales {
+    background: #012970;
+    color: #fff;
+}
+
+/* La plantilla da estilo a los <span> del menú del usuario: las iniciales conservan el suyo. */
+.header-nav .nav-profile .sv-avatar-iniciales {
+    font-size: 14px;
+}
+
+.sv-foto-grande .sv-avatar {
+    width: 128px;
+    height: 128px;
+    font-size: 44px;
+}

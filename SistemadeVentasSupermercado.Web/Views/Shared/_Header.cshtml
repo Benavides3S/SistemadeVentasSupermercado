@@ -2,6 +2,7 @@
 ﻿@using SistemadeVentasSupermercado.Web.Data.Entities
 @inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
 @inject SistemadeVentasSupermercado.Web.Services.Abstractions.IAuthorizationPinService _pinService
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IProfilePhotoService _photoService
 
 @{
     User? user;
@@ -43,7 +44,7 @@
                 @if (user is not null)
                 {     
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-                        <img src="~/assets/img/profile-img.jpg" alt="Profile" class="rounded-circle">
+                        <partial name="_Avatar" model="(user.FirstName, user.LastName, await _photoService.GetVersionAsync(User.Identity!.Name!))" />
                         <span class="d-none d-md-block dropdown-toggle ps-2">@user.FirstName.Substring(0, 1) . @user.LastName</span>
                     </a>
 
