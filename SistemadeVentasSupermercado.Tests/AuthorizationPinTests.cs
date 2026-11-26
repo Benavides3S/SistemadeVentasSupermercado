@@ -219,6 +219,19 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.Equal(1, (await LeerAsync(supervisor)).AccessFailedCount);
         }
 
+        [Fact]
+        public async Task Guardar_TrasCincoContrasenasMalas_NiLaBuenaSirve()
+        {
+            User supervisor = await SupervisorAsync();
+            for (int i = 0; i < 5; i++)
+                await GuardarPinAsync(supervisor, Pin, clave: "OtraClave2026");
+
+            Response<bool> conLaBuena = await GuardarPinAsync(supervisor, Pin);
+
+            Assert.False(conLaBuena.IsSuccess);
+            Assert.Null(await FilaAsync(supervisor));
+        }
+
         [Theory]
         [InlineData("123456", "123456")]
         [InlineData("1234", "1234")]
