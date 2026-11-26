@@ -1057,6 +1057,26 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.UserPhoto", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserPhotos", t =>
+                        {
+                            t.HasCheckConstraint("CK_UserPhotos_Content_Size", "DATALENGTH([Content]) BETWEEN 1 AND 204800");
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -1370,6 +1390,17 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "User")
                         .WithOne()
                         .HasForeignKey("SistemadeVentasSupermercado.Web.Data.Entities.UserAuthorizationPin", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.UserPhoto", b =>
+                {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("SistemadeVentasSupermercado.Web.Data.Entities.UserPhoto", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
