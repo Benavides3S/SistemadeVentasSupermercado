@@ -69,6 +69,7 @@ Tecnología: ASP.NET Core 8 MVC (Razor), Entity Framework Core 8, SQL Server, AS
 - **Olvidó su contraseña:** en **Usuarios**, el botón 🔑 (permiso `resetPasswords`) genera una temporal nueva y desbloquea la cuenta.
 - **Bloqueo:** 5 intentos fallidos bloquean la cuenta 15 minutos, o hasta que alguien con `resetPasswords` la desbloquee (sin cambiar la contraseña) o la restablezca.
 - **Desactivar usuarios:** quien ya no trabaja se **desactiva** (no se borra: sus ventas y turnos se conservan). Pierde el acceso de inmediato, aunque tenga la sesión abierta. Si dejó la caja abierta, el sistema avisa y alguien con `showCashSessions` debe cerrarla en **Turnos de caja**. Se puede reactivar. Nadie se desactiva a sí mismo, solo un Admin desactiva o reactiva a un Admin y siempre queda un Admin activo.
+- **Actividad de usuarios:** en el menú **Actividad de usuarios** (permiso `showUserActivity`, al principio solo el Admin) se ve quién entró o intentó entrar, y quién cambió usuarios, contraseñas, roles y permisos. No guarda contraseñas. Los intentos fallidos repetidos en el mismo minuto salen en una línea con un contador. Hoy no se borra nada automáticamente. La dirección IP es solo una pista: con Docker puede ser una dirección interna.
 - **Cambiar contraseña:** cualquiera, desde el menú de su nombre (arriba a la derecha).
 - **Protección del rol Admin:** solo un Admin puede crear o editar usuarios Admin, asignar ese rol o restablecer la contraseña de un Admin. Nadie puede cambiar su propio rol y siempre queda al menos un Admin.
 
@@ -113,6 +114,7 @@ El rol **Admin** tiene acceso a todo. Para los demás roles, asigna permisos en 
 | Productos, Categorías, Proveedores, Clientes, Usuarios, Roles | `show*`, `create*`, `update*`, `delete*` | Administración |
 | Usuarios | `resetPasswords` | Restablecer la contraseña de un usuario (genera una temporal) y desbloquear cuentas |
 | Usuarios | `deactivateUsers` | Desactivar y reactivar usuarios (al principio solo el Admin) |
+| Usuarios | `showUserActivity` | Ver el historial de actividad de todos los usuarios, incluidos los Admin (al principio solo el Admin) |
 
 El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **Supervisor** (lo del cajero, más `showSales`, `cancelSales`, `createReturns`, `showCashSessions`, `showReports`, `showPurchases`, `createPurchases`, `cancelPurchases` y `showInventory`). Puedes cambiarles los permisos en **Roles**; el sistema no los vuelve a poner. En una instalación que ya existía, el rol **Supervisor** no recibe los permisos de Compras ni de Inventario solo: márcalos en **Roles**. El permiso `adjustInventory` no se da a ningún rol de ejemplo: solo el Admin ajusta stock hasta que lo marques.
 
