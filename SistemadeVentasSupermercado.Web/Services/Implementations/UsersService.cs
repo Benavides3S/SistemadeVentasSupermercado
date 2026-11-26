@@ -176,6 +176,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     return Response<TemporaryPasswordDTO>.Failure("No se pudo restablecer la contraseña.",
                         result.Errors.Select(e => e.Description).ToList());
 
+                // Si la cuenta estuvo en manos de otro, su PIN de autorización tampoco debe servir.
+                await _context.UserAuthorizationPins.Where(p => p.UserId == user.Id).ExecuteDeleteAsync();
+
                 await _activity.StageAsync(UserActivityType.PasswordReset, requestedByUserName, user);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();

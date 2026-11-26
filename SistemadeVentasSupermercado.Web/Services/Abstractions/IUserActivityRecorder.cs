@@ -21,5 +21,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         /// se guarda cuando tiene forma de correo. No lanza excepciones.
         /// </summary>
         Task RecordFailedLoginAsync(UserActivityType type, User? target, string? typedEmail);
+
+        /// <summary>
+        /// PIN de autorización rechazado. Guarda quién estaba en la sesión y de quién era el PIN (si puede
+        /// autorizar). Se agrupa: una fila por esas dos personas, IP y minuto. No lanza excepciones.
+        /// NUNCA recibe el PIN.
+        /// </summary>
+        Task RecordFailedAuthorizationAsync(User? authorizer, string requesterUserName);
     }
 }

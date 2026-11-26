@@ -46,6 +46,9 @@ namespace SistemadeVentasSupermercado.Web.DTOs
             UserActivityType.RoleCreated => "Creó un rol",
             UserActivityType.RoleEdited => "Editó un rol",
             UserActivityType.RoleDeleted => "Eliminó un rol",
+            UserActivityType.SupervisorAuthorizationGranted => "Autorizó una operación",
+            UserActivityType.SupervisorAuthorizationFailed => "Autorización rechazada",
+            UserActivityType.AuthorizationPinChanged => "Cambió su PIN de autorización",
             _ => type.ToString()
         };
     }

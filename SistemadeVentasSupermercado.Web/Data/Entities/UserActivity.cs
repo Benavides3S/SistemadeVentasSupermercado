@@ -36,7 +36,14 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         // Roles
         RoleCreated = 40,
         RoleEdited = 41,
-        RoleDeleted = 42
+        RoleDeleted = 42,
+
+        // Autorización de supervisor
+        /// <summary>Un supervisor autorizó con su PIN una operación en la caja de otro.</summary>
+        SupervisorAuthorizationGranted = 50,
+        /// <summary>PIN incorrecto o bloqueado, o de alguien que no puede autorizar.</summary>
+        SupervisorAuthorizationFailed = 51,
+        AuthorizationPinChanged = 52
     }
 
     /// <summary>

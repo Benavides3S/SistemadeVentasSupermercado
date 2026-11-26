@@ -86,12 +86,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 string key = $"{(int)type}|{text.ToLowerInvariant()}|{ip}|{now:yyyyMMddHHmm}";
                 key = Limit(key, UserActivity.GroupKeyMaxLength)!;
 
-                // 1. Si el grupo ya existe, se suma en la base de datos (atómico: no se pierden intentos).
-                if (await AddAttemptAsync(key, now))
-                    return;
-
-                // 2. Si no, se crea. El índice único impide que dos intentos a la vez creen dos filas.
-                UserActivity activity = new()
+                await SaveGroupedAsync(new UserActivity
                 {
                     Id = Guid.NewGuid(),
                     OccurredAtUtc = now,
@@ -101,28 +96,71 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     TargetName = Limit(target is null ? text : Describe(target), UserActivity.NameMaxLength),
                     IpAddress = ip,
                     GroupKey = key
-                };
-                _context.UserActivities.Add(activity);
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateException ex) when (IsUniqueViolation(ex))
-                {
-                    // 3. Otro intento creó el grupo justo ahora: se suma a ese.
-                    Forget(activity);
-                    if (!await AddAttemptAsync(key, now))
-                        throw;
-                }
-                catch
-                {
-                    Forget(activity);
-                    throw;
-                }
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "No se pudo registrar el intento fallido {Tipo}", type);
+            }
+        }
+
+        public async Task RecordFailedAuthorizationAsync(User? authorizer, string requesterUserName)
+        {
+            const UserActivityType type = UserActivityType.SupervisorAuthorizationFailed;
+            try
+            {
+                User? requester = await FindAsync(requesterUserName);
+                string? ip = ClientIp();
+                DateTime now = UtcNow;
+                string key = $"{(int)type}|{authorizer?.Id}|{requester?.Id}|{ip}|{now:yyyyMMddHHmm}";
+
+                await SaveGroupedAsync(new UserActivity
+                {
+                    Id = Guid.NewGuid(),
+                    OccurredAtUtc = now,
+                    LastAttemptAtUtc = now,
+                    Type = type,
+                    ActorUserId = requester?.Id,
+                    ActorName = Limit(requester is null ? requesterUserName : Describe(requester), UserActivity.NameMaxLength),
+                    TargetUserId = authorizer?.Id,
+                    TargetName = authorizer is null ? null : Limit(Describe(authorizer), UserActivity.NameMaxLength),
+                    IpAddress = ip,
+                    GroupKey = Limit(key, UserActivity.GroupKeyMaxLength)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo registrar el intento fallido {Tipo}", type);
+            }
+        }
+
+        /// <summary>Suma un intento al grupo de la fila; si el grupo todavía no existe, la guarda.</summary>
+        private async Task SaveGroupedAsync(UserActivity activity)
+        {
+            string key = activity.GroupKey!;
+            DateTime now = activity.OccurredAtUtc;
+
+            // 1. Si el grupo ya existe, se suma en la base de datos (atómico: no se pierden intentos).
+            if (await AddAttemptAsync(key, now))
+                return;
+
+            // 2. Si no, se crea. El índice único impide que dos intentos a la vez creen dos filas.
+            _context.UserActivities.Add(activity);
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            {
+                // 3. Otro intento creó el grupo justo ahora: se suma a ese.
+                Forget(activity);
+                if (!await AddAttemptAsync(key, now))
+                    throw;
+            }
+            catch
+            {
+                Forget(activity);
+                throw;
             }
         }
 

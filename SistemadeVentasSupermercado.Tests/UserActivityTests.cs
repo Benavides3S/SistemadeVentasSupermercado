@@ -67,6 +67,7 @@ namespace SistemadeVentasSupermercado.Tests
 
             public Task RecordAccessAsync(UserActivityType type, string userName) => Task.CompletedTask;
             public Task RecordFailedLoginAsync(UserActivityType type, User? target, string? typedEmail) => Task.CompletedTask;
+            public Task RecordFailedAuthorizationAsync(User? authorizer, string requesterUserName) => Task.CompletedTask;
         }
 
         private sealed class RelojFijo(DateTimeOffset ahora) : TimeProvider
