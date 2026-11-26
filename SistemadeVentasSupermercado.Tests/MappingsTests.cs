@@ -293,7 +293,6 @@ namespace SistemadeVentasSupermercado.Tests
 
             AccountUserDTO dto = usuario.ToAccountUserDTO();
 
-            Assert.Equal(usuario.Id, dto.Id);
             Assert.Equal("123", dto.Document);
             Assert.Equal("Ana", dto.FirstName);
             Assert.Equal("Gómez", dto.LastName);

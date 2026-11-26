@@ -26,6 +26,8 @@ namespace SistemadeVentasSupermercado.Web.Data
         public DbSet<Purchase> Purchases { get; set; }
         public DbSet<PurchaseItem> PurchaseItems { get; set; }
         public DbSet<InventoryMovement> InventoryMovements { get; set; }
+        public DbSet<UserActivity> UserActivities { get; set; }
+        public DbSet<UserAuthorizationPin> UserAuthorizationPins { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -112,6 +114,26 @@ namespace SistemadeVentasSupermercado.Web.Data
                 t.HasCheckConstraint("CK_CashSessions_OpeningAmount_NonNegative", "[OpeningAmount] >= 0");
                 t.HasCheckConstraint("CK_CashSessions_CountedAmount_NonNegative", "[CountedAmount] IS NULL OR [CountedAmount] >= 0");
             });
+
+            // ---------- Autorización de supervisor ----------
+            builder.Entity<Sale>()
+                   .HasOne(s => s.CancelAuthorizedByUser).WithMany()
+                   .HasForeignKey(s => s.CancelAuthorizedByUserId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SaleReturn>()
+                   .HasOne(r => r.AuthorizedByUser).WithMany()
+                   .HasForeignKey(r => r.AuthorizedByUserId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            // El PIN es un dato propio del usuario (no es historial): se va con él.
+            builder.Entity<UserAuthorizationPin>()
+                   .HasOne(p => p.User).WithOne()
+                   .HasForeignKey<UserAuthorizationPin>(p => p.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<UserAuthorizationPin>().ToTable(t =>
+                t.HasCheckConstraint("CK_UserAuthorizationPins_FailedAttempts_NonNegative", "[FailedAttempts] >= 0"));
 
             // ---------- Devoluciones ----------
             builder.Entity<SaleReturn>()
@@ -212,6 +234,21 @@ namespace SistemadeVentasSupermercado.Web.Data
                 t.HasCheckConstraint("CK_InventoryMovements_Quantity_NonZero", "[Quantity] <> 0");
                 t.HasCheckConstraint("CK_InventoryMovements_StockAfter_NonNegative", "[StockAfter] >= 0");
             });
+
+            // ---------- Historial de actividad de usuarios ----------
+            // Restrict: un usuario con actividad no se borra (los usuarios se desactivan).
+            builder.Entity<UserActivity>()
+                   .HasOne(a => a.ActorUser).WithMany()
+                   .HasForeignKey(a => a.ActorUserId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<UserActivity>()
+                   .HasOne(a => a.TargetUser).WithMany()
+                   .HasForeignKey(a => a.TargetUserId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<UserActivity>().ToTable(t =>
+                t.HasCheckConstraint("CK_UserActivities_AttemptCount_Positive", "[AttemptCount] >= 1"));
         }
 
         private void ConfigureIndexes(ModelBuilder builder)
@@ -278,6 +315,15 @@ namespace SistemadeVentasSupermercado.Web.Data
                    .IsUnique()
                    .HasFilter("[IdempotencyKey] IS NOT NULL")
                    .HasDatabaseName("IX_Purchases_IdempotencyKey_UserId");
+
+            builder.Entity<UserActivity>().HasIndex(a => a.Number).IsUnique();
+            builder.Entity<UserActivity>().HasIndex(a => a.OccurredAtUtc);
+            // Un solo registro por grupo de fallos (mismo tipo, correo, IP y minuto), aunque lleguen a la vez.
+            builder.Entity<UserActivity>()
+                   .HasIndex(a => a.GroupKey)
+                   .IsUnique()
+                   .HasFilter("[GroupKey] IS NOT NULL")
+                   .HasDatabaseName("IX_UserActivities_GroupKey");
 
             builder.Entity<InventoryMovement>().HasIndex(m => m.Number).IsUnique();
             builder.Entity<InventoryMovement>().HasIndex(m => m.CreatedAtUtc);

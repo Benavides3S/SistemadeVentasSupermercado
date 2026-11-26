@@ -26,14 +26,14 @@
             }
 
 
-        public static Response<T> Failure( string message, List<String> errors = null)
+        public static Response<T> Failure(string message, List<string>? errors = null)
         {
 
             return new Response<T>
             {
                 IsSuccess = false,
                 Message = message,
-                Errors = errors
+                Errors = errors ?? new List<string>()
             };
         }
         public static Response<T> Success(T result, String message = "Tarea realizada con exito")

@@ -11,7 +11,7 @@ namespace SistemadeVentasSupermercado.Web.Helpers
     /// </summary>
     public static class ReportExcelBuilder
     {
-        private const string MoneyFormat = "$ #,##0.##";
+        internal const string MoneyFormat = "$ #,##0.##";
         private const string QuantityFormat = "#,##0.###";
 
         public static byte[] Build(string businessName, DailySalesReportDTO daily, List<TopProductDTO> top)
@@ -26,7 +26,7 @@ namespace SistemadeVentasSupermercado.Web.Helpers
             return stream.ToArray();
         }
 
-        private static void Title(IXLWorksheet sheet, string businessName, string title, DateOnly from, DateOnly to, int lastColumn)
+        internal static void Title(IXLWorksheet sheet, string businessName, string title, DateOnly from, DateOnly to, int lastColumn)
         {
             sheet.Cell(1, 1).Value = businessName;
             sheet.Cell(1, 1).Style.Font.Bold = true;
@@ -36,7 +36,7 @@ namespace SistemadeVentasSupermercado.Web.Helpers
             sheet.Range(2, 1, 2, lastColumn).Merge();
         }
 
-        private static void Header(IXLWorksheet sheet, int row, params string[] titles)
+        internal static void Header(IXLWorksheet sheet, int row, params string[] titles)
         {
             for (int i = 0; i < titles.Length; i++)
                 sheet.Cell(row, i + 1).Value = titles[i];

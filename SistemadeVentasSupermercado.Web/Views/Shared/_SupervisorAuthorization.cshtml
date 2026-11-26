@@ -1,0 +1,40 @@
+@* Lo llena el supervisor en la caja del cajero. Usa ViewBag.Authorizers y ViewBag.SelectedAuthorizer.
+   El PIN nunca vuelve escrito: si hay un error, se escribe de nuevo. *@
+@{
+    List<AuthorizerDTO> authorizers = ViewBag.Authorizers as List<AuthorizerDTO> ?? new();
+    string? selected = ViewBag.SelectedAuthorizer as string;
+}
+
+<div class="border rounded p-3 mt-3 bg-light">
+    <div class="fw-bold mb-2"><i class="bi bi-shield-lock"></i> Autorización de supervisor</div>
+
+    @if (!authorizers.Any())
+    {
+        <div class="alert alert-warning mb-0">
+            Nadie puede autorizar todavía. Un supervisor debe entrar con su usuario y crear su PIN en
+            "Mi PIN de autorización" (menú de arriba a la derecha).
+        </div>
+    }
+    else
+    {
+        <div class="row g-2">
+            <div class="col-md-7">
+                <label for="authorizerUserId" class="form-label">Quién autoriza</label>
+                <select id="authorizerUserId" name="authorizerUserId" class="form-select" required>
+                    <option value="">Elige tu nombre...</option>
+                    @foreach (AuthorizerDTO authorizer in authorizers)
+                    {
+                        <option value="@authorizer.UserId" selected="@(authorizer.UserId == selected)">@authorizer.FullName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label for="authorizationPin" class="form-label">PIN</label>
+                @* "new-password" evita que el navegador rellene una contraseña guardada. *@
+                <input type="password" id="authorizationPin" name="authorizationPin" class="form-control" required
+                       inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" title="6 dígitos" />
+            </div>
+        </div>
+        <div class="form-text">Revisa la operación antes de escribir tu PIN. No se lo digas a nadie.</div>
+    }
+</div>

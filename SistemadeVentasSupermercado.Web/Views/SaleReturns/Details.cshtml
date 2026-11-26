@@ -1,8 +1,16 @@
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
 @model SaleReturnDetailDTO
 
 @{
     ViewData["Title"] = $"Devolución #{Model.Number}";
     BusinessOptions business = (BusinessOptions)ViewBag.Business;
+
+    // La venta se abre en el historial o, para el cajero, en "Anular o devolver".
+    bool showSales = await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas");
+    bool canAssist = !showSales && await _usersService.CurrentUserIsAuthorizedAsync("createSales", "Ventas");
+    string? saleUrl = showSales ? Url.Action("Details", "Sales", new { id = Model.SaleId })
+        : canAssist ? Url.Action("Assist", "Sales", new { number = Model.SaleNumber })
+        : null;
 }
 
 <div class="pagetitle no-print">
@@ -10,7 +18,10 @@
     <nav>
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
-            <li class="breadcrumb-item"><a asp-controller="Sales" asp-action="Details" asp-route-id="@Model.SaleId">Venta #@Model.SaleNumber</a></li>
+            @if (saleUrl != null)
+            {
+                <li class="breadcrumb-item"><a href="@saleUrl">Venta #@Model.SaleNumber</a></li>
+            }
             <li class="breadcrumb-item active">Devolución #@Model.Number</li>
         </ol>
     </nav>
@@ -20,9 +31,12 @@
     <button type="button" class="btn btn-primary" onclick="window.print()">
         <i class="bi bi-printer"></i> Imprimir
     </button>
-    <a asp-controller="Sales" asp-action="Details" asp-route-id="@Model.SaleId" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Ver la venta
-    </a>
+    @if (saleUrl != null)
+    {
+        <a href="@saleUrl" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Ver la venta
+        </a>
+    }
 </div>
 
 <div class="receipt">
@@ -41,6 +55,10 @@
     <div>Venta N.º @Model.SaleNumber</div>
     <div>Fecha: @DisplayFormat.DateTimeColombia(Model.CreatedAtUtc)</div>
     <div>Atendió: @Model.UserName</div>
+    @if (Model.AuthorizedByName != null)
+    {
+        <div>Autorizó: @Model.AuthorizedByName</div>
+    }
     <div>Motivo: @Model.Reason</div>
 
     <hr />

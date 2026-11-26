@@ -18,7 +18,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         public Task<User> GetUserByIdAsync(Guid id);
         public Task<Response<SignInResult>> LoginAsync(LoginDTO dto);
         public Task LogoutAsync();
-        public Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto);
+        /// <summary>El formulario de ingreso se rechazó antes de revisar la contraseña (el correo no es válido).</summary>
+        public Task RecordRejectedLoginFormAsync(LoginDTO dto);
+        public Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto, string userName);
         // For Management
         public Task<Response<TemporaryPasswordDTO>> CreateAsync(UserDTO dto, string requestedByUserName);
         public Task<Response<TemporaryPasswordDTO>> ResetPasswordAsync(Guid userId, string requestedByUserName);
@@ -31,6 +33,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         //public Task<Response<object>> DeleteAsync(Guid id);
         public Task<Response<UserDTO>> EditAsync(UserDTO dto, string requestedByUserName);
         //public Task<Response<UserDTO>> GetOneAsync(Guid id);
-        public Task<Response<PaginationResponse<UserDTO>>> GetPaginatedListAsync(PaginationRequest request);
+        public Task<Response<PaginationResponse<UserDTO>>> GetPaginatedListAsync(PaginationRequest request, UserStatus? status = null);
+        public Task<Response<UserDeactivationDTO>> DeactivateAsync(Guid userId, string requestedByUserName);
+        public Task<Response<string>> ReactivateAsync(Guid userId, string requestedByUserName);
+        public Task<Response<string>> UnlockAsync(Guid userId, string requestedByUserName);
     }
 }

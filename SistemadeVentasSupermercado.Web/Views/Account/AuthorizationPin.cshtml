@@ -1,0 +1,67 @@
+@model SetAuthorizationPinDTO
+
+@{
+    ViewData["Title"] = "Mi PIN de autorización";
+    bool hasPin = ViewBag.HasPin == true;
+}
+
+<div class="pagetitle">
+    <h1>Mi PIN de autorización</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Inicio</a></li>
+            <li class="breadcrumb-item active">Mi PIN de autorización</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">@(hasPin ? "Cambiar mi PIN" : "Crear mi PIN")</h5>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-shield-lock"></i>
+                        Con este PIN autorizas anulaciones o devoluciones en la caja de otra persona, según tu rol.
+                        No sirve para iniciar sesión. Todo lo que autorices queda a tu nombre: no se lo digas a nadie.
+                    </div>
+
+                    <partial name="_FormError" />
+
+                    <form asp-action="AuthorizationPin" method="POST" class="row g-3">
+                        <div class="col-12">
+                            <label asp-for="CurrentPassword" class="form-label"></label>
+                            <input asp-for="CurrentPassword" class="form-control" autocomplete="current-password" />
+                            <span asp-validation-for="CurrentPassword" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Pin" class="form-label"></label>
+                            <input asp-for="Pin" class="form-control" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+                            <span asp-validation-for="Pin" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ConfirmPin" class="form-label"></label>
+                            <input asp-for="ConfirmPin" class="form-control" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+                            <span asp-validation-for="ConfirmPin" class="text-danger"></span>
+                        </div>
+                        <div class="col-12 form-text">
+                            No se aceptan números iguales, seguidos o repetidos (000000, 123456, 121212).
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary">Guardar PIN</button>
+                            <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

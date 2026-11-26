@@ -1,0 +1,220 @@
+@model CashierDetailsDTO
+
+@{
+    CashierRowDTO cashier = Model.Cashier!;
+    ViewData["Title"] = $"Detalle de {cashier.Name}";
+    BusinessOptions business = (BusinessOptions)ViewBag.Business;
+    string fromValue = Model.From.ToString("yyyy-MM-dd");
+    string toValue = Model.To.ToString("yyyy-MM-dd");
+}
+
+<div class="pagetitle no-print">
+    <h1>@cashier.Name</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index" asp-route-From="@fromValue" asp-route-To="@toValue">Reporte por cajero</a></li>
+            <li class="breadcrumb-item active">Detalle</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="print-only mb-3">
+    <h4 class="mb-0">@business.Nombre</h4>
+    <div>Reporte por cajero: @cashier.Name</div>
+</div>
+
+<section class="section">
+    <div class="d-flex gap-2 flex-wrap mb-3 no-print">
+        <a asp-action="Index" asp-route-From="@fromValue" asp-route-To="@toValue" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <a asp-action="Excel" asp-route-cashierId="@cashier.UserId" asp-route-From="@fromValue" asp-route-To="@toValue" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+            <i class="bi bi-file-earmark-pdf"></i> Imprimir / PDF
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-body pt-3">
+            <div>
+                Del @Model.From.ToString("dd/MM/yyyy") al @Model.To.ToString("dd/MM/yyyy")
+                @if (cashier.IsDeactivated)
+                {
+                    <span class="badge bg-secondary">Desactivado</span>
+                }
+            </div>
+            <div class="row mt-2">
+                <div class="col-6 col-lg-3"><div class="text-muted small">Ventas cobradas</div><div class="fw-bold">(@cashier.SalesCount) @DisplayFormat.Money(cashier.SalesTotal)</div></div>
+                <div class="col-6 col-lg-3"><div class="text-muted small">Faltantes</div><div class="fw-bold">@DisplayFormat.Money(cashier.ShortageTotal)</div></div>
+                <div class="col-6 col-lg-3"><div class="text-muted small">Sobrantes</div><div class="fw-bold">@DisplayFormat.Money(cashier.SurplusTotal)</div></div>
+                <div class="col-6 col-lg-3"><div class="text-muted small">Turnos cerrados con descuadre</div><div class="fw-bold">@cashier.UnbalancedSessionsCount de @cashier.ClosedSessionsCount</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body pt-3">
+            <h5 class="card-title py-0">Anulaciones</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered tabla-apilable align-middle">
+                    <thead>
+                        <tr>
+                            <th>Venta</th>
+                            <th>Cobrada</th>
+                            <th>Anulada</th>
+                            <th class="text-end">Valor</th>
+                            <th>Cobró</th>
+                            <th>Anuló</th>
+                            <th>Autorizó</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (CashierCancellationDTO item in Model.Cancellations)
+                        {
+                            <tr>
+                                <td>#@item.SaleNumber</td>
+                                <td>@DisplayFormat.DateTimeColombia(item.SoldAtUtc)</td>
+                                <td>@DisplayFormat.DateTimeColombia(item.CancelledAtUtc)</td>
+                                <td class="text-end">@DisplayFormat.Money(item.Total)</td>
+                                <td>@item.ChargedByName</td>
+                                <td>@item.CancelledByName</td>
+                                <td>@(item.AuthorizedByName ?? "—")</td>
+                                <td class="text-break">@item.Reason</td>
+                            </tr>
+                        }
+                        @if (Model.Cancellations.Count == 0)
+                        {
+                            <tr><td colspan="8" class="text-center text-muted">Sin anulaciones en estas fechas.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body pt-3">
+            <h5 class="card-title py-0">Devoluciones</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered tabla-apilable align-middle">
+                    <thead>
+                        <tr>
+                            <th>Devolución</th>
+                            <th>Venta</th>
+                            <th>Fecha</th>
+                            <th class="text-end">Valor</th>
+                            <th>Reembolso</th>
+                            <th>Cobró la venta</th>
+                            <th>Registró</th>
+                            <th>Autorizó</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (CashierReturnDTO item in Model.Returns)
+                        {
+                            <tr>
+                                <td>#@item.ReturnNumber</td>
+                                <td>#@item.SaleNumber</td>
+                                <td>@DisplayFormat.DateTimeColombia(item.CreatedAtUtc)</td>
+                                <td class="text-end">@DisplayFormat.Money(item.Total)</td>
+                                <td>@item.RefundMethod.Label()</td>
+                                <td>@item.ChargedByName</td>
+                                <td>@item.RegisteredByName</td>
+                                <td>@(item.AuthorizedByName ?? "—")</td>
+                                <td class="text-break">@item.Reason</td>
+                            </tr>
+                        }
+                        @if (Model.Returns.Count == 0)
+                        {
+                            <tr><td colspan="9" class="text-center text-muted">Sin devoluciones en estas fechas.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body pt-3">
+            <h5 class="card-title py-0">Turnos de caja</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered tabla-apilable align-middle">
+                    <thead>
+                        <tr>
+                            <th>Turno</th>
+                            <th>Apertura</th>
+                            <th>Cierre</th>
+                            <th class="text-end">Esperado</th>
+                            <th class="text-end">Contado</th>
+                            <th class="text-end">Diferencia</th>
+                            <th>Cerrado por</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (CashierSessionDTO item in Model.Sessions)
+                        {
+                            <tr>
+                                <td>#@item.Number</td>
+                                <td>@DisplayFormat.DateTimeColombia(item.OpenedAtUtc)</td>
+                                <td>
+                                    @if (item.IsOpen)
+                                    {
+                                        <span class="badge bg-warning text-dark">Abierto ahora</span>
+                                    }
+                                    else
+                                    {
+                                        @DisplayFormat.DateTimeColombia(item.ClosedAtUtc!.Value)
+                                    }
+                                </td>
+                                <td class="text-end">@(item.ExpectedAmount.HasValue && !item.IsOpen ? DisplayFormat.Money(item.ExpectedAmount.Value) : "—")</td>
+                                <td class="text-end">@(item.CountedAmount.HasValue ? DisplayFormat.Money(item.CountedAmount.Value) : "—")</td>
+                                <td class="text-end">
+                                    @if (item.Difference is null)
+                                    {
+                                        <span>—</span>
+                                    }
+                                    else if (item.Difference < 0)
+                                    {
+                                        <span class="text-danger fw-semibold">Faltan @DisplayFormat.Money(-item.Difference.Value)</span>
+                                    }
+                                    else if (item.Difference > 0)
+                                    {
+                                        <span class="fw-semibold">Sobran @DisplayFormat.Money(item.Difference.Value)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Cuadra</span>
+                                    }
+                                </td>
+                                <td>
+                                    @(item.ClosedByName ?? "—")
+                                    @if (item.ClosedByOther)
+                                    {
+                                        <span class="badge bg-info text-dark">Otra persona</span>
+                                    }
+                                </td>
+                                <td class="text-break">@item.Notes</td>
+                            </tr>
+                        }
+                        @if (Model.Sessions.Count == 0)
+                        {
+                            <tr><td colspan="8" class="text-center text-muted">Sin turnos cerrados en estas fechas ni turnos abiertos.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-text">
+                Un turno de varios días puede incluir ventas de antes de las fechas elegidas. Estos datos indican qué revisar;
+                un descuadre o una anulación pueden tener una explicación.
+            </div>
+        </div>
+    </div>
+</section>
+
+<partial name="_PrintStyles" />

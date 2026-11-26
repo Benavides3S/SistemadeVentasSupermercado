@@ -83,6 +83,11 @@ namespace SistemadeVentasSupermercado.Web
               .AddEntityFrameworkStores<DataContext>()
               .AddDefaultTokenProviders();
 
+            // El "sello de seguridad" cambia al restablecer o cambiar la contraseña. Por defecto Identity lo
+            // revisa cada 30 minutos y mientras tanto las sesiones viejas siguen sirviendo: se revisa en
+            // cada petición para que se cierren de inmediato (cuesta unas consultas más por petición).
+            builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.Zero);
+
             builder.Services.ConfigureApplicationCookie(conf =>
             {
                 conf.Cookie.Name = "Auth";
@@ -90,6 +95,8 @@ namespace SistemadeVentasSupermercado.Web
                 conf.SlidingExpiration = true;
                 conf.LoginPath = "/Account/Login";
                 conf.AccessDeniedPath = "/Error/403";
+                // Usuario desactivado: pierde el acceso en su siguiente petición.
+                conf.Events.OnValidatePrincipal = ActiveUserCookieValidator.ValidateAsync;
             });
         }
 
@@ -99,6 +106,10 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddScoped<IClientService, ClientsService>();
             builder.Services.AddScoped<IRolesService, RolesService>();
             builder.Services.AddScoped<IUsersService, UsersService>();
+            builder.Services.AddScoped<IUserActivityRecorder, UserActivityRecorder>();
+            builder.Services.AddScoped<IUserActivityService, UserActivityService>();
+            builder.Services.AddScoped<IAuthorizationPinService, AuthorizationPinService>();
+            builder.Services.AddScoped<ICashierReportService, CashierReportService>();
             builder.Services.AddScoped<ICategoryService, CategoriesService>();
             builder.Services.AddScoped<ISupplierService, SuppliersService>();
 

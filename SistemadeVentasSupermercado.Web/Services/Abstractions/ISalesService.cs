@@ -22,10 +22,16 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
 
         Task<Response<SaleDetailDTO>> GetOneAsync(Guid id);
 
+        /// <summary>Id de la venta con ese número de comprobante, o null si no existe.</summary>
+        Task<Guid?> FindIdByNumberAsync(int number);
+
         /// <summary>
         /// Anula una venta completada y devuelve su stock. Solo mientras el turno de caja
         /// de la venta siga abierto (después se usa una devolución).
+        /// authorizedByUserId: el supervisor cuyo PIN YA se comprobó (null si quien anula tiene el permiso).
+        /// Nunca sale de un dato del navegador sin comprobar.
         /// </summary>
-        Task<Response<SaleDetailDTO>> CancelAsync(Guid saleId, CancelSaleDTO dto, string userId);
+        Task<Response<SaleDetailDTO>> CancelAsync(Guid saleId, CancelSaleDTO dto, string userId,
+            string? authorizedByUserId = null);
     }
 }

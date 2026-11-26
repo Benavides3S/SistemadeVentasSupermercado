@@ -29,6 +29,12 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         /// </summary>
         public bool MustChangePassword { get; set; }
 
+        /// <summary>
+        /// Fecha (UTC) en que se desactivó el usuario; null = activo. Un usuario desactivado no puede
+        /// entrar, pero no se borra: se conservan sus ventas, compras y turnos de caja.
+        /// </summary>
+        public DateTime? DeactivatedAt { get; set; }
+
         public string FullName => $"{FirstName} {LastName}";
     }
 }

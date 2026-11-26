@@ -16,6 +16,9 @@ namespace SistemadeVentasSupermercado.Web.Controllers
     
         public class UsersController : Controller
         {
+            /// <summary>Clave de TempData del aviso "quedó una caja abierta".</summary>
+            public const string OpenCashWarningKey = "OpenCashWarning";
+
             private readonly IUsersService _usersService;
             private readonly INotyfService _notifyService;
             private readonly ICombosHelper _combosHelper;
@@ -29,9 +32,10 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
             [HttpGet]
             [CustomAuthorize(permission: "showUsers", module: "Usuarios")]
-            public async Task<IActionResult> Index([FromQuery] PaginationRequest request)
+            public async Task<IActionResult> Index([FromQuery] PaginationRequest request, [FromQuery] UserStatus? status)
             {
-                Response<PaginationResponse<UserDTO>> response = await _usersService.GetPaginatedListAsync(request);
+                Response<PaginationResponse<UserDTO>> response = await _usersService.GetPaginatedListAsync(request, status);
+                ViewBag.Status = status;
                 return View(response.Result);
             }
 
@@ -64,7 +68,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
             if (!response.IsSuccess)
             {
-                string detalle = response.Errors is null ? "" : " " + string.Join(" ", response.Errors);
+                string detalle = response.Errors.Count == 0 ? "" : " " + string.Join(" ", response.Errors);
                 _notifyService.Error(response.Message + detalle);
                 ModelState.AddModelError(string.Empty, response.Message + detalle);
 
@@ -92,6 +96,53 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             }
 
             return TemporaryPasswordView(response.Result!);
+        }
+
+        [HttpPost]
+        [CustomAuthorize(permission: "deactivateUsers", module: "Usuarios")]
+        public async Task<IActionResult> Deactivate([FromRoute] Guid id)
+        {
+            Response<UserDeactivationDTO> response = await _usersService.DeactivateAsync(id, User.Identity!.Name!);
+
+            if (!response.IsSuccess)
+            {
+                _notifyService.Error(response.Message);
+                return RedirectToAction(nameof(Index));
+            }
+
+            _notifyService.Success(response.Message);
+
+            UserDeactivationDTO result = response.Result!;
+            if (result.OpenCashSessionNumber is not null)
+            {
+                // Aviso fijo en la lista (un toast desaparece a los pocos segundos).
+                TempData[OpenCashWarningKey] =
+                    $"{result.FullName} quedó sin acceso, pero tiene abierta la caja n.º {result.OpenCashSessionNumber} " +
+                    $"desde el {DisplayFormat.DateTimeColombia(result.OpenCashSessionOpenedAtUtc!.Value)}. " +
+                    "Alguien con permiso para ver los turnos de caja debe cerrarla en \"Turnos de caja\".";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [CustomAuthorize(permission: "deactivateUsers", module: "Usuarios")]
+        public async Task<IActionResult> Reactivate([FromRoute] Guid id)
+            => NotifyAndReturnToList(await _usersService.ReactivateAsync(id, User.Identity!.Name!));
+
+        [HttpPost]
+        [CustomAuthorize(permission: "resetPasswords", module: "Usuarios")]
+        public async Task<IActionResult> Unlock([FromRoute] Guid id)
+            => NotifyAndReturnToList(await _usersService.UnlockAsync(id, User.Identity!.Name!));
+
+        private IActionResult NotifyAndReturnToList(Response<string> response)
+        {
+            if (response.IsSuccess)
+                _notifyService.Success(response.Message);
+            else
+                _notifyService.Error(response.Message);
+
+            return RedirectToAction(nameof(Index));
         }
 
         /// <summary>

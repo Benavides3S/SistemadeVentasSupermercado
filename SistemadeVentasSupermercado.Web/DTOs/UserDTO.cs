@@ -40,6 +40,10 @@ namespace SistemadeVentasSupermercado.Web.DTOs
 
         public IEnumerable<SelectListItem>? SistemaVentasRoles { get; set; }
 
+        // Solo para mostrar en la lista (ToEntity no los copia).
+        public string? RoleName { get; set; }
+        public UserStatus Status { get; set; }
+
         public string FullName => $"{FirstName} {LastName}";
     }
 }

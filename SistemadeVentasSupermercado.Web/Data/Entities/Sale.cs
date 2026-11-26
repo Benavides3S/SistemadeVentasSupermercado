@@ -76,6 +76,12 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         public string? CancelledByUserId { get; set; }
         public User? CancelledByUser { get; set; }
 
+        /// <summary>
+        /// Supervisor que autorizó la anulación con su PIN. Vacío si quien anuló ya tenía el permiso.
+        /// </summary>
+        public string? CancelAuthorizedByUserId { get; set; }
+        public User? CancelAuthorizedByUser { get; set; }
+
         /// <summary>Suma de todo lo devuelto de esta venta (0 si no hay devoluciones).</summary>
         [Display(Name = "Devuelto")]
         public decimal ReturnedTotal { get; set; }

@@ -16,9 +16,28 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
     {
         private readonly DataContext _context;
 
-        public RolesService(DataContext context) : base(context)
+        private readonly IUserActivityRecorder _activity;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public RolesService(DataContext context, IUserActivityRecorder activity, IHttpContextAccessor httpContextAccessor)
+            : base(context)
         {
             _context = context;
+            _activity = activity;
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        private string? CurrentUserName => _httpContextAccessor.HttpContext?.User.Identity?.Name;
+
+        /// <summary>"Módulo: descripción" de esos permisos, para el historial.</summary>
+        private async Task<string> DescribePermissionsAsync(List<Guid> ids)
+        {
+            List<string> names = await _context.Permissions.Where(p => ids.Contains(p.Id))
+                .OrderBy(p => p.Module).ThenBy(p => p.Description)
+                .Select(p => p.Module + ": " + p.Description)
+                .ToListAsync();
+
+            return names.Count == 0 ? "ninguno" : string.Join("; ", names);
         }
 
         public async Task<Response<SistemaVentaRoleDTO>> CreateAsync(SistemaVentaRoleDTO dto)
@@ -57,6 +76,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         await _context.RolePermissions.AddAsync(rolePermission);
                     }
 
+                    await _activity.StageAsync(UserActivityType.RoleCreated, CurrentUserName, targetName: role.Name,
+                        details: "Permisos: " + await DescribePermissionsAsync(permissionIds));
                     await _context.SaveChangesAsync();
 
                     transaction.Commit();
@@ -77,7 +98,26 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             {
                 return Response<object>.Failure("No puede eliminar el rol ya que existen usuarios que lo contienen");
             }
-            return await DeleteAsync<SistemaVentasRole>(id);
+
+            await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                string? name = await _context.SistemaVentasRoles.Where(r => r.Id == id)
+                    .Select(r => r.Name).FirstOrDefaultAsync();
+
+                Response<object> response = await DeleteAsync<SistemaVentasRole>(id);
+                if (!response.IsSuccess)
+                    return response;
+
+                await _activity.StageAsync(UserActivityType.RoleDeleted, CurrentUserName, targetName: name);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return Response<object>.Failure(ex);
+            }
         }
 
         public async Task<Response<SistemaVentaRoleDTO>> EditAsync(SistemaVentaRoleDTO dto)
@@ -99,6 +139,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 if (IsReservedName(dto.Name))
                     return Response<SistemaVentaRoleDTO>.Failure(ReservedNameMessage);
 
+                string oldName = role.Name;
                 role.Name = dto.Name.Trim();
 
                 // Permissions
@@ -113,6 +154,15 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 List<RolePermission> oldRolePermissions = await _context.RolePermissions.Where(rp => rp.SistemaVentasRoleId == dto.Id).ToListAsync();
                 _context.RolePermissions.RemoveRange(oldRolePermissions);
 
+                // Qué cambió, para el historial.
+                List<Guid> oldIds = oldRolePermissions.Select(rp => rp.PermissionId).ToList();
+                List<Guid> added = permissionIds.Except(oldIds).ToList();
+                List<Guid> removed = oldIds.Except(permissionIds).ToList();
+                List<string> changes = [];
+                if (oldName != role.Name) changes.Add($"Nombre: {oldName} → {role.Name}");
+                if (added.Count > 0) changes.Add("Permisos agregados: " + await DescribePermissionsAsync(added));
+                if (removed.Count > 0) changes.Add("Permisos quitados: " + await DescribePermissionsAsync(removed));
+
                 // Create new ones
                 foreach (Guid permissionId in permissionIds)
                 {
@@ -124,6 +174,11 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
                     await _context.RolePermissions.AddAsync(rolePermission);
                 }
+
+                // El registro va en el mismo SaveChanges que el cambio (una sola transacción).
+                if (changes.Count > 0)
+                    await _activity.StageAsync(UserActivityType.RoleEdited, CurrentUserName, targetName: role.Name,
+                        details: string.Join(". ", changes));
 
                 await _context.SaveChangesAsync();
 

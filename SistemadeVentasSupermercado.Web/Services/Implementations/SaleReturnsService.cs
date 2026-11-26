@@ -11,10 +11,13 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
     public class SaleReturnsService : ISaleReturnsService
     {
         private readonly DataContext _context;
+        private readonly IUserActivityRecorder? _activity;
 
-        public SaleReturnsService(DataContext context)
+        // El registro de actividad solo se usa en devoluciones autorizadas por un supervisor.
+        public SaleReturnsService(DataContext context, IUserActivityRecorder? activity = null)
         {
             _context = context;
+            _activity = activity;
         }
 
         private static Response<SaleReturnDetailDTO> Fail(string message)
@@ -75,8 +78,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 .Select(g => new { SaleItemId = g.Key, Quantity = g.Sum(r => r.Quantity) })
                 .ToDictionaryAsync(x => x.SaleItemId, x => x.Quantity);
 
-        public async Task<Response<SaleReturnDetailDTO>> CreateAsync(Guid saleId, CreateSaleReturnDTO dto, string userId)
+        public async Task<Response<SaleReturnDetailDTO>> CreateAsync(Guid saleId, CreateSaleReturnDTO dto, string userId,
+            string? authorizedByUserId = null)
         {
+            if (authorizedByUserId == userId)
+                return Fail("No puedes autorizarte a ti mismo");
+
             // ---------- Validaciones que no necesitan la base de datos ----------
 
             string reason = dto.Reason?.Trim() ?? string.Empty;
@@ -179,6 +186,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     Id = Guid.NewGuid(),
                     SaleId = saleId,
                     UserId = userId,
+                    AuthorizedByUserId = authorizedByUserId,
                     CashSessionId = cashSessionId,
                     CreatedAtUtc = DateTime.UtcNow,
                     Reason = reason,
@@ -254,6 +262,15 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 await _context.SaveChangesAsync();
 
                 await InventoryRecorder.SaveAsync(_context, movements, saleReturn.Number);
+
+                // Después de guardar, porque el número de la devolución lo pone la base de datos.
+                if (authorizedByUserId is not null)
+                {
+                    await SupervisorAuthorizationLog.StageAsync(_context, _activity, authorizedByUserId, userId,
+                        $"Devolución N.º {saleReturn.Number} de la venta N.º {sale.Number}");
+                    await _context.SaveChangesAsync();
+                }
+
                 await transaction.CommitAsync();
 
                 Response<SaleReturnDetailDTO> result = await GetOneAsync(saleReturn.Id);
@@ -281,7 +298,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         SaleId = r.SaleId,
                         SaleNumber = r.Sale!.Number,
                         CreatedAtUtc = r.CreatedAtUtc,
+                        UserId = r.UserId,
                         UserName = r.User!.FirstName + " " + r.User.LastName,
+                        AuthorizedByName = r.AuthorizedByUser != null
+                            ? r.AuthorizedByUser.FirstName + " " + r.AuthorizedByUser.LastName : null,
                         Reason = r.Reason,
                         RefundMethod = r.RefundMethod,
                         Total = r.Total,

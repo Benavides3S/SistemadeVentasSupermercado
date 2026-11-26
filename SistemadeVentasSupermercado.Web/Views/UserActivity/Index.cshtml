@@ -1,0 +1,143 @@
+@model PaginationResponse<UserActivityDTO>
+
+@{
+    ViewData["Title"] = "Actividad de usuarios";
+    UserActivityQueryDTO query = ViewBag.Query as UserActivityQueryDTO ?? new UserActivityQueryDTO();
+
+    // Los enlaces de paginación conservan todos los filtros.
+    Dictionary<string, string?> RouteFor(int page) => new()
+    {
+        ["Page"] = page.ToString(),
+        ["RecordsPerPage"] = Model.RecordsPerPage.ToString(),
+        ["Filter"] = Model.Filter,
+        ["Type"] = query.Type.HasValue ? ((int)query.Type.Value).ToString() : null,
+        ["From"] = query.From?.ToString("yyyy-MM-dd"),
+        ["To"] = query.To?.ToString("yyyy-MM-dd")
+    };
+}
+
+<div class="pagetitle">
+    <h1>Actividad de usuarios</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item active">Actividad de usuarios</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <div class="card">
+        <div class="card-body pt-3">
+            <form asp-action="Index" method="GET" class="row g-2 mb-3">
+                <input type="hidden" name="Page" value="1" />
+                <div class="col-md-auto">
+                    <select name="RecordsPerPage" class="form-select bg-light border-0 small" aria-label="Registros por página">
+                        <option value="10" selected="@(Model.RecordsPerPage == 10)">10</option>
+                        <option value="15" selected="@(Model.RecordsPerPage == 15)">15</option>
+                        <option value="30" selected="@(Model.RecordsPerPage == 30)">30</option>
+                        <option value="50" selected="@(Model.RecordsPerPage == 50)">50</option>
+                    </select>
+                </div>
+                <div class="col-md">
+                    <input type="text" name="Filter" value="@Model.Filter" class="form-control bg-light border-0 small"
+                           placeholder="Nombre, correo o rol..." />
+                </div>
+                <div class="col-md-auto">
+                    <select name="Type" class="form-select bg-light border-0 small" aria-label="Tipo de evento">
+                        <option value="">Todos los eventos</option>
+                        @foreach (UserActivityType type in Enum.GetValues<UserActivityType>())
+                        {
+                            <option value="@((int)type)" selected="@(query.Type == type)">@type.Label()</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-auto">
+                    <input type="date" name="From" value="@query.From?.ToString("yyyy-MM-dd")" class="form-control bg-light border-0 small" aria-label="Desde" title="Desde" />
+                </div>
+                <div class="col-md-auto">
+                    <input type="date" name="To" value="@query.To?.ToString("yyyy-MM-dd")" class="form-control bg-light border-0 small" aria-label="Hasta" title="Hasta" />
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-primary" title="Buscar"><i class="bi bi-search"></i></button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-bordered tabla-apilable align-middle">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Evento</th>
+                            <th>Quién</th>
+                            <th>Sobre</th>
+                            <th>Detalle</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.List != null && Model.List.Any())
+                        {
+                            foreach (UserActivityDTO item in Model.List)
+                            {
+                                <tr>
+                                    <td>@DisplayFormat.DateTimeColombia(item.OccurredAtUtc)</td>
+                                    <td>@item.Type.Label()</td>
+                                    <td class="text-break">@(item.ActorName ?? "—")</td>
+                                    <td class="text-break">@(item.TargetName ?? "—")</td>
+                                    <td class="text-break">
+                                        @if (item.AttemptCount > 1 && item.LastAttemptAtUtc.HasValue)
+                                        {
+                                            <span>@item.AttemptCount intentos; el último: @DisplayFormat.DateTimeColombia(item.LastAttemptAtUtc.Value)</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@(item.Details ?? "—")</span>
+                                        }
+                                    </td>
+                                    <td>@(item.IpAddress ?? "—")</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center">No hay actividad con esos filtros.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Páginas">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item @(Model.HasPrevious ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(1)"><i class="bi bi-chevron-double-left"></i></a>
+                        </li>
+                        <li class="page-item @(Model.HasPrevious ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(Model.CurrentPage - 1)"><i class="bi bi-chevron-left"></i></a>
+                        </li>
+                        @foreach (int pageNumber in Model.Pages)
+                        {
+                            <li class="page-item @(pageNumber == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(pageNumber)">@pageNumber</a>
+                            </li>
+                        }
+                        <li class="page-item @(Model.HasNext ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(Model.CurrentPage + 1)"><i class="bi bi-chevron-right"></i></a>
+                        </li>
+                        <li class="page-item @(Model.HasNext ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index" asp-all-route-data="@RouteFor(Model.TotalPages)"><i class="bi bi-chevron-double-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+            <div class="text-muted small text-end">
+                @Model.TotalCount registro(s). Los intentos fallidos repetidos en el mismo minuto salen en una sola línea.
+                La dirección IP es solo una pista y puede no ser la del equipo.
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Core.Mappings;
 using SistemadeVentasSupermercado.Web.Core.Pagination;
@@ -20,13 +21,15 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         private readonly UserManager<User> _userManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<UsersService> _logger; // ✅ Agregar esto
+        private readonly IUserActivityRecorder _activity;
 
 
         public UsersService(DataContext context,
                         SignInManager<User> signInManager,
                         UserManager<User> userManager,
                         IHttpContextAccessor httpContextAccessor,
-                        ILogger<UsersService> logger) : base(context) // ✅ Agregar logger
+                        ILogger<UsersService> logger,
+                        IUserActivityRecorder activity) : base(context) // ✅ Agregar logger
 
         {
             _context = context;
@@ -34,6 +37,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
+            _activity = activity;
         }
 
         public async Task<Response<IdentityResult>> AddUserAsync(User user, string password)
@@ -109,6 +113,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 user.SistemaVentasRoleId = roleId;
                 user.MustChangePassword = true;
 
+                // El usuario y su registro en el historial quedan juntos (o ninguno).
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
                 string temporaryPassword = PasswordGenerator.Generate();
                 Response<IdentityResult> createResponse = await AddUserAsync(user, temporaryPassword);
 
@@ -117,6 +124,11 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     List<string>? errors = createResponse.Result?.Errors.Select(e => e.Description).ToList();
                     return Response<TemporaryPasswordDTO>.Failure("No se pudo crear el usuario.", errors);
                 }
+
+                string? roleName = await RoleNameAsync(roleId);
+                await _activity.StageAsync(UserActivityType.UserCreated, requestedByUserName, user, details: $"Rol: {roleName}");
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 _logger.LogInformation("Usuario creado: {Email} por {CreadoPor}", dto.Email, requestedByUserName);
 
@@ -155,12 +167,21 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 user.AccessFailedCount = 0;
                 user.LockoutEnd = null;
 
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
                 string token = await _userManager.GeneratePasswordResetTokenAsync(user);
                 IdentityResult result = await _userManager.ResetPasswordAsync(user, token, temporaryPassword);
 
                 if (!result.Succeeded)
                     return Response<TemporaryPasswordDTO>.Failure("No se pudo restablecer la contraseña.",
                         result.Errors.Select(e => e.Description).ToList());
+
+                // Si la cuenta estuvo en manos de otro, su PIN de autorización tampoco debe servir.
+                await _context.UserAuthorizationPins.Where(p => p.UserId == user.Id).ExecuteDeleteAsync();
+
+                await _activity.StageAsync(UserActivityType.PasswordReset, requestedByUserName, user);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 _logger.LogInformation("Contraseña restablecida: {Email} por {RestablecidoPor}", user.Email, requestedByUserName);
 
@@ -192,6 +213,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 // Se guarda junto con la contraseña nueva, en la misma operación de Identity.
                 user.MustChangePassword = false;
 
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
                 IdentityResult result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
 
                 if (!result.Succeeded)
@@ -201,6 +224,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         : e.Description).ToList();
                     return Response<User>.Failure(string.Join(" ", errors), errors);
                 }
+
+                await _activity.StageAsync(UserActivityType.PasswordChanged, userName, user);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 return Response<User>.Success(user, "Contraseña cambiada con éxito");
             }
@@ -225,8 +252,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         private async Task<bool> IsSuperAdminRoleAsync(Guid roleId)
             => await _context.SistemaVentasRoles.AnyAsync(r => r.Id == roleId && r.Name == Env.SUPER_ADMIN_ROLE_NAME);
 
+        /// <summary>Un Admin desactivado ya no cuenta como Admin.</summary>
         private async Task<bool> IsSuperAdminUserAsync(string userName)
             => await _context.Users.AnyAsync(u => u.UserName == userName
+                                                  && u.DeactivatedAt == null
                                                   && u.SistemaVentasRole != null
                                                   && u.SistemaVentasRole.Name == Env.SUPER_ADMIN_ROLE_NAME);
 
@@ -239,6 +268,160 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             IsNewUser = isNewUser
         };
 
+
+        /// <summary>
+        /// Desactiva un usuario: no puede entrar y sus sesiones abiertas dejan de servir en la siguiente
+        /// petición (ver ActiveUserCookieValidator). No se borra: se conservan sus ventas y turnos.
+        /// Si tiene la caja abierta se permite igual y se devuelve el turno para avisar.
+        /// </summary>
+        public async Task<Response<UserDeactivationDTO>> DeactivateAsync(Guid userId, string requestedByUserName)
+        {
+            try
+            {
+                string id = userId.ToString();
+                string fullName;
+
+                await using (IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync())
+                {
+                    await LockAdminRoleAsync();
+
+                    User? user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                    if (user is null)
+                        return Response<UserDeactivationDTO>.Failure("No existe el usuario.");
+
+                    if (string.Equals(user.UserName, requestedByUserName, StringComparison.OrdinalIgnoreCase))
+                        return Response<UserDeactivationDTO>.Failure("No puedes desactivar tu propio usuario.");
+
+                    // Se revisa DESPUÉS del bloqueo: si otro Admin acaba de desactivar a quien pide esto, se rechaza.
+                    if (!await _context.Users.AnyAsync(u => u.UserName == requestedByUserName && u.DeactivatedAt == null))
+                        return Response<UserDeactivationDTO>.Failure("Tu usuario no está activo.");
+
+                    if (await IsSuperAdminRoleAsync(user.SistemaVentasRoleId))
+                    {
+                        if (!await IsSuperAdminUserAsync(requestedByUserName))
+                            return Response<UserDeactivationDTO>.Failure(
+                                $"Solo un usuario con rol '{Env.SUPER_ADMIN_ROLE_NAME}' puede desactivar a otro '{Env.SUPER_ADMIN_ROLE_NAME}'.");
+
+                        if (!await ExistsOtherActiveAdminAsync(user))
+                            return Response<UserDeactivationDTO>.Failure("No se puede desactivar al único administrador activo.");
+                    }
+
+                    // También cambian los sellos: el de seguridad invalida las sesiones y el de concurrencia
+                    // impide que un guardado de Identity con datos viejos vuelva a dejarlo activo.
+                    DateTime now = DateTime.UtcNow;
+                    int changed = await _context.Users
+                        .Where(u => u.Id == id && u.DeactivatedAt == null)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(u => u.DeactivatedAt, now)
+                            .SetProperty(u => u.SecurityStamp, Guid.NewGuid().ToString())
+                            .SetProperty(u => u.ConcurrencyStamp, Guid.NewGuid().ToString()));
+
+                    if (changed == 0)
+                        return Response<UserDeactivationDTO>.Failure("El usuario ya estaba desactivado.");
+
+                    await _activity.StageAsync(UserActivityType.UserDeactivated, requestedByUserName, user);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    fullName = user.FullName;
+                }
+
+                _logger.LogInformation("Usuario desactivado: {UserId} por {DesactivadoPor}", id, requestedByUserName);
+
+                var openSession = await _context.CashSessions.AsNoTracking()
+                    .Where(c => c.UserId == id && c.Status == CashSessionStatus.Open)
+                    .Select(c => new { c.Number, c.OpenedAtUtc })
+                    .FirstOrDefaultAsync();
+
+                return Response<UserDeactivationDTO>.Success(new UserDeactivationDTO
+                {
+                    FullName = fullName,
+                    OpenCashSessionNumber = openSession?.Number,
+                    OpenCashSessionOpenedAtUtc = openSession?.OpenedAtUtc
+                }, "Usuario desactivado");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al desactivar el usuario {UserId}", userId);
+                return Response<UserDeactivationDTO>.Failure("No se pudo desactivar el usuario.");
+            }
+        }
+
+        /// <summary>Vuelve a activar un usuario. Entra con la contraseña que tenía.</summary>
+        public Task<Response<string>> ReactivateAsync(Guid userId, string requestedByUserName)
+            => ChangeAccessAsync(userId, requestedByUserName, "reactivar",
+                user => user.DeactivatedAt is null ? "El usuario ya está activo." : null,
+                query => query.ExecuteUpdateAsync(s => s
+                    .SetProperty(u => u.DeactivatedAt, (DateTime?)null)
+                    .SetProperty(u => u.AccessFailedCount, 0)
+                    .SetProperty(u => u.LockoutEnd, (DateTimeOffset?)null)
+                    .SetProperty(u => u.ConcurrencyStamp, Guid.NewGuid().ToString())),
+                UserActivityType.UserReactivated, "Usuario reactivado");
+
+        /// <summary>Quita el bloqueo por intentos fallidos sin cambiar la contraseña.</summary>
+        public Task<Response<string>> UnlockAsync(Guid userId, string requestedByUserName)
+            => ChangeAccessAsync(userId, requestedByUserName, "desbloquear",
+                user => user.DeactivatedAt is not null ? "El usuario está desactivado."
+                      : user.LockoutEnd is null || user.LockoutEnd <= DateTimeOffset.UtcNow ? "El usuario no está bloqueado."
+                      : null,
+                query => query.ExecuteUpdateAsync(s => s
+                    .SetProperty(u => u.AccessFailedCount, 0)
+                    .SetProperty(u => u.LockoutEnd, (DateTimeOffset?)null)
+                    .SetProperty(u => u.ConcurrencyStamp, Guid.NewGuid().ToString())),
+                UserActivityType.UserUnlocked, "Usuario desbloqueado");
+
+        /// <summary>Parte común de reactivar y desbloquear. Un Admin solo lo puede tocar otro Admin.</summary>
+        private async Task<Response<string>> ChangeAccessAsync(Guid userId, string requestedByUserName, string action,
+            Func<User, string?> rejection, Func<IQueryable<User>, Task<int>> update, UserActivityType activityType,
+            string successMessage)
+        {
+            try
+            {
+                // Con el bloqueo, dos clics a la vez no dejan dos registros: el segundo ya ve el cambio.
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+                await LockAdminRoleAsync();
+
+                string id = userId.ToString();
+                User? user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                if (user is null)
+                    return Response<string>.Failure("No existe el usuario.");
+
+                if (await IsSuperAdminRoleAsync(user.SistemaVentasRoleId) && !await IsSuperAdminUserAsync(requestedByUserName))
+                    return Response<string>.Failure(
+                        $"Solo un usuario con rol '{Env.SUPER_ADMIN_ROLE_NAME}' puede {action} a otro '{Env.SUPER_ADMIN_ROLE_NAME}'.");
+
+                string? reason = rejection(user);
+                if (reason is not null)
+                    return Response<string>.Failure(reason);
+
+                await update(_context.Users.Where(u => u.Id == id));
+                await _activity.StageAsync(activityType, requestedByUserName, user);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                _logger.LogInformation("{Mensaje}: {UserId} por {Quien}", successMessage, id, requestedByUserName);
+
+                return Response<string>.Success(user.FullName, successMessage);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al {Accion} el usuario {UserId}", action, userId);
+                return Response<string>.Failure($"No se pudo {action} el usuario.");
+            }
+        }
+
+        /// <summary>
+        /// Debe llamarse dentro de una transacción y ANTES de revisar quién es Admin. Bloquea la fila del
+        /// rol Admin (sin cambiarla): así desactivar y cambiar roles se hacen de uno en uno, y dos
+        /// operaciones a la vez no pueden dejar el sistema sin ningún Admin activo.
+        /// </summary>
+        private Task LockAdminRoleAsync()
+            => _context.SistemaVentasRoles
+                .Where(r => r.Name == Env.SUPER_ADMIN_ROLE_NAME)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Name, r => r.Name));
+
+        private Task<bool> ExistsOtherActiveAdminAsync(User admin)
+            => _context.Users.AnyAsync(u => u.Id != admin.Id
+                                            && u.SistemaVentasRoleId == admin.SistemaVentasRoleId
+                                            && u.DeactivatedAt == null);
 
         public bool CurrentUserIsAuthenticaded()
         {
@@ -312,6 +495,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         {
             try
             {
+                await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+                await LockAdminRoleAsync();
+
                 User? user = await GetUserAsync(dto.Id?.ToString());
 
                 if (user == null)
@@ -342,10 +528,17 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 if (roleChanges && string.Equals(user.UserName, requestedByUserName, StringComparison.OrdinalIgnoreCase))
                     return Response<UserDTO>.Failure("No puedes cambiar tu propio rol. Pídeselo a otro administrador.");
 
-                // Siempre debe quedar al menos un Admin.
-                if (roleChanges && targetIsAdmin && !newRoleIsAdmin
-                    && !await _context.Users.AnyAsync(u => u.Id != user.Id && u.SistemaVentasRoleId == user.SistemaVentasRoleId))
+                // Quien perdió el acceso mientras tanto (otra operación lo desactivó) no puede editar.
+                if (await _context.Users.AnyAsync(u => u.UserName == requestedByUserName && u.DeactivatedAt != null))
+                    return Response<UserDTO>.Failure("Tu usuario no está activo.");
+
+                // Siempre debe quedar al menos un Admin activo.
+                if (roleChanges && targetIsAdmin && !newRoleIsAdmin && user.DeactivatedAt is null
+                    && !await ExistsOtherActiveAdminAsync(user))
                     return Response<UserDTO>.Failure($"No se puede quitar el rol '{Env.SUPER_ADMIN_ROLE_NAME}' al único administrador.");
+
+                Guid oldRoleId = user.SistemaVentasRoleId;
+                List<string> changedFields = ChangedFields(user, dto.Document, dto.FirstName, dto.LastName, dto.PhoneNumber);
 
                 user.PhoneNumber = dto.PhoneNumber;
                 user.Document = dto.Document;
@@ -354,6 +547,19 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                 user.SistemaVentasRoleId = newRoleId;
 
                 await _context.SaveChangesAsync();
+
+                if (roleChanges)
+                {
+                    await _activity.StageAsync(UserActivityType.UserRoleChanged, requestedByUserName, user,
+                        details: $"Rol: {await RoleNameAsync(oldRoleId)} → {await RoleNameAsync(newRoleId)}");
+                    // Uno por uno: en un mismo guardado EF los ordena por el Id (al azar) y el número no seguiría el orden.
+                    await _context.SaveChangesAsync();
+                }
+                if (changedFields.Count > 0)
+                    await _activity.StageAsync(UserActivityType.UserEdited, requestedByUserName, user,
+                        details: "Cambió: " + string.Join(", ", changedFields));
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 if (roleChanges)
                     _logger.LogInformation("Rol cambiado: {Email} por {CambiadoPor}", user.Email, requestedByUserName);
@@ -378,9 +584,19 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
         //    throw new NotImplementedException();
         //}
 
-        public async Task<Response<PaginationResponse<UserDTO>>> GetPaginatedListAsync(PaginationRequest request)
+        public async Task<Response<PaginationResponse<UserDTO>>> GetPaginatedListAsync(PaginationRequest request,
+            UserStatus? status = null)
         {
-            IQueryable<User> queryable = _context.Users.AsQueryable();
+            IQueryable<User> queryable = _context.Users.AsNoTracking().Include(u => u.SistemaVentasRole);
+
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            queryable = status switch
+            {
+                UserStatus.Active => queryable.Where(u => u.DeactivatedAt == null && (u.LockoutEnd == null || u.LockoutEnd <= now)),
+                UserStatus.Locked => queryable.Where(u => u.DeactivatedAt == null && u.LockoutEnd != null && u.LockoutEnd > now),
+                UserStatus.Deactivated => queryable.Where(u => u.DeactivatedAt != null),
+                _ => queryable
+            };
 
             if (!string.IsNullOrEmpty(request.Filter))
             {
@@ -394,6 +610,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     || (!string.IsNullOrEmpty(u.PhoneNumber) && u.PhoneNumber.ToLower().Contains(f))
                 );
             }
+
+            queryable = queryable.OrderBy(u => u.FirstName).ThenBy(u => u.LastName).ThenBy(u => u.Id);
 
             return await GetPaginationAsync<User, UserDTO>(request, u => u.ToUserDTO(), queryable);
         }
@@ -412,9 +630,25 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         public async Task<Response<SignInResult>> LoginAsync(LoginDTO dto)
         {
+            // Un usuario desactivado no entra, y no se le dice por qué a quien está en el login.
+            User? account = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserName == dto.Email);
+            if (account?.DeactivatedAt is not null)
+            {
+                await _activity.RecordFailedLoginAsync(UserActivityType.DeactivatedLoginRejected, account, dto.Email);
+                return new Response<SignInResult> { Result = SignInResult.NotAllowed, IsSuccess = false };
+            }
+
             // lockoutOnFailure: true → tras 5 intentos fallidos seguidos la cuenta se bloquea 15 minutos
             // (ver CustomConfiguration.ConfigureIdentityOptions).
             SignInResult result = await _signInManager.PasswordSignInAsync(dto.Email, dto.Password, isPersistent: false, lockoutOnFailure: true);
+
+            if (result.Succeeded)
+                await _activity.RecordAccessAsync(UserActivityType.LoginSucceeded, dto.Email);
+            else
+                // Si alguien escribió su contraseña en los dos campos, el "correo" no se guarda.
+                await _activity.RecordFailedLoginAsync(
+                    result.IsLockedOut ? UserActivityType.AccountLocked : UserActivityType.LoginFailed,
+                    account, dto.Email == dto.Password ? null : dto.Email);
 
             return new Response<SignInResult>
             {
@@ -423,22 +657,58 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             };
         }
 
+        public Task RecordRejectedLoginFormAsync(LoginDTO dto)
+            => _activity.RecordFailedLoginAsync(UserActivityType.LoginFailed, null,
+                dto.Email == dto.Password ? null : dto.Email);
+
         public async Task LogoutAsync()
         {
+            string? userName = _httpContextAccessor.HttpContext?.User.Identity?.Name;
             await _signInManager.SignOutAsync();
+
+            if (userName is not null)
+                await _activity.RecordAccessAsync(UserActivityType.Logout, userName);
         }
 
-        public async Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto)
+        private Task<string?> RoleNameAsync(Guid roleId)
+            => _context.SistemaVentasRoles.Where(r => r.Id == roleId).Select(r => (string?)r.Name).FirstOrDefaultAsync();
+
+        /// <summary>Solo los NOMBRES de los campos que cambian: el historial no copia los datos personales.</summary>
+        private static List<string> ChangedFields(User user, string document, string firstName, string lastName, string? phone)
+        {
+            List<string> changed = [];
+            if (user.Document != document) changed.Add("Documento");
+            if (user.FirstName != firstName) changed.Add("Nombres");
+            if (user.LastName != lastName) changed.Add("Apellidos");
+            if ((user.PhoneNumber ?? string.Empty) != (phone ?? string.Empty)) changed.Add("Teléfono");
+            return changed;
+        }
+
+        /// <summary>
+        /// "Mi perfil". A quién se edita lo decide userName (el de la sesión), nunca el formulario:
+        /// si viniera del navegador, cualquiera podría cambiar los datos de otro usuario.
+        /// </summary>
+        public async Task<Response<AccountUserDTO>> UpdateUserAsync(AccountUserDTO dto, string userName)
         {
             try
             {
-                User user = await GetUserAsync(dto.Id);
+                User? user = await _userManager.FindByNameAsync(userName);
+                if (user is null)
+                    return Response<AccountUserDTO>.Failure("No existe el usuario.");
+
+                List<string> changedFields = ChangedFields(user, dto.Document, dto.FirstName, dto.LastName, dto.PhoneNumber);
+
                 user.PhoneNumber = dto.PhoneNumber;
                 user.Document = dto.Document;
                 user.FirstName = dto.FirstName;
                 user.LastName = dto.LastName;
 
                 _context.Users.Update(user);
+
+                // Se guarda junto con el cambio (un solo SaveChanges es una sola transacción).
+                if (changedFields.Count > 0)
+                    await _activity.StageAsync(UserActivityType.ProfileUpdated, userName, user,
+                        details: "Cambió: " + string.Join(", ", changedFields));
 
                 await _context.SaveChangesAsync();
 

@@ -39,3 +39,6 @@ app.MapControllerRoute(
 app.AddCustomWebApplicationConfiguration();
 
 app.Run();
+
+// Necesario para que las pruebas (WebApplicationFactory) puedan arrancar la aplicación.
+public partial class Program { }

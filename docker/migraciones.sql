@@ -1480,3 +1480,203 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126033930_DesactivarUsuarios'
+)
+BEGIN
+    ALTER TABLE [AspNetUsers] ADD [DeactivatedAt] datetime2 NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126033930_DesactivarUsuarios'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261126033930_DesactivarUsuarios', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126041235_HistorialActividadUsuarios'
+)
+BEGIN
+    CREATE TABLE [UserActivities] (
+        [Id] uniqueidentifier NOT NULL,
+        [Number] int NOT NULL IDENTITY,
+        [OccurredAtUtc] datetime2 NOT NULL,
+        [Type] int NOT NULL,
+        [ActorUserId] nvarchar(450) NULL,
+        [ActorName] nvarchar(400) NULL,
+        [TargetUserId] nvarchar(450) NULL,
+        [TargetName] nvarchar(400) NULL,
+        [Details] nvarchar(4000) NULL,
+        [IpAddress] nvarchar(45) NULL,
+        [AttemptCount] int NOT NULL,
+        [LastAttemptAtUtc] datetime2 NULL,
+        [GroupKey] nvarchar(350) NULL,
+        CONSTRAINT [PK_UserActivities] PRIMARY KEY ([Id]),
+        CONSTRAINT [CK_UserActivities_AttemptCount_Positive] CHECK ([AttemptCount] >= 1),
+        CONSTRAINT [FK_UserActivities_AspNetUsers_ActorUserId] FOREIGN KEY ([ActorUserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_UserActivities_AspNetUsers_TargetUserId] FOREIGN KEY ([TargetUserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126041235_HistorialActividadUsuarios'
+)
+BEGIN
+    CREATE INDEX [IX_UserActivities_ActorUserId] ON [UserActivities] ([ActorUserId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126041235_HistorialActividadUsuarios'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_UserActivities_GroupKey] ON [UserActivities] ([GroupKey]) WHERE [GroupKey] IS NOT NULL');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126041235_HistorialActividadUsuarios'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_UserActivities_Number] ON [UserActivities] ([Number]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126041235_HistorialActividadUsuarios'
+)
+BEGIN
+    CREATE INDEX [IX_UserActivities_OccurredAtUtc] ON [UserActivities] ([OccurredAtUtc]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126041235_HistorialActividadUsuarios'
+)
+BEGIN
+    CREATE INDEX [IX_UserActivities_TargetUserId] ON [UserActivities] ([TargetUserId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126041235_HistorialActividadUsuarios'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261126041235_HistorialActividadUsuarios', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    ALTER TABLE [Sales] ADD [CancelAuthorizedByUserId] nvarchar(450) NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    ALTER TABLE [SaleReturns] ADD [AuthorizedByUserId] nvarchar(450) NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    CREATE TABLE [UserAuthorizationPins] (
+        [UserId] nvarchar(450) NOT NULL,
+        [PinHash] nvarchar(200) NOT NULL,
+        [FailedAttempts] int NOT NULL,
+        [LockedUntilUtc] datetime2 NULL,
+        CONSTRAINT [PK_UserAuthorizationPins] PRIMARY KEY ([UserId]),
+        CONSTRAINT [CK_UserAuthorizationPins_FailedAttempts_NonNegative] CHECK ([FailedAttempts] >= 0),
+        CONSTRAINT [FK_UserAuthorizationPins_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    CREATE INDEX [IX_Sales_CancelAuthorizedByUserId] ON [Sales] ([CancelAuthorizedByUserId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    CREATE INDEX [IX_SaleReturns_AuthorizedByUserId] ON [SaleReturns] ([AuthorizedByUserId]);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    ALTER TABLE [SaleReturns] ADD CONSTRAINT [FK_SaleReturns_AspNetUsers_AuthorizedByUserId] FOREIGN KEY ([AuthorizedByUserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    ALTER TABLE [Sales] ADD CONSTRAINT [FK_Sales_AspNetUsers_CancelAuthorizedByUserId] FOREIGN KEY ([CancelAuthorizedByUserId]) REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261126153518_AutorizacionSupervisor'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261126153518_AutorizacionSupervisor', N'8.0.34');
+END;
+GO
+
+COMMIT;
+GO
+

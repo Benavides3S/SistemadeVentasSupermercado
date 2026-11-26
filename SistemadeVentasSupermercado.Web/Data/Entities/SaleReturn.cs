@@ -26,6 +26,12 @@ namespace SistemadeVentasSupermercado.Web.Data.Entities
         public User? User { get; set; }
 
         /// <summary>
+        /// Supervisor que autorizó la devolución con su PIN. Vacío si quien la hizo ya tenía el permiso.
+        /// </summary>
+        public string? AuthorizedByUserId { get; set; }
+        public User? AuthorizedByUser { get; set; }
+
+        /// <summary>
         /// Turno de caja de quien devuelve. Obligatorio si el reembolso es en efectivo
         /// (el dinero sale de ese cajón); vacío para tarjeta o transferencia.
         /// </summary>

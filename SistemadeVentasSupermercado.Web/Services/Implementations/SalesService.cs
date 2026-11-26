@@ -13,10 +13,13 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
     public class SalesService : ISalesService
     {
         private readonly DataContext _context;
+        private readonly IUserActivityRecorder? _activity;
 
-        public SalesService(DataContext context)
+        // El registro de actividad solo se usa en anulaciones autorizadas por un supervisor.
+        public SalesService(DataContext context, IUserActivityRecorder? activity = null)
         {
             _context = context;
+            _activity = activity;
         }
 
         private static Response<SaleResultDTO> Fail(string message)
@@ -206,8 +209,12 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
 
         // ---------- Anulación ----------
 
-        public async Task<Response<SaleDetailDTO>> CancelAsync(Guid saleId, CancelSaleDTO dto, string userId)
+        public async Task<Response<SaleDetailDTO>> CancelAsync(Guid saleId, CancelSaleDTO dto, string userId,
+            string? authorizedByUserId = null)
         {
+            if (authorizedByUserId == userId)
+                return Response<SaleDetailDTO>.Failure("No puedes autorizarte a ti mismo");
+
             string reason = dto.Reason?.Trim() ?? string.Empty;
 
             if (reason.Length == 0)
@@ -264,7 +271,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         .SetProperty(x => x.Status, SaleStatus.Cancelled)
                         .SetProperty(x => x.CancelledAtUtc, now)
                         .SetProperty(x => x.CancelReason, reason)
-                        .SetProperty(x => x.CancelledByUserId, userId));
+                        .SetProperty(x => x.CancelledByUserId, userId)
+                        .SetProperty(x => x.CancelAuthorizedByUserId, authorizedByUserId));
 
                 if (cancelled == 0)
                 {
@@ -289,6 +297,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                     await InventoryRecorder.RecordAsync(_context, line.ProductId, InventoryMovementType.SaleCancellation,
                         line.Quantity, userId, referenceId: saleId, referenceNumber: sale.Number);
                 }
+
+                if (authorizedByUserId is not null)
+                    await SupervisorAuthorizationLog.StageAsync(_context, _activity, authorizedByUserId, userId,
+                        $"Anulación de la venta N.º {sale.Number}");
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -472,6 +484,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             }
         }
 
+        public Task<Guid?> FindIdByNumberAsync(int number)
+            => _context.Sales.Where(s => s.Number == number).Select(s => (Guid?)s.Id).FirstOrDefaultAsync();
+
         public async Task<Response<SaleDetailDTO>> GetOneAsync(Guid id)
         {
             try
@@ -492,6 +507,8 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         CancelledAtUtc = s.CancelledAtUtc,
                         CancelReason = s.CancelReason,
                         CancelledByName = s.CancelledByUser != null ? s.CancelledByUser.FirstName + " " + s.CancelledByUser.LastName : null,
+                        CancelAuthorizedByName = s.CancelAuthorizedByUser != null
+                            ? s.CancelAuthorizedByUser.FirstName + " " + s.CancelAuthorizedByUser.LastName : null,
                         CanBeCancelled = s.Status == SaleStatus.Completed
                                       && s.ReturnedTotal == 0
                                       && s.CashSession != null

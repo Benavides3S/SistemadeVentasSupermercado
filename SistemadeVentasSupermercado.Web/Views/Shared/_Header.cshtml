@@ -1,6 +1,7 @@
 ﻿<!-- ======= Header ======= -->
 ﻿@using SistemadeVentasSupermercado.Web.Data.Entities
 @inject SistemadeVentasSupermercado.Web.Services.Abstractions.IUsersService _usersService
+@inject SistemadeVentasSupermercado.Web.Services.Abstractions.IAuthorizationPinService _pinService
 
 @{
     User? user;
@@ -59,6 +60,15 @@
                                 <span>Cambiar contraseña</span>
                             </a>
                         </li>
+                        @if (await _pinService.CanHavePinAsync(User.Identity!.Name!))
+                        {
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center" asp-controller="Account" asp-action="AuthorizationPin">
+                                    <i class="bi bi-shield-check"></i>
+                                    <span>Mi PIN de autorización</span>
+                                </a>
+                            </li>
+                        }
                         <li>
                             <hr class="dropdown-divider">
                         </li>

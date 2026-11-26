@@ -1,0 +1,211 @@
+@model CashierReportDTO?
+
+@{
+    ViewData["Title"] = "Reporte por cajero";
+    DateOnly from = (DateOnly)ViewBag.From;
+    DateOnly to = (DateOnly)ViewBag.To;
+    BusinessOptions business = (BusinessOptions)ViewBag.Business;
+    string fromValue = from.ToString("yyyy-MM-dd");
+    string toValue = to.ToString("yyyy-MM-dd");
+
+    static string CountAndMoney(int count, decimal total) => count > 0 ? $"({count}) {DisplayFormat.Money(total)}" : "—";
+}
+
+<div class="pagetitle no-print">
+    <h1>Reporte por cajero</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Inicio</a></li>
+            <li class="breadcrumb-item active">Reporte por cajero</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="print-only mb-3">
+    <h4 class="mb-0">@business.Nombre</h4>
+    <div>Reporte por cajero del @from.ToString("dd/MM/yyyy") al @to.ToString("dd/MM/yyyy")</div>
+</div>
+
+<section class="section">
+    <div class="card no-print">
+        <div class="card-body pt-3">
+            <form asp-action="Index" method="get" class="row g-2 align-items-end">
+                <div class="col-sm-4 col-md-3">
+                    <label for="From" class="form-label">Desde</label>
+                    <input type="date" id="From" name="From" value="@fromValue" class="form-control" required />
+                </div>
+                <div class="col-sm-4 col-md-3">
+                    <label for="To" class="form-label">Hasta</label>
+                    <input type="date" id="To" name="To" value="@toValue" class="form-control" required />
+                </div>
+                <div class="col-sm-4 col-md-6 d-flex gap-2 flex-wrap">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Ver</button>
+                    <a asp-action="Excel" asp-route-From="@fromValue" asp-route-To="@toValue" class="btn btn-success">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()" title="En la ventana de impresión elige &quot;Guardar como PDF&quot;">
+                        <i class="bi bi-file-earmark-pdf"></i> Imprimir / PDF
+                    </button>
+                </div>
+            </form>
+            <div class="form-text">
+                Fechas en días de Colombia (máximo 366). Las anulaciones cuentan el día en que se anuló, las devoluciones
+                el día en que se registraron y los turnos el día en que se cerraron. Contiene datos de empleados:
+                comparte los archivos solo con quien deba verlos.
+            </div>
+        </div>
+    </div>
+
+    @if (Model != null)
+    {
+        if (Model.OwnFiguresHidden)
+        {
+            <div class="alert alert-warning">
+                <i class="bi bi-eye-slash"></i> Tienes la caja abierta: tus propias cifras no aparecen y
+                <strong>los totales son parciales</strong>. Cierra tu caja para verlas.
+            </div>
+        }
+
+        if (Model.Rows.Count == 0)
+        {
+            <div class="card"><div class="card-body pt-3">No hay actividad de caja en estas fechas.</div></div>
+        }
+        else
+        {
+            CashierRowDTO total = Model.Totals;
+
+            <div class="card">
+                <div class="card-body pt-3">
+                    <h5 class="card-title py-0">Ventas cobradas</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered tabla-apilable align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Persona</th>
+                                    <th class="text-end">Ventas</th>
+                                    <th class="text-end">Efectivo</th>
+                                    <th class="text-end">Tarjeta</th>
+                                    <th class="text-end">Transferencia</th>
+                                    <th class="text-end">Total vendido</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (CashierRowDTO row in Model.Rows)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-action="Detail" asp-route-id="@row.UserId" asp-route-From="@fromValue" asp-route-To="@toValue" title="Ver detalle">@row.Name</a>
+                                            @if (row.IsDeactivated)
+                                            {
+                                                <span class="badge bg-secondary">Desactivado</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">@row.SalesCount</td>
+                                        <td class="text-end">@DisplayFormat.Money(row.CashTotal)</td>
+                                        <td class="text-end">@DisplayFormat.Money(row.CardTotal)</td>
+                                        <td class="text-end">@DisplayFormat.Money(row.TransferTotal)</td>
+                                        <td class="text-end fw-semibold">@DisplayFormat.Money(row.SalesTotal)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="fw-bold">
+                                <tr>
+                                    <td>TOTAL</td>
+                                    <td class="text-end">@total.SalesCount</td>
+                                    <td class="text-end">@DisplayFormat.Money(total.CashTotal)</td>
+                                    <td class="text-end">@DisplayFormat.Money(total.CardTotal)</td>
+                                    <td class="text-end">@DisplayFormat.Money(total.TransferTotal)</td>
+                                    <td class="text-end">@DisplayFormat.Money(total.SalesTotal)</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="form-text no-print">Toca un nombre para ver el detalle. Las ventas anuladas no suman.</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body pt-3">
+                    <h5 class="card-title py-0">Anulaciones y devoluciones</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered tabla-apilable align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Persona</th>
+                                    <th class="text-end">Anuladas de sus ventas</th>
+                                    <th class="text-end">Anulaciones que ejecutó</th>
+                                    <th class="text-end">Devoluciones que registró</th>
+                                    <th class="text-end">Devoluciones de sus ventas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (CashierRowDTO row in Model.Rows)
+                                {
+                                    <tr>
+                                        <td><a asp-action="Detail" asp-route-id="@row.UserId" asp-route-From="@fromValue" asp-route-To="@toValue">@row.Name</a></td>
+                                        <td class="text-end">@CountAndMoney(row.OwnSalesCancelledCount, row.OwnSalesCancelledTotal)</td>
+                                        <td class="text-end">@CountAndMoney(row.CancellationsDoneCount, row.CancellationsDoneTotal)</td>
+                                        <td class="text-end">@CountAndMoney(row.ReturnsRegisteredCount, row.ReturnsRegisteredTotal)</td>
+                                        <td class="text-end">@CountAndMoney(row.ReturnsOnOwnSalesCount, row.ReturnsOnOwnSalesTotal)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="form-text">
+                        Entre paréntesis, la cantidad. No sumes "de sus ventas" con "que ejecutó" o "que registró":
+                        una misma operación puede estar en las dos columnas.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body pt-3">
+                    <h5 class="card-title py-0">Caja</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered tabla-apilable align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Persona</th>
+                                    <th class="text-end">Turnos cerrados</th>
+                                    <th class="text-end">Con descuadre</th>
+                                    <th class="text-end">Faltantes</th>
+                                    <th class="text-end">Sobrantes</th>
+                                    <th class="text-end">Abiertos ahora</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (CashierRowDTO row in Model.Rows)
+                                {
+                                    <tr>
+                                        <td><a asp-action="Detail" asp-route-id="@row.UserId" asp-route-From="@fromValue" asp-route-To="@toValue">@row.Name</a></td>
+                                        <td class="text-end">@row.ClosedSessionsCount</td>
+                                        <td class="text-end">@row.UnbalancedSessionsCount</td>
+                                        <td class="text-end">@(row.ShortageTotal > 0 ? DisplayFormat.Money(row.ShortageTotal) : "—")</td>
+                                        <td class="text-end">@(row.SurplusTotal > 0 ? DisplayFormat.Money(row.SurplusTotal) : "—")</td>
+                                        <td class="text-end">@row.OpenSessionsCount</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="fw-bold">
+                                <tr>
+                                    <td>TOTAL</td>
+                                    <td class="text-end">@total.ClosedSessionsCount</td>
+                                    <td class="text-end">@total.UnbalancedSessionsCount</td>
+                                    <td class="text-end">@DisplayFormat.Money(total.ShortageTotal)</td>
+                                    <td class="text-end">@DisplayFormat.Money(total.SurplusTotal)</td>
+                                    <td class="text-end">@total.OpenSessionsCount</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="form-text">
+                        Faltantes y sobrantes se suman por separado. "Abiertos ahora" es el estado actual, sin importar las fechas.
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</section>
+
+<partial name="_PrintStyles" />

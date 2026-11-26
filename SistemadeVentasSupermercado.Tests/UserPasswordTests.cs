@@ -7,6 +7,7 @@ using SistemadeVentasSupermercado.Web.Core;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
 using SistemadeVentasSupermercado.Web.DTOs;
+using SistemadeVentasSupermercado.Web.Services.Abstractions;
 using SistemadeVentasSupermercado.Web.Services.Implementations;
 
 namespace SistemadeVentasSupermercado.Tests
@@ -36,6 +37,7 @@ namespace SistemadeVentasSupermercado.Tests
             services.AddIdentity<User, IdentityRole>(CustomConfiguration.ConfigureIdentityOptions)
                     .AddEntityFrameworkStores<DataContext>()
                     .AddDefaultTokenProviders();
+            services.AddScoped<IUserActivityRecorder, UserActivityRecorder>();
             services.AddScoped<UsersService>();
             _servicios = services.BuildServiceProvider();
         }

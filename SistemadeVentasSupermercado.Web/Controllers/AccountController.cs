@@ -14,14 +14,18 @@ namespace SistemadeVentasSupermercado.Web.Controllers
     {
         private readonly IUsersService _usersService;
         private readonly INotyfService _notyfService;
+        private readonly IAuthorizationPinService _pinService;
 
-        public AccountController(IUsersService usersService, INotyfService notyfService)
+        public AccountController(IUsersService usersService, INotyfService notyfService,
+            IAuthorizationPinService pinService)
         {
+            _pinService = pinService;
             _usersService = usersService;
             _notyfService = notyfService;
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [SkipMustChangePassword]
         public IActionResult Login()
         {
@@ -29,6 +33,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [SkipMustChangePassword]
         public async Task<IActionResult> Login(LoginDTO dto)
         {
@@ -52,6 +57,11 @@ namespace SistemadeVentasSupermercado.Web.Controllers
                 {
                     ModelState.AddModelError(string.Empty, "Email o contraseña incorrectos");
                 }
+            }
+
+            else if (!string.IsNullOrEmpty(dto.Email) && !string.IsNullOrEmpty(dto.Password))
+            {
+                await _usersService.RecordRejectedLoginFormAsync(dto);
             }
 
             return View(dto);
@@ -102,6 +112,46 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             return RedirectToAction("Index", "Home");
         }
 
+        /// <summary>
+        /// "Mi PIN": solo para quien puede autorizar (permiso de anular o de devolver). Esa combinación
+        /// se revisa aquí. El usuario es SIEMPRE el de la sesión.
+        /// </summary>
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> AuthorizationPin()
+        {
+            if (!await _pinService.CanHavePinAsync(User.Identity!.Name!))
+                return Forbid();
+
+            ViewBag.HasPin = await _pinService.HasPinAsync(User.Identity.Name!);
+            return View(new SetAuthorizationPinDTO());
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> AuthorizationPin(SetAuthorizationPinDTO dto)
+        {
+            string userName = User.Identity!.Name!;
+            if (!await _pinService.CanHavePinAsync(userName))
+                return Forbid();
+
+            if (ModelState.IsValid)
+            {
+                Response<bool> result = await _pinService.SetPinAsync(userName, dto);
+
+                if (result.IsSuccess)
+                {
+                    _notyfService.Success(result.Message);
+                    return RedirectToAction(nameof(AuthorizationPin));
+                }
+
+                ModelState.AddModelError(string.Empty, result.Message ?? "No se pudo guardar el PIN.");
+            }
+
+            ViewBag.HasPin = await _pinService.HasPinAsync(userName);
+            return View(new SetAuthorizationPinDTO()); // ni la contraseña ni el PIN vuelven al formulario
+        }
+
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> UpdateUser()
@@ -122,7 +172,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                Response<AccountUserDTO> result = await _usersService.UpdateUserAsync(dto);
+                Response<AccountUserDTO> result = await _usersService.UpdateUserAsync(dto, User.Identity!.Name!);
 
                 if (result.IsSuccess)
                 {

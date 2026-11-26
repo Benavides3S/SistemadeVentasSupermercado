@@ -572,6 +572,9 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CancelAuthorizedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("CancelReason")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -619,6 +622,8 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CancelAuthorizedByUserId");
 
                     b.HasIndex("CancelledByUserId");
 
@@ -691,6 +696,9 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("AuthorizedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<Guid?>("CashSessionId")
                         .HasColumnType("uniqueidentifier");
 
@@ -723,6 +731,8 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AuthorizedByUserId");
 
                     b.HasIndex("CashSessionId");
 
@@ -866,6 +876,9 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("DeactivatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Document")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -946,6 +959,102 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                     b.HasIndex("SistemaVentasRoleId");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.UserActivity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("ActorUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("GroupKey")
+                        .HasMaxLength(350)
+                        .HasColumnType("nvarchar(350)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<DateTime?>("LastAttemptAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Number")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Number"));
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TargetName")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("TargetUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("GroupKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserActivities_GroupKey")
+                        .HasFilter("[GroupKey] IS NOT NULL");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("TargetUserId");
+
+                    b.ToTable("UserActivities", t =>
+                        {
+                            t.HasCheckConstraint("CK_UserActivities_AttemptCount_Positive", "[AttemptCount] >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.UserAuthorizationPin", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LockedUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PinHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserAuthorizationPins", t =>
+                        {
+                            t.HasCheckConstraint("CK_UserAuthorizationPins_FailedAttempts_NonNegative", "[FailedAttempts] >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1112,6 +1221,11 @@ namespace SistemadeVentasSupermercado.Web.Migrations
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.Sale", b =>
                 {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "CancelAuthorizedByUser")
+                        .WithMany()
+                        .HasForeignKey("CancelAuthorizedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "CancelledByUser")
                         .WithMany()
                         .HasForeignKey("CancelledByUserId")
@@ -1132,6 +1246,8 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CancelAuthorizedByUser");
 
                     b.Navigation("CancelledByUser");
 
@@ -1163,6 +1279,11 @@ namespace SistemadeVentasSupermercado.Web.Migrations
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.SaleReturn", b =>
                 {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "AuthorizedByUser")
+                        .WithMany()
+                        .HasForeignKey("AuthorizedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.CashSession", "CashSession")
                         .WithMany()
                         .HasForeignKey("CashSessionId")
@@ -1179,6 +1300,8 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AuthorizedByUser");
 
                     b.Navigation("CashSession");
 
@@ -1223,6 +1346,34 @@ namespace SistemadeVentasSupermercado.Web.Migrations
                         .IsRequired();
 
                     b.Navigation("SistemaVentasRole");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.UserActivity", b =>
+                {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "TargetUser")
+                        .WithMany()
+                        .HasForeignKey("TargetUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ActorUser");
+
+                    b.Navigation("TargetUser");
+                });
+
+            modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.UserAuthorizationPin", b =>
+                {
+                    b.HasOne("SistemadeVentasSupermercado.Web.Data.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("SistemadeVentasSupermercado.Web.Data.Entities.UserAuthorizationPin", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SistemadeVentasSupermercado.Web.Data.Entities.CashSession", b =>
