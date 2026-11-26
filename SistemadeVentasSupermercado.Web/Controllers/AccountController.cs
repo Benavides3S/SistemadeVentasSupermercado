@@ -17,10 +17,12 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         private readonly INotyfService _notyfService;
         private readonly IAuthorizationPinService _pinService;
         private readonly ScreenLockStore _screenLock;
+        private readonly IProfilePhotoService _photoService;
 
         public AccountController(IUsersService usersService, INotyfService notyfService,
-            IAuthorizationPinService pinService, ScreenLockStore screenLock)
+            IAuthorizationPinService pinService, ScreenLockStore screenLock, IProfilePhotoService photoService)
         {
+            _photoService = photoService;
             _screenLock = screenLock;
             _pinService = pinService;
             _usersService = usersService;
@@ -229,6 +231,67 @@ namespace SistemadeVentasSupermercado.Web.Controllers
 
             ViewBag.HasPin = await _pinService.HasPinAsync(userName);
             return View(new SetAuthorizationPinDTO()); // ni la contraseña ni el PIN vuelven al formulario
+        }
+
+        // ---------- Foto de perfil ----------
+        // Ninguna de estas acciones recibe un usuario: es SIEMPRE el de la sesión.
+
+        /// <summary>
+        /// La foto propia. La dirección es la misma para todos, así que el navegador NO puede guardarla:
+        /// en un computador compartido, el siguiente usuario vería la del anterior.
+        /// </summary>
+        [Authorize]
+        [HttpGet]
+        [SkipMustChangePassword]
+        public async Task<IActionResult> Photo()
+        {
+            Response.Headers.CacheControl = "no-store";
+            Response.Headers.XContentTypeOptions = "nosniff";
+
+            byte[]? content = await _photoService.GetAsync(User.Identity!.Name!);
+            return content is null ? NotFound() : File(content, "image/jpeg");
+        }
+
+        /// <summary>Recibe la foto ya recortada por profile-photo.js. Devuelve JSON.</summary>
+        [Authorize]
+        [HttpPost]
+        [RequestSizeLimit(ProfilePhotoRules.MaxRequestBytes)]
+        [RequestFormLimits(MultipartBodyLengthLimit = ProfilePhotoRules.MaxRequestBytes)]
+        public async Task<IActionResult> UploadPhoto(IFormFile? photo)
+        {
+            if (photo is null || photo.Length == 0)
+                return PhotoResult(Response<bool>.Failure("No llegó ninguna foto, o es demasiado grande."));
+
+            // Antes de leerla en memoria.
+            if (photo.Length > ProfilePhotoRules.MaxBytes)
+                return PhotoResult(Response<bool>.Failure(ProfilePhotoRules.TooLargeMessage));
+
+            using MemoryStream content = new();
+            await photo.CopyToAsync(content);
+
+            return PhotoResult(await _photoService.SaveAsync(User.Identity!.Name!, content.ToArray()));
+        }
+
+        private IActionResult PhotoResult(Core.Response<bool> result)
+        {
+            if (result.IsSuccess)
+                _notyfService.Success(result.Message);
+
+            return Json(new { isSuccess = result.IsSuccess, message = result.Message });
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> RemovePhoto()
+        {
+            Response<bool> result = await _photoService.RemoveAsync(User.Identity!.Name!);
+
+            if (result.IsSuccess)
+                _notyfService.Success(result.Message);
+            else
+                _notyfService.Error(result.Message);
+
+            return RedirectToAction(nameof(UpdateUser));
         }
 
         [Authorize]

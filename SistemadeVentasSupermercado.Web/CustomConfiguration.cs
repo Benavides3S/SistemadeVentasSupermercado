@@ -117,6 +117,7 @@ namespace SistemadeVentasSupermercado.Web
             builder.Services.AddScoped<IClientService, ClientsService>();
             builder.Services.AddScoped<IRolesService, RolesService>();
             builder.Services.AddScoped<IUsersService, UsersService>();
+            builder.Services.AddScoped<IProfilePhotoService, ProfilePhotoService>();
             builder.Services.AddScoped<IUserActivityRecorder, UserActivityRecorder>();
             builder.Services.AddScoped<IUserActivityService, UserActivityService>();
             builder.Services.AddScoped<IAuthorizationPinService, AuthorizationPinService>();
