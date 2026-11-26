@@ -67,7 +67,8 @@ Tecnología: ASP.NET Core 8 MVC (Razor), Entity Framework Core 8, SQL Server, AS
 
 - **Crear usuario:** el sistema genera una **contraseña temporal** y la muestra **una sola vez**. Entrégala en privado; al entrar, el usuario debe cambiarla por una propia.
 - **Olvidó su contraseña:** en **Usuarios**, el botón 🔑 (permiso `resetPasswords`) genera una temporal nueva y desbloquea la cuenta.
-- **Bloqueo:** 5 intentos fallidos bloquean la cuenta 15 minutos (o hasta que se restablezca).
+- **Bloqueo:** 5 intentos fallidos bloquean la cuenta 15 minutos, o hasta que alguien con `resetPasswords` la desbloquee (sin cambiar la contraseña) o la restablezca.
+- **Desactivar usuarios:** quien ya no trabaja se **desactiva** (no se borra: sus ventas y turnos se conservan). Pierde el acceso de inmediato, aunque tenga la sesión abierta. Si dejó la caja abierta, el sistema avisa y alguien con `showCashSessions` debe cerrarla en **Turnos de caja**. Se puede reactivar. Nadie se desactiva a sí mismo, solo un Admin desactiva o reactiva a un Admin y siempre queda un Admin activo.
 - **Cambiar contraseña:** cualquiera, desde el menú de su nombre (arriba a la derecha).
 - **Protección del rol Admin:** solo un Admin puede crear o editar usuarios Admin, asignar ese rol o restablecer la contraseña de un Admin. Nadie puede cambiar su propio rol y siempre queda al menos un Admin.
 
@@ -110,7 +111,8 @@ El rol **Admin** tiene acceso a todo. Para los demás roles, asigna permisos en 
 | Inventario | `adjustInventory` | Ajustar el stock a mano (mermas, pérdidas, conteo físico) |
 | Reportes | `showReports` | Ver y exportar reportes |
 | Productos, Categorías, Proveedores, Clientes, Usuarios, Roles | `show*`, `create*`, `update*`, `delete*` | Administración |
-| Usuarios | `resetPasswords` | Restablecer la contraseña de un usuario (genera una temporal) |
+| Usuarios | `resetPasswords` | Restablecer la contraseña de un usuario (genera una temporal) y desbloquear cuentas |
+| Usuarios | `deactivateUsers` | Desactivar y reactivar usuarios (al principio solo el Admin) |
 
 El sistema crea los roles **Cajero** (`createSales` y `manageCashSessions`) y **Supervisor** (lo del cajero, más `showSales`, `cancelSales`, `createReturns`, `showCashSessions`, `showReports`, `showPurchases`, `createPurchases`, `cancelPurchases` y `showInventory`). Puedes cambiarles los permisos en **Roles**; el sistema no los vuelve a poner. En una instalación que ya existía, el rol **Supervisor** no recibe los permisos de Compras ni de Inventario solo: márcalos en **Roles**. El permiso `adjustInventory` no se da a ningún rol de ejemplo: solo el Admin ajusta stock hasta que lo marques.
 
