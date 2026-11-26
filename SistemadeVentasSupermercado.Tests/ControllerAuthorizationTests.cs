@@ -29,7 +29,8 @@ namespace SistemadeVentasSupermercado.Tests
         // HTTP en PermissionsHttpTests (permitidos y denegados con datos reales).
         private static readonly HashSet<string> PermisoDentroDeLaAccion =
         [
-            "SaleReturns.Details",   // createReturns o showSales
+            "SaleReturns.Details",   // createReturns o showSales, o quien hizo la devolución
+            "Account.AuthorizationPin", // quien tiene cancelSales o createReturns (SupervisorAuthorizationHttpTests)
             "CashSessions.Report",   // showCashSessions, o el dueño con el turno ya cerrado
         ];
 

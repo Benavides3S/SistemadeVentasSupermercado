@@ -22,6 +22,19 @@
             </li>
         }
 
+        @* Para quien usa el punto de venta y no tiene todos los permisos: con ellos usa "Ventas". *@
+        @if (await _usersService.CurrentUserIsAuthorizedAsync("createSales", "Ventas")
+             && !(await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas")
+                  && await _usersService.CurrentUserIsAuthorizedAsync("cancelSales", "Ventas")
+                  && await _usersService.CurrentUserIsAuthorizedAsync("createReturns", "Ventas")))
+        {
+            <li class="nav-item">
+                <a class="nav-link collapsed" asp-controller="Sales" asp-action="Assist">
+                    <i class="bi bi-arrow-counterclockwise"></i><span>Anular o devolver</span>
+                </a>
+            </li>
+        }
+
         @if (await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas"))
         {
             <li class="nav-item">

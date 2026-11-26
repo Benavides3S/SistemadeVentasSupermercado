@@ -58,6 +58,8 @@ namespace SistemadeVentasSupermercado.Web.DTOs
         public Guid SaleId { get; set; }
         public int SaleNumber { get; set; }
         public DateTime CreatedAtUtc { get; set; }
+        /// <summary>Quién hizo la devolución (para saber si es de quien la consulta).</summary>
+        public string UserId { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
         public string Reason { get; set; } = string.Empty;
         public PaymentMethod RefundMethod { get; set; }

@@ -17,11 +17,16 @@ namespace SistemadeVentasSupermercado.Web.Controllers
         private readonly ISalesService _salesService;
         private readonly ICashSessionService _cashService;
         private readonly INotyfService _notyfService;
+        private readonly IUsersService _usersService;
+        private readonly IAuthorizationPinService _pinService;
         private readonly BusinessOptions _business;
 
         public SalesController(ISalesService salesService, ICashSessionService cashService,
-            INotyfService notyfService, IOptions<BusinessOptions> business)
+            INotyfService notyfService, IUsersService usersService, IAuthorizationPinService pinService,
+            IOptions<BusinessOptions> business)
         {
+            _usersService = usersService;
+            _pinService = pinService;
             _salesService = salesService;
             _cashService = cashService;
             _notyfService = notyfService;
@@ -70,7 +75,7 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             if (!ModelState.IsValid)
             {
                 _notyfService.Error("Escribe el motivo de la anulación (máximo 200 caracteres)");
-                return RedirectToAction(nameof(Details), new { id });
+                return await BackToSaleAsync(id);
             }
 
             // Quien anula es siempre el usuario de la sesión.
@@ -82,7 +87,112 @@ namespace SistemadeVentasSupermercado.Web.Controllers
             else
                 _notyfService.Error(response.Message);
 
-            return RedirectToAction(nameof(Details), new { id });
+            return await BackToSaleAsync(id);
+        }
+
+        /// <summary>El comprobante si puede ver ventas; si no, "Anular o devolver" con esa venta.</summary>
+        private async Task<IActionResult> BackToSaleAsync(Guid id)
+        {
+            if (await _usersService.CurrentUserIsAuthorizedAsync("showSales", "Ventas"))
+                return RedirectToAction(nameof(Details), new { id });
+
+            Response<SaleDetailDTO> sale = await _salesService.GetOneAsync(id);
+            return RedirectToAction(nameof(Assist), new { number = sale.Result?.Number });
+        }
+
+        // ---------- Anular o devolver (con autorización de supervisor) ----------
+
+        /// <summary>
+        /// El cajero busca UNA venta por el número del comprobante. A propósito no hay lista: con la lista
+        /// de sus ventas podría calcular el efectivo esperado antes del arqueo.
+        /// </summary>
+        [HttpGet]
+        [CustomAuthorize("createSales", "Ventas")]
+        public async Task<IActionResult> Assist([FromQuery] int? number)
+        {
+            if (number is null)
+            {
+                // Un texto que no es un número llega como null.
+                if (!ModelState.IsValid)
+                    ModelState.AddModelError(string.Empty, "Escribe el número del comprobante (solo números).");
+                return View((SaleDetailDTO?)null);
+            }
+
+            Guid? id = await _salesService.FindIdByNumberAsync(number.Value);
+            if (id is null)
+            {
+                ModelState.AddModelError(string.Empty, $"No existe la venta N.º {number}.");
+                return View((SaleDetailDTO?)null);
+            }
+
+            return await AssistViewAsync(id.Value);
+        }
+
+        private async Task<IActionResult> AssistViewAsync(Guid id)
+        {
+            Response<SaleDetailDTO> response = await _salesService.GetOneAsync(id);
+
+            if (!response.IsSuccess)
+            {
+                _notyfService.Error(response.Message);
+                return RedirectToAction(nameof(Assist));
+            }
+
+            ViewBag.Business = _business;
+            ViewBag.Authorizers = await _pinService.GetAuthorizersAsync(SupervisorOperation.CancelSale, User.Identity!.Name!);
+            return View(nameof(Assist), response.Result);
+        }
+
+        /// <summary>Anulación que autoriza un supervisor con su PIN. SIEMPRE lo exige.</summary>
+        [HttpPost]
+        [CustomAuthorize("createSales", "Ventas")]
+        public async Task<IActionResult> CancelWithAuthorization([FromRoute] Guid id, [FromForm] CancelSaleDTO dto,
+            [FromForm] string? authorizerUserId, [FromForm] string? authorizationPin)
+        {
+            Response<SaleDetailDTO> sale = await _salesService.GetOneAsync(id);
+
+            if (!sale.IsSuccess)
+            {
+                _notyfService.Error(sale.Message);
+                return RedirectToAction(nameof(Assist));
+            }
+
+            // Se revisa antes del PIN, para no pedirlo para una anulación que no se puede hacer.
+            string? error = !ModelState.IsValid ? "Escribe el motivo de la anulación (máximo 200 caracteres)."
+                : !sale.Result!.CanBeCancelled
+                    ? "Esta venta ya no se puede anular (está anulada, tiene devoluciones o su turno de caja cerró)."
+                    : null;
+
+            if (error is null)
+            {
+                Response<AuthorizerDTO> authorizer = await _pinService.VerifyAsync(
+                    SupervisorOperation.CancelSale, authorizerUserId, authorizationPin, User.Identity!.Name!);
+
+                if (authorizer.IsSuccess)
+                {
+                    string userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                    Response<SaleDetailDTO> response =
+                        await _salesService.CancelAsync(id, dto, userId, authorizer.Result!.UserId);
+
+                    if (response.IsSuccess)
+                    {
+                        _notyfService.Success(response.Message);
+                        return RedirectToAction(nameof(Assist), new { number = sale.Result!.Number });
+                    }
+
+                    error = response.Message;
+                }
+                else
+                {
+                    error = authorizer.Message;
+                }
+            }
+
+            // Se vuelve a mostrar con lo que se escribió (menos el PIN).
+            ModelState.AddModelError(string.Empty, error ?? "No se pudo anular la venta.");
+            ViewBag.CancelReason = dto.Reason;
+            ViewBag.SelectedAuthorizer = authorizerUserId;
+            return await AssistViewAsync(id);
         }
 
         // ---------- Punto de venta ----------

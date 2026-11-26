@@ -298,6 +298,7 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
                         SaleId = r.SaleId,
                         SaleNumber = r.Sale!.Number,
                         CreatedAtUtc = r.CreatedAtUtc,
+                        UserId = r.UserId,
                         UserName = r.User!.FirstName + " " + r.User.LastName,
                         Reason = r.Reason,
                         RefundMethod = r.RefundMethod,

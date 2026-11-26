@@ -484,6 +484,9 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             }
         }
 
+        public Task<Guid?> FindIdByNumberAsync(int number)
+            => _context.Sales.Where(s => s.Number == number).Select(s => (Guid?)s.Id).FirstOrDefaultAsync();
+
         public async Task<Response<SaleDetailDTO>> GetOneAsync(Guid id)
         {
             try

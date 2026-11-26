@@ -3,7 +3,6 @@
 
 @{
     ViewData["Title"] = $"Venta #{Model.Number}";
-    BusinessOptions business = (BusinessOptions)ViewBag.Business;
     bool canCancel = Model.CanBeCancelled && await _usersService.CurrentUserIsAuthorizedAsync("cancelSales", "Ventas");
     bool canReturn = Model.CanBeReturned && await _usersService.CurrentUserIsAuthorizedAsync("createReturns", "Ventas");
 }
@@ -39,101 +38,7 @@
     }
 </div>
 
-@* Ancho pensado para impresora térmica de 80 mm (área imprimible ≈ 72 mm). *@
-<div class="receipt">
-    <div class="text-center">
-        <div class="receipt-title">@business.Nombre</div>
-        @if (!string.IsNullOrWhiteSpace(business.Nit))
-        {
-            <div>NIT @business.Nit</div>
-        }
-        @if (!string.IsNullOrWhiteSpace(business.Direccion))
-        {
-            <div>@business.Direccion</div>
-        }
-        @if (!string.IsNullOrWhiteSpace(business.Telefono))
-        {
-            <div>Tel. @business.Telefono</div>
-        }
-    </div>
-
-    <hr />
-
-    <div>Venta N.º <strong>@Model.Number</strong></div>
-    <div>Fecha: @DisplayFormat.DateTimeColombia(Model.CreatedAtUtc)</div>
-    <div>Cajero: @Model.CashierName</div>
-    @if (Model.ClientName != null)
-    {
-        <div>Cliente: @Model.ClientName</div>
-    }
-    @if (Model.Status == SaleStatus.Cancelled)
-    {
-        <div class="receipt-banner">*** VENTA ANULADA ***</div>
-        @if (Model.CancelledAtUtc.HasValue)
-        {
-            <div>Anulada: @DisplayFormat.DateTimeColombia(Model.CancelledAtUtc.Value)</div>
-        }
-        @if (Model.CancelledByName != null)
-        {
-            <div>Por: @Model.CancelledByName</div>
-        }
-        @if (Model.CancelReason != null)
-        {
-            <div>Motivo: @Model.CancelReason</div>
-        }
-    }
-
-    <hr />
-
-    @foreach (SaleDetailLineDTO line in Model.Items)
-    {
-        <div class="receipt-line">
-            <div>@line.ProductName</div>
-            <div class="d-flex justify-content-between">
-                <span>@DisplayFormat.Quantity(line.Quantity) @line.Unit.Abbreviation() × @DisplayFormat.Money(line.UnitPrice)</span>
-                <span>@DisplayFormat.Money(line.Total)</span>
-            </div>
-        </div>
-    }
-
-    <hr />
-
-    <div class="d-flex justify-content-between receipt-total">
-        <span>TOTAL</span>
-        <span>@DisplayFormat.Money(Model.Total)</span>
-    </div>
-    <div class="d-flex justify-content-between">
-        <span>Pago</span>
-        <span>@Model.PaymentMethod.Label()</span>
-    </div>
-
-    @if (Model.Returns.Any())
-    {
-        <hr />
-        <div class="fw-bold">Devoluciones</div>
-        @foreach (SaleReturnSummaryDTO ret in Model.Returns)
-        {
-            <div class="d-flex justify-content-between">
-                <span>
-                    <a asp-controller="SaleReturns" asp-action="Details" asp-route-id="@ret.Id">N.º @ret.Number</a>
-                    @DisplayFormat.ToColombiaTime(ret.CreatedAtUtc).ToString("dd/MM/yyyy")
-                </span>
-                <span>− @DisplayFormat.Money(ret.Total)</span>
-            </div>
-        }
-        <div class="d-flex justify-content-between fw-bold">
-            <span>Neto</span>
-            <span>@DisplayFormat.Money(Model.Total - Model.ReturnedTotal)</span>
-        </div>
-    }
-
-    <hr />
-
-    <div class="text-center small">
-        Este documento no es una factura electrónica.<br />
-        ¡Gracias por su compra!
-    </div>
-</div>
+<partial name="_SaleReceipt" model="Model" />
 
 <link rel="stylesheet" href="~/css/receipt.css" asp-append-version="true" />
 

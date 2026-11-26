@@ -138,12 +138,12 @@ namespace SistemadeVentasSupermercado.Tests
             Assert.Contains("/Error/403", r.Headers.Location?.ToString());
         }
 
-        // Devolución: createReturns o showSales.
-        // Supervisor tiene ambos; el Cajero solo createSales y manageCashSessions.
+        // Devolución: createReturns o showSales, y el cajero (createSales) que la hizo.
+        // Supervisor tiene ambos; el Cajero solo createSales y manageCashSessions, pero ESTA la hizo él.
         [Theory]
         [InlineData(AppWebFixture.Admin, true)]
         [InlineData(AppWebFixture.Supervisor, true)]
-        [InlineData(AppWebFixture.Cajero, false)]
+        [InlineData(AppWebFixture.Cajero, true)]
         [InlineData(AppWebFixture.SinPermisos, false)]
         public async Task ComprobanteDeDevolucion_RespetaLosPermisos(string correo, bool debePoderVer)
         {
@@ -152,6 +152,16 @@ namespace SistemadeVentasSupermercado.Tests
             HttpResponseMessage r = await cliente.GetAsync($"/SaleReturns/Details/{_app.DevolucionId}");
 
             if (debePoderVer) AssertPuede(r); else AssertNiega(r);
+        }
+
+        [Fact]
+        public async Task ComprobanteDeDevolucion_OtroCajero_NoVeLaAjena_ExistaONo()
+        {
+            var (otro, _) = await _app.CrearCajeroConCajaAsync();
+            using HttpClient cliente = await _app.CrearClienteConSesionAsync(otro.Email!);
+
+            AssertNiega(await cliente.GetAsync($"/SaleReturns/Details/{_app.DevolucionId}"));
+            AssertNiega(await cliente.GetAsync($"/SaleReturns/Details/{UnId}"));
         }
 
         [Fact]
