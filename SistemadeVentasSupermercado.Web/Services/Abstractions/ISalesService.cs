@@ -25,7 +25,10 @@ namespace SistemadeVentasSupermercado.Web.Services.Abstractions
         /// <summary>
         /// Anula una venta completada y devuelve su stock. Solo mientras el turno de caja
         /// de la venta siga abierto (después se usa una devolución).
+        /// authorizedByUserId: el supervisor cuyo PIN YA se comprobó (null si quien anula tiene el permiso).
+        /// Nunca sale de un dato del navegador sin comprobar.
         /// </summary>
-        Task<Response<SaleDetailDTO>> CancelAsync(Guid saleId, CancelSaleDTO dto, string userId);
+        Task<Response<SaleDetailDTO>> CancelAsync(Guid saleId, CancelSaleDTO dto, string userId,
+            string? authorizedByUserId = null);
     }
 }
