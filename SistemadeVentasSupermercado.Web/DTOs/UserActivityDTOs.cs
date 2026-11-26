@@ -34,6 +34,7 @@ namespace SistemadeVentasSupermercado.Web.DTOs
             UserActivityType.LoginFailed => "Intento fallido de ingreso",
             UserActivityType.AccountLocked => "Intento con la cuenta bloqueada",
             UserActivityType.DeactivatedLoginRejected => "Intento de un usuario desactivado",
+            UserActivityType.UnlockFailed => "Intento fallido de desbloqueo",
             UserActivityType.PasswordChanged => "Cambió su contraseña",
             UserActivityType.PasswordReset => "Restableció una contraseña",
             UserActivityType.UserCreated => "Creó un usuario",

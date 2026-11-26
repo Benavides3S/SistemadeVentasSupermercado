@@ -11,6 +11,8 @@ CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+    // Con la pantalla bloqueada no se ejecuta ninguna acción (corre antes que los demás filtros).
+    options.Filters.Add<SistemadeVentasSupermercado.Web.Core.ScreenLock.ScreenLockFilter>();
     // Con contraseña temporal, toda página lleva a "Cambiar contraseña".
     options.Filters.Add<SistemadeVentasSupermercado.Web.Core.Filters.MustChangePasswordFilter>();
 });

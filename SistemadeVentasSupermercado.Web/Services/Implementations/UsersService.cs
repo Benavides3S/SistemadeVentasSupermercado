@@ -661,6 +661,27 @@ namespace SistemadeVentasSupermercado.Web.Services.Implementations
             => _activity.RecordFailedLoginAsync(UserActivityType.LoginFailed, null,
                 dto.Email == dto.Password ? null : dto.Email);
 
+        public async Task<Response<bool>> CheckUnlockPasswordAsync(string userName, string? password)
+        {
+            if (string.IsNullOrEmpty(password))
+                return Response<bool>.Failure("Escribe tu contraseña.");
+
+            User? user = await _userManager.FindByNameAsync(userName);
+            if (user is null || user.DeactivatedAt is not null)
+                return Response<bool>.Failure("No se pudo desbloquear. Cierra la sesión.");
+
+            // No inicia sesión: solo comprueba la contraseña, contando los errores.
+            SignInResult result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
+            if (result.Succeeded)
+                return Response<bool>.Success(true, "Pantalla desbloqueada");
+
+            await _activity.RecordFailedLoginAsync(UserActivityType.UnlockFailed, user, user.Email);
+
+            return Response<bool>.Failure(result.IsLockedOut
+                ? "Tu cuenta está bloqueada por demasiados intentos. Espera 15 minutos o pide a un administrador que la desbloquee. No recargues la página si tienes un carrito sin cobrar."
+                : "La contraseña no es correcta.");
+        }
+
         public async Task LogoutAsync()
         {
             string? userName = _httpContextAccessor.HttpContext?.User.Identity?.Name;

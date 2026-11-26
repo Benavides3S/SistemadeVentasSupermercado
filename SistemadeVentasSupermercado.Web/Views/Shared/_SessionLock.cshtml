@@ -1,0 +1,36 @@
+@using SistemadeVentasSupermercado.Web.Core.ScreenLock
+@inject Microsoft.Extensions.Options.IOptions<ScreenLockOptions> _lockOptions
+
+@* Capa que tapa la pantalla (wwwroot/js/session-lock.js). Es un <dialog> modal: mientras está abierto,
+   el navegador no deja usar nada de lo que hay detrás, ni las ventanas que aparezcan después.
+   El bloqueo de verdad lo aplica el servidor (ScreenLockFilter). *@
+<dialog id="sessionLock" class="sv-bloqueo" aria-labelledby="sessionLockTitle"
+        data-idle-minutes="@_lockOptions.Value.MinutosDeInactividad"
+        data-lock-url="@Url.Action("Lock", "Account")"
+        data-unlock-url="@Url.Action("Unlock", "Account")"
+        data-activity-url="@Url.Action("Activity", "Account")">
+
+    @* El foco queda aquí, no en un botón: así el Enter de un lector de códigos no oprime nada. *@
+    <div class="sv-bloqueo-caja card shadow" tabindex="-1" data-lock-focus>
+        <div class="card-body text-center pt-4">
+            <h2 id="sessionLockTitle" class="h4"><i class="bi bi-lock"></i> Pantalla bloqueada</h2>
+            <p class="mb-3">Sesión de <strong>@User.Identity!.Name</strong></p>
+
+            <div class="alert alert-danger py-2 d-none" role="alert" data-lock-message></div>
+
+            <button type="button" class="btn btn-primary w-100" data-lock-show>Desbloquear</button>
+
+            <form class="d-none" data-lock-form novalidate>
+                @Html.AntiForgeryToken()
+                <label for="sessionLockPassword" class="visually-hidden">Contraseña</label>
+                <input type="password" id="sessionLockPassword" class="form-control mb-2" data-no-toggle
+                       placeholder="Tu contraseña" autocomplete="current-password" />
+                <button type="submit" class="btn btn-primary w-100">Entrar</button>
+            </form>
+
+            <a asp-controller="Account" asp-action="Logout" class="btn btn-link mt-2">No soy yo: cerrar sesión</a>
+            <p class="small text-muted mb-0">Al cerrar sesión se pierde lo que no esté guardado, como un carrito sin cobrar.</p>
+        </div>
+    </div>
+</dialog>
+<script src="~/js/session-lock.js" asp-append-version="true"></script>

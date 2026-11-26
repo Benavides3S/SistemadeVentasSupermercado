@@ -46,6 +46,8 @@ services:
       Negocio__Nit: ${NEGOCIO_NIT:-}
       Negocio__Direccion: ${NEGOCIO_DIRECCION:-}
       Negocio__Telefono: ${NEGOCIO_TELEFONO:-}
+      # Minutos sin uso para bloquear la pantalla (0 = sin bloqueo automático).
+      Seguridad__MinutosDeInactividad: ${MINUTOS_INACTIVIDAD:-5}
     volumes:
       - dp-keys:/keys
     ports:

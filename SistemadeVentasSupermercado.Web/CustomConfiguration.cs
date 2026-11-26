@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SistemadeVentasSupermercado.Web.Core;
+using SistemadeVentasSupermercado.Web.Core.ScreenLock;
 using SistemadeVentasSupermercado.Web.Data;
 using SistemadeVentasSupermercado.Web.Data.Entities;
 using SistemadeVentasSupermercado.Web.Data.Seeders;
@@ -79,6 +80,10 @@ namespace SistemadeVentasSupermercado.Web
 
         private static void AddIAM(WebApplicationBuilder builder)
         {
+            // Bloqueo de pantalla por inactividad: el estado vive en memoria, uno solo para toda la app.
+            builder.Services.Configure<ScreenLockOptions>(builder.Configuration.GetSection(ScreenLockOptions.SectionName));
+            builder.Services.AddSingleton<ScreenLockStore>();
+
             builder.Services.AddIdentity<User, IdentityRole>(ConfigureIdentityOptions)
               .AddEntityFrameworkStores<DataContext>()
               .AddDefaultTokenProviders();
@@ -97,6 +102,12 @@ namespace SistemadeVentasSupermercado.Web
                 conf.AccessDeniedPath = "/Error/403";
                 // Usuario desactivado: pierde el acceso en su siguiente petición.
                 conf.Events.OnValidatePrincipal = ActiveUserCookieValidator.ValidateAsync;
+                // Cada inicio de sesión recibe un Id para poder bloquear su pantalla.
+                conf.Events.OnSigningIn = context =>
+                {
+                    ScreenLockSession.Assign(context.HttpContext, context.Properties);
+                    return Task.CompletedTask;
+                };
             });
         }
 

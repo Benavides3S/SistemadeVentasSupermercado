@@ -1,0 +1,39 @@
+/* Bloqueo de pantalla: ocupa todo y no deja ver lo que hay detrás. */
+.sv-bloqueo {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: 16px;
+    border: 0;
+    background: #012970;
+    overflow: auto;
+}
+
+.sv-bloqueo[open] {
+    display: flex;
+}
+
+.sv-bloqueo::backdrop {
+    background: #012970;
+}
+
+.sv-bloqueo-caja {
+    width: 100%;
+    max-width: 420px;
+    margin: auto;
+}
+
+.sv-bloqueo-caja:focus {
+    outline: none;
+}
+
+/* Con la pantalla bloqueada tampoco se imprime lo que hay detrás. */
+@media print {
+    body.sv-bloqueado > * {
+        display: none !important;
+    }
+}

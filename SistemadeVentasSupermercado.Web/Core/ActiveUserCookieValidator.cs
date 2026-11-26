@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using SistemadeVentasSupermercado.Web.Core.ScreenLock;
 using SistemadeVentasSupermercado.Web.Data;
 
 namespace SistemadeVentasSupermercado.Web.Core
@@ -19,7 +20,9 @@ namespace SistemadeVentasSupermercado.Web.Core
             string? userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
             DataContext db = context.HttpContext.RequestServices.GetRequiredService<DataContext>();
 
-            if (userId is null || !await db.Users.AnyAsync(u => u.Id == userId && u.DeactivatedAt == null))
+            // Una cookie sin Id de sesión (anterior al bloqueo de pantalla) no se podría bloquear.
+            if (userId is null || !ScreenLockSession.Remember(context.HttpContext, context.Properties)
+                || !await db.Users.AnyAsync(u => u.Id == userId && u.DeactivatedAt == null))
             {
                 context.RejectPrincipal();
                 await context.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
